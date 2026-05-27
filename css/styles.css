@@ -471,6 +471,8 @@ nav { display: none; }
   overflow: hidden;
   transition: var(--transition);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
 }
 .product-card:hover {
   border-color: var(--red);
@@ -498,7 +500,14 @@ nav { display: none; }
 }
 .badge-new { background: var(--black-4); color: var(--white); border: 1px solid rgba(255,255,255,0.2); }
 .badge-offer { background: var(--red); color: var(--white); }
-.product-info { padding: 16px; }
+.product-info {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.product-info-top { flex: 1; }
+.product-info-bottom { margin-top: 12px; }
 .product-info .category {
   font-size: 0.73rem;
   color: var(--red);
@@ -553,7 +562,50 @@ nav { display: none; }
   transition: var(--transition);
   letter-spacing: 0.3px;
 }
-.btn-add:hover { background: var(--red-dark); }
+.btn-add:hover:not(:disabled) { background: var(--red-dark); }
+
+/* Botón WhatsApp directo en producto */
+.btn-wa-product {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--green-wa);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s;
+  letter-spacing: 0.3px;
+}
+.btn-wa-product:hover { background: #1da851; color: #fff; }
+
+/* Estado deshabilitado para variantes no seleccionadas */
+.btn-variant-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Hint de selección de variante */
+.variant-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--yellow);
+  margin-bottom: 8px;
+  padding: 6px 10px;
+  background: rgba(255, 215, 0, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 215, 0, 0.2);
+}
 
 /* ===== WHY US SECTION ===== */
 .why-us {

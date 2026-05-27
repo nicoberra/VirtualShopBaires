@@ -1,21 +1,27 @@
-// Estado de variantes seleccionadas por producto { pid: { color, talle } }
 const selectedVariants = {};
+const WA_NUMBER = "5491149457266";
 
 function formatPrecio(n) {
   return "$" + n.toLocaleString("es-AR");
 }
 
-// Inicializa la selección al primer hover/render
-function initVariant(pid) {
-  const p = PRODUCTOS.find(x => x.id === pid);
-  if (!p || !p.tieneVariantes || selectedVariants[pid]) return;
-  selectedVariants[pid] = {};
-  if (p.colores.length > 0) selectedVariants[pid].color = p.colores[0];
-  if (p.talles.length  > 0) selectedVariants[pid].talle = p.talles[0];
-  updateVariantState(pid);
+function getWAText(nombre, color, talle) {
+  let msg = `Hola! Me interesa: *${nombre}*`;
+  if (color) msg += ` - Color: ${color}`;
+  if (talle) msg += ` - Talle: ${talle}`;
+  msg += `. ¿Está disponible?`;
+  return encodeURIComponent(msg);
 }
 
-// Cuando el usuario elige color o talle
+function isVariantComplete(pid) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p || !p.tieneVariantes) return true;
+  const sel = selectedVariants[pid] || {};
+  if (p.colores.length > 0 && !sel.color) return false;
+  if (p.talles.length  > 0 && !sel.talle) return false;
+  return true;
+}
+
 function selectVariant(pid, type, value, btn) {
   if (!selectedVariants[pid]) selectedVariants[pid] = {};
   selectedVariants[pid][type] = value;
@@ -25,45 +31,79 @@ function selectVariant(pid, type, value, btn) {
   updateVariantState(pid);
 }
 
-// Actualiza precio y estado del botón según variante seleccionada
 function updateVariantState(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p || !p.tieneVariantes) return;
-  const sel = selectedVariants[pid] || {};
+  const sel      = selectedVariants[pid] || {};
+  const complete = isVariantComplete(pid);
 
-  const variant = p.variantes.find(v =>
+  const variant = complete ? p.variantes.find(v =>
     (!p.colores.length || v.color === sel.color) &&
     (!p.talles.length  || v.talle === sel.talle)
-  );
+  ) : null;
 
-  const card = document.querySelector(`.product-card[data-id="${pid}"]`);
-  if (!card || !variant) return;
+  const card   = document.querySelector(`.product-card[data-id="${pid}"]`);
+  if (!card) return;
 
   const priceEl = card.querySelector('.price-main');
   const addBtn  = card.querySelector('.btn-add');
-  if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
-  if (addBtn) {
-    addBtn.disabled = !variant.stock;
-    addBtn.innerHTML = variant.stock
-      ? '<i class="fa-solid fa-cart-plus"></i> Agregar al carrito'
-      : '<i class="fa-solid fa-ban"></i> Sin stock';
+  const waBtn   = card.querySelector('.btn-wa-product');
+  const hint    = card.querySelector('.variant-hint');
+
+  // Mostrar/ocultar hint
+  if (hint) hint.style.display = complete ? 'none' : 'flex';
+
+  if (complete && variant) {
+    if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
+
+    const inStock = variant.stock;
+    if (addBtn) {
+      addBtn.disabled = !inStock;
+      addBtn.classList.toggle('btn-variant-disabled', !inStock);
+      addBtn.innerHTML = inStock
+        ? '<i class="fa-solid fa-cart-plus"></i> Agregar al carrito'
+        : '<i class="fa-solid fa-ban"></i> Sin stock';
+    }
+    if (waBtn) {
+      waBtn.classList.toggle('btn-variant-disabled', !inStock);
+      waBtn.dataset.ready = inStock ? 'true' : 'false';
+      waBtn.dataset.color = sel.color || '';
+      waBtn.dataset.talle = sel.talle || '';
+    }
+  } else {
+    if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
+    if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
   }
 }
 
-// Botón "Agregar" en productos con variantes
 function addToCartWithVariant(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p) return;
-  const sel = selectedVariants[pid] || {};
-  const variant = p.variantes.find(v =>
-    (!p.colores.length || v.color === sel.color) &&
-    (!p.talles.length  || v.talle === sel.talle)
-  );
-  if (!variant || !variant.stock) return;
-  Cart.add(pid, sel, variant.precio);
+  if (p.tieneVariantes) {
+    if (!isVariantComplete(pid)) return;
+    const sel = selectedVariants[pid] || {};
+    const variant = p.variantes.find(v =>
+      (!p.colores.length || v.color === sel.color) &&
+      (!p.talles.length  || v.talle === sel.talle)
+    );
+    if (!variant || !variant.stock) return;
+    Cart.add(pid, sel, variant.precio);
+  } else {
+    Cart.add(pid);
+  }
 }
 
-// Render de tarjeta de producto
+function buyWithWA(pid) {
+  const p    = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return false;
+  const card = document.querySelector(`.product-card[data-id="${pid}"]`);
+  const waBtn = card?.querySelector('.btn-wa-product');
+  if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null);
+  window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
+  return false;
+}
+
 function renderProductCard(p) {
   const badgeHTML = (p.badge === "new" || p.badge === "nuevo")
     ? `<span class="badge-new">NUEVO</span>`
@@ -83,7 +123,7 @@ function renderProductCard(p) {
     ? `<p class="product-desc">${p.descripcion}</p>`
     : "";
 
-  // Selectores de variantes
+  // Variantes sin selección por defecto
   let variantesHTML = "";
   if (p.tieneVariantes) {
     if (p.colores.length > 0) {
@@ -91,9 +131,9 @@ function renderProductCard(p) {
         <div class="variant-group">
           <span class="variant-label">Color:</span>
           <div class="variant-options" data-type="color">
-            ${p.colores.map((c, i) => `
-              <button class="variant-btn${i === 0 ? ' selected' : ''}"
-                      onclick="selectVariant(${p.id}, 'color', '${c.replace(/'/g, "\\'")}', this)">
+            ${p.colores.map(c => `
+              <button class="variant-btn"
+                      onclick="selectVariant(${p.id},'color','${c.replace(/'/g,"\\'")}',this)">
                 ${c}
               </button>`).join("")}
           </div>
@@ -104,9 +144,9 @@ function renderProductCard(p) {
         <div class="variant-group">
           <span class="variant-label">Talle:</span>
           <div class="variant-options" data-type="talle">
-            ${p.talles.map((t, i) => `
-              <button class="variant-btn${i === 0 ? ' selected' : ''}"
-                      onclick="selectVariant(${p.id}, 'talle', '${t.replace(/'/g, "\\'")}', this)">
+            ${p.talles.map(t => `
+              <button class="variant-btn"
+                      onclick="selectVariant(${p.id},'talle','${t.replace(/'/g,"\\'")}',this)">
                 ${t}
               </button>`).join("")}
           </div>
@@ -114,31 +154,53 @@ function renderProductCard(p) {
     }
   }
 
-  const addBtnHTML = p.tieneVariantes
-    ? `<button class="btn-add" onclick="addToCartWithVariant(${p.id})">
-         <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+  const hasVariants = p.tieneVariantes;
+
+  // Hint solo para productos con variantes
+  const hintHTML = hasVariants
+    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná color${p.talles.length ? ' y talle' : ''} para continuar</div>`
+    : "";
+
+  // Botón carrito
+  const addBtnHTML = `
+    <button class="btn-add${hasVariants ? ' btn-variant-disabled' : ''}"
+            onclick="addToCartWithVariant(${p.id})"
+            ${hasVariants ? 'disabled' : ''}>
+      <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+    </button>`;
+
+  // Botón WhatsApp directo
+  const waBtnHTML = hasVariants
+    ? `<button class="btn-wa-product btn-variant-disabled"
+               onclick="return buyWithWA(${p.id})"
+               data-ready="false" data-color="" data-talle="">
+         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </button>`
-    : `<button class="btn-add" onclick="Cart.add(${p.id})">
-         <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
-       </button>`;
+    : `<a class="btn-wa-product"
+          href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null)}"
+          target="_blank">
+         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+       </a>`;
 
   return `
     <div class="product-card" data-id="${p.id}">
-      <div class="product-img">
-        ${imgHTML}
-        ${badgeHTML}
-      </div>
+      <div class="product-img">${imgHTML}${badgeHTML}</div>
       <div class="product-info">
-        <div class="category">${p.categoria}</div>
-        <h3>${p.nombre}</h3>
-        ${descHTML}
-        ${variantesHTML}
-        <div class="product-price">
-          <span class="price-main">${formatPrecio(p.precio)}</span>
-          ${oldPriceHTML}
+        <div class="product-info-top">
+          <div class="category">${p.categoria}</div>
+          <h3>${p.nombre}</h3>
+          ${descHTML}
+          ${variantesHTML}
         </div>
-        ${addBtnHTML}
+        <div class="product-info-bottom">
+          ${hintHTML}
+          <div class="product-price">
+            <span class="price-main">${formatPrecio(p.precio)}</span>
+            ${oldPriceHTML}
+          </div>
+          ${addBtnHTML}
+          ${waBtnHTML}
+        </div>
       </div>
-    </div>
-  `;
+    </div>`;
 }

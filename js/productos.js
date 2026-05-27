@@ -159,12 +159,12 @@ function renderProductCard(p) {
   if (hasVariants) {
     if (p.colores.length > 0) {
       variantesHTML += `
-        <div class="variant-group">
+        <div class="variant-group" onclick="event.stopPropagation()">
           <span class="variant-label">Color:</span>
           <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
               <button class="variant-btn${sel.color === c ? ' selected' : ''}"
-                      onclick="selectVariant(${p.id},'color','${c.replace(/'/g,"\\'")}',this)">
+                      onclick="event.stopPropagation(); selectVariant(${p.id},'color','${c.replace(/'/g,"\\'")}',this)">
                 ${c}
               </button>`).join("")}
           </div>
@@ -172,12 +172,12 @@ function renderProductCard(p) {
     }
     if (p.talles.length > 0) {
       variantesHTML += `
-        <div class="variant-group">
+        <div class="variant-group" onclick="event.stopPropagation()">
           <span class="variant-label">Talle:</span>
           <div class="variant-options" data-type="talle">
             ${p.talles.map(t => `
               <button class="variant-btn${sel.talle === t ? ' selected' : ''}"
-                      onclick="selectVariant(${p.id},'talle','${t.replace(/'/g,"\\'")}',this)">
+                      onclick="event.stopPropagation(); selectVariant(${p.id},'talle','${t.replace(/'/g,"\\'")}',this)">
                 ${t}
               </button>`).join("")}
           </div>

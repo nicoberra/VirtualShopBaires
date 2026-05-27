@@ -96,23 +96,28 @@ async function fetchHoja(nombreHoja) {
     const rows = json.table.rows;
     if (!rows) return [];
 
-    // Parsear todas las filas
+    // Estructura actual del Sheet:
+    // A(0):nombre | B(1):precio | C(2):stock | D(3):color | E(4):talle
+    // F(5):descripcion | G(6):destacado (checkbox) | H(7):descuento (precio rebajado)
+
     const rawRows = rows
       .filter(row => row.c && row.c[0] && row.c[0].v)
       .map(row => {
         const c   = row.c;
         const get = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;
-        const stockVal = get(2);
+        const stockVal   = get(2);
+        const precioBase = Number(String(get(1) || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || 0;
+        const descuento  = get(7) ? Number(String(get(7)).replace(/[^\d.,]/g, "").replace(",", ".")) : null;
         return {
           nombre:         String(get(0) || "").trim(),
-          precio:         Number(String(get(1) || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || 0,
+          precio:         descuento !== null ? descuento : precioBase,  // precio real de venta
+          precioOriginal: descuento !== null ? precioBase : null,       // tachado si hay descuento
+          badge:          descuento !== null ? "oferta" : null,
           stock:          stockVal !== false && String(stockVal).toLowerCase() !== "false",
           color:          get(3) ? String(get(3)).trim() : null,
           talle:          get(4) ? String(get(4)).trim() : null,
           descripcion:    String(get(5) || ""),
-          precioOriginal: get(6) ? Number(String(get(6)).replace(/[^\d.,]/g, "").replace(",", ".")) : null,
-          badge:          get(7) ? String(get(7)).toLowerCase() : null,
-          destacado:      String(get(8)).toLowerCase() === "si",
+          destacado:      get(6) === true,
         };
       });
 
@@ -126,7 +131,7 @@ async function fetchHoja(nombreHoja) {
           precio:         row.precio,
           precioOriginal: row.precioOriginal,
           badge:          row.badge,
-          destacado:      row.destacado,
+          destacado:      false,
           imagen:         getImagenDrive(nombreHoja, row.nombre),
           categoria:      nombreHoja,
           disponible:     true,
@@ -136,16 +141,19 @@ async function fetchHoja(nombreHoja) {
           talles:         [],
         };
       }
+      // Si cualquier fila tiene destacado marcado, el producto es destacado
+      if (row.destacado) grouped[row.nombre].destacado = true;
+
       if (row.color || row.talle) {
         grouped[row.nombre].tieneVariantes = true;
         grouped[row.nombre].variantes.push({
-          color:  row.color,
-          talle:  row.talle,
-          precio: row.precio,
-          stock:  row.stock,
+          color:          row.color,
+          talle:          row.talle,
+          precio:         row.precio,
+          precioOriginal: row.precioOriginal,
+          stock:          row.stock,
         });
       } else {
-        // Sin variantes: checkbox desmarcado = ocultar
         if (!row.stock) grouped[row.nombre].disponible = false;
       }
     });

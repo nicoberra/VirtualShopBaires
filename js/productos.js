@@ -54,6 +54,19 @@ function updateVariantState(pid) {
 
   if (complete && variant) {
     if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
+
+    // Actualizar precio tachado
+    const oldPriceEl = card.querySelector('.price-old');
+    if (variant.precioOriginal) {
+      if (oldPriceEl) {
+        oldPriceEl.textContent = formatPrecio(variant.precioOriginal);
+      } else {
+        priceEl?.insertAdjacentHTML('afterend', `<span class="price-old">${formatPrecio(variant.precioOriginal)}</span>`);
+      }
+    } else {
+      if (oldPriceEl) oldPriceEl.remove();
+    }
+
     const inStock = variant.stock;
     if (addBtn) {
       addBtn.disabled = !inStock;
@@ -119,9 +132,10 @@ function renderProductCard(p) {
     (!p.talles.length  || v.talle === sel.talle)
   ) : null;
 
-  const inStock      = currentVariant ? currentVariant.stock : true;
-  const displayPrice = currentVariant ? currentVariant.precio : p.precio;
-  const btnDisabled  = hasVariants && (!alreadyComplete || !inStock);
+  const inStock        = currentVariant ? currentVariant.stock : true;
+  const displayPrice   = currentVariant ? currentVariant.precio : p.precio;
+  const displayOldPrice = currentVariant ? currentVariant.precioOriginal : p.precioOriginal;
+  const btnDisabled    = hasVariants && (!alreadyComplete || !inStock);
 
   const badgeHTML = (p.badge === "new" || p.badge === "nuevo")
     ? `<span class="badge-new">NUEVO</span>`
@@ -129,8 +143,8 @@ function renderProductCard(p) {
     ? `<span class="badge-offer">OFERTA</span>`
     : "";
 
-  const oldPriceHTML = p.precioOriginal
-    ? `<span class="price-old">${formatPrecio(p.precioOriginal)}</span>`
+  const oldPriceHTML = displayOldPrice
+    ? `<span class="price-old">${formatPrecio(displayOldPrice)}</span>`
     : "";
 
   const imgHTML = p.imagen

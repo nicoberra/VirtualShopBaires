@@ -52,7 +52,7 @@ ul { list-style: none; }
 
 /* ===== HEADER ===== */
 header {
-  background: rgba(13,13,13,0.97);
+  background: #000;
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;

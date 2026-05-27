@@ -42,7 +42,7 @@ function updateVariantState(pid) {
     (!p.talles.length  || v.talle === sel.talle)
   ) : null;
 
-  const card   = document.querySelector(`.product-card[data-id="${pid}"]`);
+  const card = document.querySelector(`.product-card[data-id="${pid}"]`);
   if (!card) return;
 
   const priceEl = card.querySelector('.price-main');
@@ -50,12 +50,10 @@ function updateVariantState(pid) {
   const waBtn   = card.querySelector('.btn-wa-product');
   const hint    = card.querySelector('.variant-hint');
 
-  // Mostrar/ocultar hint
   if (hint) hint.style.display = complete ? 'none' : 'flex';
 
   if (complete && variant) {
     if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
-
     const inStock = variant.stock;
     if (addBtn) {
       addBtn.disabled = !inStock;
@@ -94,9 +92,9 @@ function addToCartWithVariant(pid) {
 }
 
 function buyWithWA(pid) {
-  const p    = PRODUCTOS.find(x => x.id === pid);
+  const p = PRODUCTOS.find(x => x.id === pid);
   if (!p) return false;
-  const card = document.querySelector(`.product-card[data-id="${pid}"]`);
+  const card  = document.querySelector(`.product-card[data-id="${pid}"]`);
   const waBtn = card?.querySelector('.btn-wa-product');
   if (!waBtn || waBtn.dataset.ready !== 'true') return false;
   const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null);
@@ -105,6 +103,26 @@ function buyWithWA(pid) {
 }
 
 function renderProductCard(p) {
+  // Pre-seleccionar opciones únicas antes de renderizar
+  if (p.tieneVariantes) {
+    if (!selectedVariants[p.id]) selectedVariants[p.id] = {};
+    if (p.colores.length === 1) selectedVariants[p.id].color = p.colores[0];
+    if (p.talles.length  === 1) selectedVariants[p.id].talle = p.talles[0];
+  }
+
+  const hasVariants     = p.tieneVariantes;
+  const alreadyComplete = hasVariants && isVariantComplete(p.id);
+  const sel             = selectedVariants[p.id] || {};
+
+  const currentVariant = alreadyComplete ? p.variantes.find(v =>
+    (!p.colores.length || v.color === sel.color) &&
+    (!p.talles.length  || v.talle === sel.talle)
+  ) : null;
+
+  const inStock      = currentVariant ? currentVariant.stock : true;
+  const displayPrice = currentVariant ? currentVariant.precio : p.precio;
+  const btnDisabled  = hasVariants && (!alreadyComplete || !inStock);
+
   const badgeHTML = (p.badge === "new" || p.badge === "nuevo")
     ? `<span class="badge-new">NUEVO</span>`
     : (p.badge === "offer" || p.badge === "oferta")
@@ -123,16 +141,15 @@ function renderProductCard(p) {
     ? `<p class="product-desc">${p.descripcion}</p>`
     : "";
 
-  // Variantes sin selección por defecto
   let variantesHTML = "";
-  if (p.tieneVariantes) {
+  if (hasVariants) {
     if (p.colores.length > 0) {
       variantesHTML += `
         <div class="variant-group">
           <span class="variant-label">Color:</span>
           <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
-              <button class="variant-btn"
+              <button class="variant-btn${sel.color === c ? ' selected' : ''}"
                       onclick="selectVariant(${p.id},'color','${c.replace(/'/g,"\\'")}',this)">
                 ${c}
               </button>`).join("")}
@@ -145,7 +162,7 @@ function renderProductCard(p) {
           <span class="variant-label">Talle:</span>
           <div class="variant-options" data-type="talle">
             ${p.talles.map(t => `
-              <button class="variant-btn"
+              <button class="variant-btn${sel.talle === t ? ' selected' : ''}"
                       onclick="selectVariant(${p.id},'talle','${t.replace(/'/g,"\\'")}',this)">
                 ${t}
               </button>`).join("")}
@@ -154,26 +171,26 @@ function renderProductCard(p) {
     }
   }
 
-  const hasVariants = p.tieneVariantes;
-
-  // Hint solo para productos con variantes
-  const hintHTML = hasVariants
-    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná color${p.talles.length ? ' y talle' : ''} para continuar</div>`
+  const needsColor = p.colores.length > 1;
+  const needsTalle = p.talles.length > 1;
+  const hintText   = [needsColor ? 'color' : '', needsTalle ? 'talle' : ''].filter(Boolean).join(' y ');
+  const hintHTML   = hasVariants && !alreadyComplete
+    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná ${hintText} para continuar</div>`
     : "";
 
-  // Botón carrito
   const addBtnHTML = `
-    <button class="btn-add${hasVariants ? ' btn-variant-disabled' : ''}"
+    <button class="btn-add${btnDisabled ? ' btn-variant-disabled' : ''}"
             onclick="addToCartWithVariant(${p.id})"
-            ${hasVariants ? 'disabled' : ''}>
+            ${btnDisabled ? 'disabled' : ''}>
       <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
     </button>`;
 
-  // Botón WhatsApp directo
   const waBtnHTML = hasVariants
-    ? `<button class="btn-wa-product btn-variant-disabled"
+    ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}"
                onclick="return buyWithWA(${p.id})"
-               data-ready="false" data-color="" data-talle="">
+               data-ready="${!btnDisabled ? 'true' : 'false'}"
+               data-color="${sel.color || ''}"
+               data-talle="${sel.talle || ''}">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </button>`
     : `<a class="btn-wa-product"
@@ -195,7 +212,7 @@ function renderProductCard(p) {
         <div class="product-info-bottom">
           ${hintHTML}
           <div class="product-price">
-            <span class="price-main">${formatPrecio(p.precio)}</span>
+            <span class="price-main">${formatPrecio(displayPrice)}</span>
             ${oldPriceHTML}
           </div>
           ${addBtnHTML}

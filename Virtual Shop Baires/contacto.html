@@ -1,0 +1,254 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contacto | Virtual Shop Baires</title>
+  <meta name="description" content="Contactate con Virtual Shop Baires - Estamos para ayudarte" />
+  <link rel="icon" href="Logo negro.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>🚚 Envíos a todo el país</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <a href="index.html" class="logo"><img src="Logo negro.png" alt="Virtual Shop Baires" /></a>
+      <nav class="header-nav">
+        <a href="index.html">Inicio</a>
+        <a href="productos.html">Productos</a>
+        <a href="nosotros.html">Nosotros</a>
+        <a href="contacto.html" class="active">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+        <button class="cart-action-btn" onclick="openCart()"><i class="fa-solid fa-cart-shopping"></i><span id="cart-label">0</span></button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<nav>
+  <div class="container">
+    <div class="nav-inner" id="nav-inner">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html">Productos</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html" class="active">Contacto</a>
+    </div>
+  </div>
+</nav>
+
+<div style="margin-bottom: 0;">
+  <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" class="map-link-block" style="border-radius:0;">
+    <iframe
+      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3283.!2d-58.5074!3d-34.6266!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMzTCsDM3JzM2LjAiUyA1OMKwMzAnMjYuNiJX!5e0!3m2!1ses!2sar!4v1"
+      width="100%" height="320" style="border:0; pointer-events:none;" allowfullscreen="" loading="lazy">
+    </iframe>
+    <div class="map-overlay">
+      <i class="fa-solid fa-location-dot"></i>
+      <span>Marcelo Gamboa 6306, Versalles, Buenos Aires — Tocá para abrir en Maps</span>
+    </div>
+  </a>
+</div>
+
+<div class="container">
+  <div class="contact-layout">
+
+    <div class="contact-info-card">
+      <h2>Información de contacto</h2>
+
+      <a href="https://wa.me/5491149457266" target="_blank" class="contact-item contact-item-link contact-item-wa">
+        <div class="ci-icon"><i class="fa-brands fa-whatsapp"></i></div>
+        <div>
+          <h4>WhatsApp</h4>
+          <p style="color:var(--green-wa);">+54 9 11 4945-7266</p>
+        </div>
+      </a>
+      <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="contact-item contact-item-link">
+        <div class="ci-icon"><i class="fa-brands fa-instagram"></i></div>
+        <div>
+          <h4>Instagram</h4>
+          <p>@virtualshopbaires</p>
+        </div>
+      </a>
+      <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="contact-item contact-item-link">
+        <div class="ci-icon"><i class="fa-brands fa-facebook-f"></i></div>
+        <div>
+          <h4>Facebook</h4>
+          <p>Virtualshopbaires</p>
+        </div>
+      </a>
+      <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" class="contact-item contact-item-link">
+        <div class="ci-icon"><i class="fa-brands fa-tiktok"></i></div>
+        <div>
+          <h4>TikTok</h4>
+          <p>@virtualshopbaires</p>
+        </div>
+      </a>
+      <div class="contact-item">
+        <div class="ci-icon"><i class="fa-solid fa-envelope"></i></div>
+        <div>
+          <h4>Email</h4>
+          <p>virtualshopbuenosaires@gmail.com</p>
+        </div>
+      </div>
+      <div class="contact-item">
+        <div class="ci-icon"><i class="fa-solid fa-clock"></i></div>
+        <div>
+          <h4>Horario de atención</h4>
+          <p>Lunes a Viernes: 9:00 – 17:00</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="contact-form-card">
+      <h2>Envianos un mensaje</h2>
+      <form id="contact-form" onsubmit="submitForm(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nombre">Nombre *</label>
+            <input type="text" id="nombre" required placeholder="Tu nombre" />
+          </div>
+          <div class="form-group">
+            <label for="apellido">Apellido *</label>
+            <input type="text" id="apellido" required placeholder="Tu apellido" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" id="email" required placeholder="tu@email.com" />
+          </div>
+          <div class="form-group">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" placeholder="+54 9 11 ..." />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="asunto">Asunto *</label>
+          <select id="asunto" required>
+            <option value="">Seleccioná un asunto</option>
+            <option value="consulta">Consulta sobre producto</option>
+            <option value="pedido">Estado de mi pedido</option>
+            <option value="devolucion">Devolución / garantía</option>
+            <option value="envio">Consulta de envío</option>
+            <option value="otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="mensaje">Mensaje *</label>
+          <textarea id="mensaje" required placeholder="Escribí tu consulta acá..."></textarea>
+        </div>
+        <button type="submit" class="btn-submit">Enviar mensaje →</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="Logo negro.png" alt="Virtual Shop Baires" class="logo-footer" />
+        <p>Importadores de productos tecnológicos y accesorios. Envíos a todo el país.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="productos.html">Productos</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Categorías</h4>
+        <ul>
+          <li><a href="productos.html?cat=Mascotas">Mascotas</a></li>
+          <li><a href="productos.html?cat=Bazar y cocina">Bazar y cocina</a></li>
+          <li><a href="productos.html?cat=Muebles para el hogar">Muebles</a></li>
+          <li><a href="productos.html?cat=Deportes y fitness">Deportes</a></li>
+          <li><a href="productos.html?cat=Jardín y aire libre">Jardín</a></li>
+          <li><a href="productos.html?cat=Piletas">Piletas</a></li>
+          <li><a href="productos.html?cat=Playa">Playa</a></li>
+          <li><a href="productos.html">Ver todas →</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <div class="footer-contact-inner">
+          <ul>
+            <li><i class="fa-solid fa-location-dot"></i> <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" style="color:inherit;">Marcelo Gamboa 6306, Versalles, Buenos Aires</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+5491149457266">+54 9 11 4945-7266</a></li>
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:virtualshopbuenosaires@gmail.com">virtualshopbuenosaires@gmail.com</a></li>
+            <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
+          </ul>
+          <div class="social-links-vertical">
+            <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
+  <span class="wa-float-pulse"></span><i class="fa-brands fa-whatsapp"></i>
+</a>
+
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 Tu carrito</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro con MercadoPago</div>
+  </div>
+</div>
+
+<script src="js/productos.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/main.js"></script>
+<script>
+  function submitForm(e) {
+    e.preventDefault();
+    showToast("✅ Mensaje enviado. Te contactaremos pronto.");
+    e.target.reset();
+  }
+</script>
+</body>
+</html>

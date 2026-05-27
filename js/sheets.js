@@ -51,23 +51,55 @@ async function cargarImagenes() {
   }
 }
 
-// Dado un nombre de categoría y nombre de producto, devuelve la URL de imagen
+// Busca una clave en un mapa sin distinguir mayúsculas/minúsculas
+function _findKey(map, name) {
+  if (!map) return null;
+  if (map[name] !== undefined) return name;
+  return Object.keys(map).find(k => k.toLowerCase() === name.toLowerCase()) || null;
+}
+
+// Devuelve la URL de la imagen principal (primera) de un producto.
 function getImagenDrive(categoria, nombre) {
   const catMap = IMAGE_MAP[categoria];
   if (!catMap) return null;
 
-  // Buscar coincidencia exacta primero
-  if (catMap[nombre]) {
-    return `https://lh3.googleusercontent.com/d/${catMap[nombre]}`;
+  const key = _findKey(catMap, nombre);
+  if (!key) return null;
+
+  const val = catMap[key];
+
+  // Imagen directa (string)
+  if (typeof val === "string") {
+    return `https://lh3.googleusercontent.com/d/${val}`;
   }
 
-  // Buscar sin distinguir mayúsculas/minúsculas
-  const key = Object.keys(catMap).find(
-    k => k.toLowerCase() === nombre.toLowerCase()
-  );
-  if (key) return `https://lh3.googleusercontent.com/d/${catMap[key]}`;
+  // Array de imágenes numeradas → devolver la primera
+  if (Array.isArray(val) && val.length > 0) {
+    return `https://lh3.googleusercontent.com/d/${val[0]}`;
+  }
 
   return null;
+}
+
+// Devuelve un array con todas las URLs de imágenes de un producto.
+function getImagenesDrive(categoria, nombre) {
+  const catMap = IMAGE_MAP[categoria];
+  if (!catMap) return [];
+
+  const key = _findKey(catMap, nombre);
+  if (!key) return [];
+
+  const val = catMap[key];
+
+  if (typeof val === "string") {
+    return [`https://lh3.googleusercontent.com/d/${val}`];
+  }
+
+  if (Array.isArray(val)) {
+    return val.map(id => `https://lh3.googleusercontent.com/d/${id}`);
+  }
+
+  return [];
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +165,7 @@ async function fetchHoja(nombreHoja) {
           badge:          row.badge,
           destacado:      false,
           imagen:         getImagenDrive(nombreHoja, row.nombre),
+          imagenes:       getImagenesDrive(nombreHoja, row.nombre),
           categoria:      nombreHoja,
           disponible:     true,
           tieneVariantes: false,

@@ -214,7 +214,7 @@ function renderProductCard(p) {
        </a>`;
 
   return `
-    <div class="product-card" data-id="${p.id}">
+    <div class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})">
       <div class="product-img">${imgHTML}${badgeHTML}</div>
       <div class="product-info">
         <div class="product-info-top">
@@ -223,7 +223,7 @@ function renderProductCard(p) {
           ${descHTML}
           ${variantesHTML}
         </div>
-        <div class="product-info-bottom">
+        <div class="product-info-bottom" onclick="event.stopPropagation()">
           ${hintHTML}
           <div class="product-price">
             <span class="price-main">${formatPrecio(displayPrice)}</span>
@@ -234,4 +234,222 @@ function renderProductCard(p) {
         </div>
       </div>
     </div>`;
+}
+
+// ─── MODAL DE PRODUCTO ───────────────────────────────────────────────────────
+
+function openProductModal(pid) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return;
+
+  // Sincronizar estado de variantes con la tarjeta
+  if (p.tieneVariantes && !selectedVariants[pid]) selectedVariants[pid] = {};
+  if (p.tieneVariantes && p.colores.length === 1) selectedVariants[pid].color = p.colores[0];
+  if (p.tieneVariantes && p.talles.length  === 1) selectedVariants[pid].talle = p.talles[0];
+
+  const sel             = selectedVariants[pid] || {};
+  const alreadyComplete = p.tieneVariantes && isVariantComplete(pid);
+  const currentVariant  = alreadyComplete ? p.variantes.find(v =>
+    (!p.colores.length || v.color === sel.color) &&
+    (!p.talles.length  || v.talle === sel.talle)
+  ) : null;
+
+  const displayPrice    = currentVariant ? currentVariant.precio : p.precio;
+  const displayOldPrice = currentVariant ? currentVariant.precioOriginal : p.precioOriginal;
+  const inStock         = currentVariant ? currentVariant.stock : true;
+  const btnDisabled     = p.tieneVariantes && (!alreadyComplete || !inStock);
+
+  const imgs    = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  const imgHTML = imgs.length
+    ? `<img src="${imgs[0]}" alt="${p.nombre}" id="modal-img-main" />
+       ${imgs.length > 1 ? `
+         <button class="modal-img-prev" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left"></i></button>
+         <button class="modal-img-next" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right"></i></button>
+         <div class="modal-img-dots" id="modal-img-dots">
+           ${imgs.map((_,i) => `<span class="modal-dot${i===0?' active':''}" onclick="modalGaleriaGo(${p.id},${i})"></span>`).join('')}
+         </div>` : ''}
+       `
+    : `<i class="fa-solid fa-box-open" style="font-size:5rem; color:var(--red);" id="modal-img-main"></i>`;
+
+  const badgeHTML = (p.badge === "oferta" || p.badge === "offer")
+    ? `<span class="badge-offer" style="position:absolute;top:12px;left:12px;">OFERTA</span>`
+    : (p.badge === "nuevo" || p.badge === "new")
+    ? `<span class="badge-new" style="position:absolute;top:12px;left:12px;">NUEVO</span>`
+    : "";
+
+  let variantesHTML = "";
+  if (p.tieneVariantes) {
+    if (p.colores.length > 0) {
+      variantesHTML += `
+        <div class="variant-group">
+          <span class="variant-label">Color:</span>
+          <div class="variant-options">
+            ${p.colores.map(c => `
+              <button class="variant-btn${sel.color === c ? ' selected' : ''}"
+                      onclick="selectVariantModal(${pid},'color','${c.replace(/'/g,"\\'")}',this)">
+                ${c}
+              </button>`).join("")}
+          </div>
+        </div>`;
+    }
+    if (p.talles.length > 0) {
+      variantesHTML += `
+        <div class="variant-group">
+          <span class="variant-label">Talle:</span>
+          <div class="variant-options">
+            ${p.talles.map(t => `
+              <button class="variant-btn${sel.talle === t ? ' selected' : ''}"
+                      onclick="selectVariantModal(${pid},'talle','${t.replace(/'/g,"\\'")}',this)">
+                ${t}
+              </button>`).join("")}
+          </div>
+        </div>`;
+    }
+  }
+
+  const needsColor = p.colores.length > 1;
+  const needsTalle = p.talles.length > 1;
+  const hintText   = [needsColor ? 'color' : '', needsTalle ? 'talle' : ''].filter(Boolean).join(' y ');
+  const hintHTML   = p.tieneVariantes && !alreadyComplete
+    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná ${hintText} para continuar</div>`
+    : "";
+
+  const oldPriceHTML = displayOldPrice
+    ? `<span class="price-old" id="modal-old-price">${formatPrecio(displayOldPrice)}</span>` : "";
+
+  const addBtnHTML = `
+    <button class="btn-add${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-add"
+            onclick="addToCartFromModal(${pid})" ${btnDisabled ? 'disabled' : ''}>
+      <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+    </button>`;
+
+  const waBtnHTML = p.tieneVariantes
+    ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-wa"
+               onclick="return buyWithWAModal(${pid})"
+               data-ready="${!btnDisabled ? 'true' : 'false'}"
+               data-color="${sel.color || ''}" data-talle="${sel.talle || ''}">
+         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+       </button>`
+    : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null)}" target="_blank">
+         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+       </a>`;
+
+  const modal = document.getElementById('product-modal');
+  modal.innerHTML = `
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
+      <div class="modal-img" style="position:relative;">${imgHTML}${badgeHTML}</div>
+      <div class="modal-info">
+        <div class="category" style="font-size:0.75rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${p.categoria}</div>
+        <h2 class="modal-nombre">${p.nombre}</h2>
+        ${p.descripcion ? `<p class="modal-desc">${p.descripcion}</p>` : ""}
+        <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
+        ${hintHTML}
+        <div class="modal-price">
+          <span class="price-main" id="modal-price">${formatPrecio(displayPrice)}</span>
+          ${oldPriceHTML}
+        </div>
+        <div class="modal-actions">
+          ${addBtnHTML}
+          ${waBtnHTML}
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('product-modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function selectVariantModal(pid, type, value, btn) {
+  selectVariant(pid, type, value, btn);           // actualiza selectedVariants y la tarjeta
+  updateModalVariantState(pid);                    // actualiza el modal
+}
+
+function updateModalVariantState(pid) {
+  const p   = PRODUCTOS.find(x => x.id === pid);
+  if (!p)   return;
+  const sel      = selectedVariants[pid] || {};
+  const complete = isVariantComplete(pid);
+  const variant  = complete ? p.variantes.find(v =>
+    (!p.colores.length || v.color === sel.color) &&
+    (!p.talles.length  || v.talle === sel.talle)
+  ) : null;
+
+  const priceEl    = document.getElementById('modal-price');
+  const oldPriceEl = document.getElementById('modal-old-price');
+  const addBtn     = document.getElementById('modal-btn-add');
+  const waBtn      = document.getElementById('modal-btn-wa');
+  const hint       = document.querySelector('#product-modal .variant-hint');
+
+  if (hint) hint.style.display = complete ? 'none' : 'flex';
+
+  if (complete && variant) {
+    if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
+    if (variant.precioOriginal) {
+      if (oldPriceEl) oldPriceEl.textContent = formatPrecio(variant.precioOriginal);
+      else priceEl?.insertAdjacentHTML('afterend', `<span class="price-old" id="modal-old-price">${formatPrecio(variant.precioOriginal)}</span>`);
+    } else { if (oldPriceEl) oldPriceEl.remove(); }
+
+    const inStock = variant.stock;
+    if (addBtn) { addBtn.disabled = !inStock; addBtn.classList.toggle('btn-variant-disabled', !inStock); }
+    if (waBtn)  { waBtn.classList.toggle('btn-variant-disabled', !inStock); waBtn.dataset.ready = inStock ? 'true' : 'false'; waBtn.dataset.color = sel.color || ''; waBtn.dataset.talle = sel.talle || ''; }
+  } else {
+    if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
+    if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
+  }
+}
+
+function addToCartFromModal(pid) {
+  addToCartWithVariant(pid);
+  closeProductModal();
+}
+
+function buyWithWAModal(pid) {
+  const waBtn = document.getElementById('modal-btn-wa');
+  if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  const text = getWAText(
+    PRODUCTOS.find(x => x.id === pid)?.nombre || '',
+    waBtn.dataset.color || null,
+    waBtn.dataset.talle || null
+  );
+  window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
+  return false;
+}
+
+function closeProductModal() {
+  document.getElementById('product-modal').classList.remove('open');
+  document.body.style.overflow = '';
+  _galeriaIdx = 0;
+}
+
+// ─── GALERÍA DE IMÁGENES EN MODAL ────────────────────────────────────────────
+
+let _galeriaIdx = 0;
+
+function modalGaleria(pid, dir) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return;
+  const imgs = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  if (imgs.length <= 1) return;
+  _galeriaIdx = (_galeriaIdx + dir + imgs.length) % imgs.length;
+  _actualizarGaleria(imgs);
+}
+
+function modalGaleriaGo(pid, idx) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return;
+  const imgs = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  _galeriaIdx = idx;
+  _actualizarGaleria(imgs);
+}
+
+function _actualizarGaleria(imgs) {
+  const imgEl  = document.getElementById('modal-img-main');
+  const dotsEl = document.getElementById('modal-img-dots');
+  if (imgEl && imgEl.tagName === 'IMG') imgEl.src = imgs[_galeriaIdx];
+  if (dotsEl) {
+    dotsEl.querySelectorAll('.modal-dot').forEach((d, i) =>
+      d.classList.toggle('active', i === _galeriaIdx)
+    );
+  }
 }

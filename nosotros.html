@@ -1,0 +1,218 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nosotros | Virtual Shop Baires</title>
+  <meta name="description" content="Conocé nuestra historia - Virtual Shop Baires, importadores de productos de calidad" />
+  <link rel="icon" href="Logo negro.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>🚚 Envíos a todo el país</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <a href="index.html" class="logo"><img src="Logo negro.png" alt="Virtual Shop Baires" /></a>
+      <nav class="header-nav">
+        <a href="index.html">Inicio</a>
+        <a href="productos.html">Productos</a>
+        <a href="nosotros.html" class="active">Nosotros</a>
+        <a href="contacto.html">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+        <button class="cart-action-btn" onclick="openCart()"><i class="fa-solid fa-cart-shopping"></i><span id="cart-label">0</span></button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<nav>
+  <div class="container">
+    <div class="nav-inner" id="nav-inner">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html">Productos</a>
+      <a href="nosotros.html" class="active">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero" style="text-align:center;">
+  <div class="container">
+    <h1>¿Quiénes <span style="color:var(--red);">Somos</span>?</h1>
+    <p>La historia detrás de Virtual Shop Baires</p>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="about-section">
+    <div class="about-img-placeholder"><img src="nosotros.png" alt="Virtual Shop Baires" style="width:100%; height:100%; object-fit:cover; border-radius:var(--radius);" /></div>
+    <div class="about-text">
+      <h2>Tu tienda de importados<br><span>de confianza</span></h2>
+      <p>Virtual Shop Baires nació con una misión clara: acercar los mejores productos importados a precios justos a todos los argentinos. Somos una empresa 100% argentina con años de experiencia en importación y comercialización de tecnología y accesorios.</p>
+      <p>Trabajamos directamente con fabricantes y distribuidores del exterior para garantizar la autenticidad y calidad de cada producto. Sin intermediarios, sin sorpresas.</p>
+      <p>Nuestro equipo selecciona cuidadosamente cada artículo del catálogo para asegurarse de que cumple con los más altos estándares antes de ponerse a la venta.</p>
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:24px;">
+        <a href="productos.html" class="btn-primary">Ver productos →</a>
+        <a href="contacto.html" class="btn-secondary">Contactanos</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-item"><h3>+500</h3><p>Productos en catálogo</p></div>
+    <div class="stat-item"><h3>+5.000</h3><p>Clientes satisfechos</p></div>
+    <div class="stat-item"><h3>+3</h3><p>Años de experiencia</p></div>
+    <div class="stat-item"><h3>24/7</h3><p>Soporte al cliente</p></div>
+  </div>
+
+  <div class="section-header" style="margin-top:20px;">
+    <span class="section-label">Lo que nos define</span>
+    <h2>Nuestros <span>Valores</span></h2>
+  </div>
+  <div class="values-grid">
+    <div class="value-card">
+      <div class="icon"><i class="fa-solid fa-shield-halved"></i></div>
+      <h3>Confianza</h3>
+      <p>Operamos con total transparencia. Cada producto que vendemos es auténtico y está respaldado por garantía.</p>
+    </div>
+    <div class="value-card">
+      <div class="icon"><i class="fa-solid fa-bolt"></i></div>
+      <h3>Agilidad</h3>
+      <p>Procesamos y despachamos tus pedidos rápido para que recibas tus productos en el menor tiempo posible.</p>
+    </div>
+    <div class="value-card">
+      <div class="icon"><i class="fa-solid fa-tag"></i></div>
+      <h3>Precio justo</h3>
+      <p>Importamos directamente para ofrecerte los mejores precios del mercado sin sacrificar calidad.</p>
+    </div>
+    <div class="value-card">
+      <div class="icon"><i class="fa-solid fa-headset"></i></div>
+      <h3>Atención personalizada</h3>
+      <p>Cada cliente es único. Nuestro equipo está disponible para asesorarte y resolver cualquier duda.</p>
+    </div>
+    <div class="value-card">
+      <div class="icon"><i class="fa-solid fa-map-location-dot"></i></div>
+      <h3>Alcance nacional</h3>
+      <p>Enviamos a todos los rincones de Argentina. Donde estés, llegamos con los mejores productos.</p>
+    </div>
+    <div class="value-card">
+      <div class="icon"><i class="fa-solid fa-handshake"></i></div>
+      <h3>Responsabilidad</h3>
+      <p>Comprometidos con prácticas comerciales responsables y el bienestar de nuestra comunidad.</p>
+    </div>
+  </div>
+
+</div>
+
+<section class="cta-section">
+  <div class="container">
+    <h2>¿Tenés alguna pregunta?</h2>
+    <p>Nuestro equipo está listo para ayudarte con cualquier consulta.</p>
+    <div class="cta-buttons">
+      <a href="contacto.html" class="btn-primary">Contactanos →</a>
+      <a href="https://wa.me/5491149457266" target="_blank" class="btn-wa"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="Logo negro.png" alt="Virtual Shop Baires" class="logo-footer" />
+        <p>Importadores de productos tecnológicos y accesorios. Envíos a todo el país.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="productos.html">Productos</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Categorías</h4>
+        <ul>
+          <li><a href="productos.html?cat=Mascotas">Mascotas</a></li>
+          <li><a href="productos.html?cat=Bazar y cocina">Bazar y cocina</a></li>
+          <li><a href="productos.html?cat=Muebles para el hogar">Muebles</a></li>
+          <li><a href="productos.html?cat=Deportes y fitness">Deportes</a></li>
+          <li><a href="productos.html?cat=Jardín y aire libre">Jardín</a></li>
+          <li><a href="productos.html?cat=Piletas">Piletas</a></li>
+          <li><a href="productos.html?cat=Playa">Playa</a></li>
+          <li><a href="productos.html">Ver todas →</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <div class="footer-contact-inner">
+          <ul>
+            <li><i class="fa-solid fa-location-dot"></i> <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" style="color:inherit;">Marcelo Gamboa 6306, Versalles, Buenos Aires</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+5491149457266">+54 9 11 4945-7266</a></li>
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:virtualshopbuenosaires@gmail.com">virtualshopbuenosaires@gmail.com</a></li>
+            <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
+          </ul>
+          <div class="social-links-vertical">
+            <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
+  <span class="wa-float-pulse"></span><i class="fa-brands fa-whatsapp"></i>
+</a>
+
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 Tu carrito</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro con MercadoPago</div>
+  </div>
+</div>
+
+<script src="js/productos.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Shop Baires | Importador de Productos</title>
+  <meta name="description" content="Virtual Shop Baires - Los mejores productos importados al mejor precio. Electrónica, accesorios, computación y más." />
+  <link rel="icon" href="Logo negro.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="container">
+    <span>🚚 Envíos a todo el país</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <a href="index.html" class="logo">
+        <img src="Logo negro.png" alt="Virtual Shop Baires" />
+      </a>
+      <nav class="header-nav">
+        <a href="index.html" class="active">Inicio</a>
+        <a href="productos.html">Productos</a>
+        <a href="nosotros.html">Nosotros</a>
+        <a href="contacto.html">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+        <button class="cart-action-btn" onclick="openCart()">
+          <i class="fa-solid fa-cart-shopping"></i>
+          <span id="cart-label">0</span>
+        </button>
+        <button class="hamburger" id="hamburger" aria-label="Menú">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- SEARCH STRIP (debajo de la línea roja) -->
+<div class="search-strip">
+  <form class="search-bar" id="search-form">
+    <input type="text" id="search-input" placeholder="Buscar productos..." />
+    <button type="submit">Buscar</button>
+  </form>
+</div>
+
+<!-- NAV MOBILE -->
+<nav>
+  <div class="container">
+    <div class="nav-inner" id="nav-inner">
+      <a href="index.html" class="active">Inicio</a>
+      <a href="productos.html">Productos</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero hero-banner">
+  <img src="Banner camion.png" alt="Virtual Shop Baires" class="hero-banner-img" />
+  <div class="hero-banner-overlay">
+    <div class="hero-content" style="padding-top: 260px;">
+      <h1 class="hero-slogan">
+        Productos importados<br>
+        <span class="highlight">al mejor precio</span>
+      </h1>
+      <div class="hero-buttons">
+        <a href="productos.html" class="btn-primary">Productos →</a>
+        <a href="https://wa.me/5491149457266" target="_blank" class="btn-wa"><i class="fa-brands fa-whatsapp"></i> Consultar por WhatsApp</a>
+        <a href="contacto.html" class="btn-secondary">Contactanos</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- CATEGORÍAS -->
+<section class="categories">
+  <div class="container">
+    <div class="section-header">
+      <h2 style="color:var(--white);">Categorías</h2>
+    </div>
+    <div class="categories-grid" id="categories-grid">
+      <div style="grid-column:1/-1; text-align:center; padding:40px 0; color:var(--gray-light);">
+        <i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:var(--red);"></i>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTOS DESTACADOS -->
+<section class="products-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Lo más vendido</span>
+      <h2>Productos <span>Destacados</span></h2>
+      <p>Los favoritos de nuestros clientes</p>
+    </div>
+    <div class="products-grid" id="featured-products"></div>
+    <div style="text-align:center; margin-top: 8px;">
+      <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
+    </div>
+  </div>
+</section>
+
+<!-- POR QUÉ ELEGIRNOS -->
+<section class="why-us">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">¿Por qué nosotros?</span>
+      <h2>Tu compra, <span>garantizada</span></h2>
+      <p>Razones para elegir Virtual Shop Baires</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="wi"><i class="fa-solid fa-shield-halved"></i></div>
+        <h3>Garantía en todos los productos</h3>
+        <p>Importamos directamente de fábrica. Cada producto tiene garantía y soporte post-venta.</p>
+      </div>
+      <div class="why-card">
+        <div class="wi"><i class="fa-solid fa-tag"></i></div>
+        <h3>Los mejores precios del mercado</h3>
+        <p>Sin intermediarios. Compramos en volumen y trasladamos el ahorro directamente a vos.</p>
+      </div>
+      <div class="why-card">
+        <div class="wi"><i class="fa-solid fa-truck-fast"></i></div>
+        <h3>Entrega rápida a todo el país</h3>
+        <p>Despachamos el mismo día o al siguiente. Llegamos a cualquier provincia de Argentina.</p>
+      </div>
+      <div class="why-card">
+        <div class="wi"><i class="fa-brands fa-whatsapp"></i></div>
+        <h3>Atención por WhatsApp</h3>
+        <p>Respondemos rápido. Consultá stock, precios y seguimiento de tu pedido al instante.</p>
+      </div>
+      <div class="why-card">
+        <div class="wi"><i class="fa-solid fa-box-open"></i></div>
+        <h3>Productos importados</h3>
+        <p>Seleccionamos cada artículo del catálogo para garantizar la más alta calidad antes de la venta.</p>
+      </div>
+      <div class="why-card">
+        <div class="wi"><i class="fa-solid fa-users"></i></div>
+        <h3>Miles de clientes satisfechos</h3>
+        <p>Más de 5.000 compradores nos eligieron. Calidad y confianza respaldadas por resultados.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CÓMO COMPRAR -->
+<section class="how-to-buy">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Simple y rápido</span>
+      <h2>¿Cómo <span>comprar</span>?</h2>
+      <p>En 4 pasos tenés tu producto en camino</p>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Elegí tu producto</h3>
+        <p>Navegá por nuestras categorías y encontrá lo que necesitás entre más de 500 productos importados.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Agregá al carrito</h3>
+        <p>Seleccioná los productos que quieras y agrupalos en tu carrito antes de pagar.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Comprás</h3>
+        <p>Pagá de forma segura con MercadoPago: tarjeta, débito, efectivo o en cuotas sin interés.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">4</div>
+        <h3>Recibís en tu casa</h3>
+        <p>Despachamos rápido. Recibís tu pedido con seguimiento en tiempo real a todo el país.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="container">
+    <h2>¿Listo para comprar?</h2>
+    <p>Explorá más de 500 productos importados disponibles ahora mismo.</p>
+    <div class="cta-buttons">
+      <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
+      <a href="https://wa.me/5491149457266" target="_blank" class="btn-wa"><i class="fa-brands fa-whatsapp"></i> Hablar por WhatsApp</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="Logo negro.png" alt="Virtual Shop Baires" class="logo-footer" />
+        <p>Importadores de productos tecnológicos y accesorios. Los mejores precios del mercado con envío a todo el país.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="productos.html">Productos</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Categorías</h4>
+        <ul>
+          <li><a href="productos.html?cat=Mascotas">Mascotas</a></li>
+          <li><a href="productos.html?cat=Bazar y cocina">Bazar y cocina</a></li>
+          <li><a href="productos.html?cat=Muebles para el hogar">Muebles</a></li>
+          <li><a href="productos.html?cat=Deportes y fitness">Deportes</a></li>
+          <li><a href="productos.html?cat=Jardín y aire libre">Jardín</a></li>
+          <li><a href="productos.html?cat=Piletas">Piletas</a></li>
+          <li><a href="productos.html?cat=Playa">Playa</a></li>
+          <li><a href="productos.html">Ver todas →</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <div class="footer-contact-inner">
+          <ul>
+            <li><i class="fa-solid fa-location-dot"></i> <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" style="color:inherit;">Marcelo Gamboa 6306, Versalles, Buenos Aires</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+5491149457266">+54 9 11 4945-7266</a></li>
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:virtualshopbuenosaires@gmail.com">virtualshopbuenosaires@gmail.com</a></li>
+            <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
+          </ul>
+          <div class="social-links-vertical">
+            <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- WHATSAPP FLOTANTE -->
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
+  <span class="wa-float-pulse"></span>
+  <i class="fa-brands fa-whatsapp"></i>
+</a>
+
+<!-- CART PANEL -->
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 Tu carrito</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total">
+      <span>Total</span>
+      <span id="cart-total">$0</span>
+    </div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro con MercadoPago</div>
+  </div>
+</div>
+
+<script src="js/sheets.js"></script>
+<script src="js/productos.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/main.js"></script>
+<script>
+  // Mapa de categoría → ícono FA (para las más comunes)
+  const CAT_ICONS = {
+    "mascotas":                        "fa-paw",
+    "bazar y cocina":                  "fa-utensils",
+    "muebles para el hogar":           "fa-couch",
+    "muebles":                         "fa-couch",
+    "adornos y decoracion para el hogar": "fa-star",
+    "adornos y decoración para el hogar": "fa-star",
+    "adornos y decoracion":            "fa-star",
+    "adornos y decoración":            "fa-star",
+    "decoracion":                      "fa-star",
+    "decoración":                      "fa-star",
+    "jardin y aire libre":             "fa-leaf",
+    "jardín y aire libre":             "fa-leaf",
+    "baños":                           "fa-bath",
+    "banos":                           "fa-bath",
+    "cajas y organizadores":           "fa-boxes-stacked",
+    "organizadores":                   "fa-boxes-stacked",
+    "deportes y fitness":              "fa-dumbbell",
+    "deportes":                        "fa-dumbbell",
+    "industrias y oficinas":           "fa-briefcase",
+    "oficinas":                        "fa-briefcase",
+    "herramientas":                    "fa-screwdriver-wrench",
+    "belleza y cuidado personal":      "fa-spa",
+    "belleza":                         "fa-spa",
+    "inflables":                       "fa-wind",
+    "piletas":                         "fa-water-ladder",
+    "playa":                           "fa-umbrella-beach",
+    "tecnologia":                      "fa-microchip",
+    "tecnología":                      "fa-microchip",
+    "electronica":                     "fa-plug",
+    "electrónica":                     "fa-plug",
+    "juguetes":                        "fa-gamepad",
+    "ropa":                            "fa-shirt",
+    "calzado":                         "fa-shoe-prints",
+    "iluminacion":                     "fa-lightbulb",
+    "iluminación":                     "fa-lightbulb",
+    "automotor":                       "fa-car",
+    "cocina":                          "fa-utensils",
+  };
+
+  function getIconForCat(nombre) {
+    const key = nombre.toLowerCase().trim();
+    return CAT_ICONS[key] || "fa-tag";
+  }
+
+  function buildCategoriesGrid(categorias) {
+    // "Todos" viene primero pero no lo mostramos en la grilla; lo reemplazamos por "Ver todo" al final
+    const cats = categorias.filter(c => c !== "Todos");
+    const html = cats.map(cat => `
+      <a href="productos.html?cat=${encodeURIComponent(cat)}" class="category-card">
+        <div class="cat-icon"><i class="fa-solid ${getIconForCat(cat)}"></i></div>
+        <h3>${cat}</h3>
+      </a>
+    `).join("") + `
+      <a href="productos.html" class="category-card">
+        <div class="cat-icon"><i class="fa-solid fa-grid-2"></i></div>
+        <h3>Ver todo</h3>
+      </a>`;
+    document.getElementById("categories-grid").innerHTML = html;
+  }
+
+  cargarProductos().then(productos => {
+    // Construir grilla de categorías dinámicamente
+    buildCategoriesGrid(CATEGORIAS);
+
+    // Mostrar productos destacados
+    const destacados = productos.filter(p => p.destacado);
+    document.getElementById("featured-products").innerHTML = destacados.length
+      ? destacados.map(renderProductCard).join("")
+      : `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--gray-light);">
+           <p>No hay productos destacados todavía.</p>
+         </div>`;
+  });
+</script>
+</body>
+</html>

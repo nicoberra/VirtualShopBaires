@@ -1,0 +1,270 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Productos | Virtual Shop Baires</title>
+  <meta name="description" content="Catálogo completo de productos importados - Virtual Shop Baires" />
+  <link rel="icon" href="Logo negro.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>🚚 Envíos a todo el país</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <a href="index.html" class="logo"><img src="Logo negro.png" alt="Virtual Shop Baires" /></a>
+      <nav class="header-nav">
+        <a href="index.html">Inicio</a>
+        <a href="productos.html" class="active">Productos</a>
+        <a href="nosotros.html">Nosotros</a>
+        <a href="contacto.html">Contacto</a>
+      </nav>
+      <div class="header-actions">
+        <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+        <button class="cart-action-btn" onclick="openCart()"><i class="fa-solid fa-cart-shopping"></i><span id="cart-label">0</span></button>
+        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="search-strip">
+  <form class="search-bar" id="search-form">
+    <input type="text" id="search-input" placeholder="Buscar productos..." />
+    <button type="submit">Buscar</button>
+  </form>
+</div>
+
+<nav>
+  <div class="container">
+    <div class="nav-inner" id="nav-inner">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html" class="active">Productos</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-hero" style="text-align:center;">
+  <div class="container">
+    <h1 id="page-title">Todos los <span style="color:var(--red);">Productos</span></h1>
+    <p>Encontrá los mejores productos importados al mejor precio</p>
+  </div>
+</div>
+
+<div class="shop-page">
+  <div class="container">
+    <div class="shop-layout">
+
+      <aside class="sidebar">
+        <h3>Categoría</h3>
+        <div class="filter-group" id="cat-filters"></div>
+
+        <h3 style="margin-top:20px;">Precio máximo</h3>
+        <div class="filter-group">
+          <input type="range" id="price-range" min="0" max="70000" step="500" value="70000" oninput="updatePriceDisplay(this.value)" />
+          <div class="price-display" id="price-display">Hasta $70.000</div>
+        </div>
+
+        <h3 style="margin-top:20px;">Tipo</h3>
+        <div class="filter-group">
+          <label><input type="checkbox" id="filter-new" onchange="applyFilters()"> Solo nuevos</label>
+          <label><input type="checkbox" id="filter-offer" onchange="applyFilters()"> Solo ofertas</label>
+        </div>
+
+        <button class="btn-filter" onclick="resetFilters()" style="margin-top:8px;">Limpiar filtros</button>
+      </aside>
+
+      <div>
+        <div class="sort-bar">
+          <span class="results-count" id="results-count"></span>
+          <select id="sort-select" onchange="applyFilters()">
+            <option value="default">Ordenar: Destacados</option>
+            <option value="price-asc">Precio: menor a mayor</option>
+            <option value="price-desc">Precio: mayor a menor</option>
+            <option value="name">Nombre A–Z</option>
+          </select>
+        </div>
+        <div class="products-grid" id="products-container"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="Logo negro.png" alt="Virtual Shop Baires" class="logo-footer" />
+        <p>Importadores de productos tecnológicos y accesorios. Envíos a todo el país.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="productos.html">Productos</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Categorías</h4>
+        <ul>
+          <li><a href="productos.html?cat=Mascotas">Mascotas</a></li>
+          <li><a href="productos.html?cat=Bazar y cocina">Bazar y cocina</a></li>
+          <li><a href="productos.html?cat=Muebles para el hogar">Muebles</a></li>
+          <li><a href="productos.html?cat=Deportes y fitness">Deportes</a></li>
+          <li><a href="productos.html?cat=Jardín y aire libre">Jardín</a></li>
+          <li><a href="productos.html?cat=Piletas">Piletas</a></li>
+          <li><a href="productos.html?cat=Playa">Playa</a></li>
+          <li><a href="productos.html">Ver todas →</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <div class="footer-contact-inner">
+          <ul>
+            <li><i class="fa-solid fa-location-dot"></i> <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" style="color:inherit;">Marcelo Gamboa 6306, Versalles, Buenos Aires</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+5491149457266">+54 9 11 4945-7266</a></li>
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:virtualshopbuenosaires@gmail.com">virtualshopbuenosaires@gmail.com</a></li>
+            <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
+          </ul>
+          <div class="social-links-vertical">
+            <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
+  <span class="wa-float-pulse"></span><i class="fa-brands fa-whatsapp"></i>
+</a>
+
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 Tu carrito</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro con MercadoPago</div>
+  </div>
+</div>
+
+<script src="js/sheets.js"></script>
+<script src="js/productos.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/main.js"></script>
+<script>
+  let selectedCat = "Todos";
+  let maxPrice = 999999;
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("cat")) selectedCat = params.get("cat");
+  if (params.get("buscar")) document.getElementById("search-input").value = params.get("buscar");
+
+  function buildCatFilters() {
+    document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => `
+      <label>
+        <input type="radio" name="cat" value="${cat}" ${cat === selectedCat ? "checked" : ""}
+          onchange="selectedCat=this.value; applyFilters()">
+        ${cat}
+      </label>
+    `).join("");
+  }
+
+  function updatePriceDisplay(val) {
+    maxPrice = parseInt(val);
+    document.getElementById("price-display").textContent = `Hasta $${parseInt(val).toLocaleString("es-AR")}`;
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const sort = document.getElementById("sort-select").value;
+    const onlyNew = document.getElementById("filter-new").checked;
+    const onlyOffer = document.getElementById("filter-offer").checked;
+    const buscar = (document.getElementById("search-input").value || "").toLowerCase();
+
+    let results = PRODUCTOS.filter(p => {
+      if (selectedCat !== "Todos" && p.categoria !== selectedCat) return false;
+      if (p.precio > maxPrice) return false;
+      if (onlyNew && p.badge !== "new" && p.badge !== "nuevo") return false;
+      if (onlyOffer && p.badge !== "offer" && p.badge !== "oferta") return false;
+      if (buscar && !p.nombre.toLowerCase().includes(buscar) && !p.categoria.toLowerCase().includes(buscar) && !p.descripcion.toLowerCase().includes(buscar)) return false;
+      return true;
+    });
+
+    if (sort === "price-asc") results.sort((a, b) => a.precio - b.precio);
+    else if (sort === "price-desc") results.sort((a, b) => b.precio - a.precio);
+    else if (sort === "name") results.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    else results.sort((a, b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0));
+
+    document.getElementById("results-count").textContent = `${results.length} producto${results.length !== 1 ? "s" : ""}`;
+    document.getElementById("products-container").innerHTML = results.length
+      ? results.map(renderProductCard).join("")
+      : `<div style="grid-column:1/-1;text-align:center;padding:80px 0;color:var(--gray-light);">
+           <i class="fa-solid fa-magnifying-glass" style="font-size:2.5rem; color:var(--red);"></i>
+           <p style="margin-top:16px;">No se encontraron productos con esos filtros.</p>
+         </div>`;
+  }
+
+  function resetFilters() {
+    selectedCat = "Todos";
+    maxPrice = 999999;
+    document.getElementById("price-range").value = document.getElementById("price-range").max;
+    document.getElementById("price-display").textContent = "Todos los precios";
+    document.getElementById("filter-new").checked = false;
+    document.getElementById("filter-offer").checked = false;
+    document.getElementById("sort-select").value = "default";
+    document.getElementById("search-input").value = "";
+    buildCatFilters();
+    applyFilters();
+  }
+
+  // Cargar productos desde Google Sheets y luego inicializar filtros
+  cargarProductos().then(() => {
+    // Ajustar precio máximo dinámicamente
+    const maxP = Math.max(...PRODUCTOS.map(p => p.precio), 0);
+    const rangeEl = document.getElementById("price-range");
+    rangeEl.max = maxP;
+    rangeEl.value = maxP;
+    maxPrice = maxP;
+    document.getElementById("price-display").textContent = "Todos los precios";
+    buildCatFilters();
+    applyFilters();
+  });
+</script>
+</body>
+</html>

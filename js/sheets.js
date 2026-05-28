@@ -58,12 +58,8 @@ function _findKey(map, name) {
   return Object.keys(map).find(k => k.toLowerCase() === name.toLowerCase()) || null;
 }
 
-// Convierte un fileId de Drive a URL de imagen confiable
-function driveUrl(fileId) {
-  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
-}
-
 // Devuelve la URL de la imagen principal (primera) de un producto.
+// El Apps Script ya devuelve URLs completas — no hay conversión.
 function getImagenDrive(categoria, nombre) {
   const catMap = IMAGE_MAP[categoria];
   if (!catMap) return null;
@@ -73,11 +69,8 @@ function getImagenDrive(categoria, nombre) {
 
   const val = catMap[key];
 
-  // Imagen directa (string)
-  if (typeof val === "string") return driveUrl(val);
-
-  // Array de imágenes numeradas → devolver la primera
-  if (Array.isArray(val) && val.length > 0) return driveUrl(val[0]);
+  if (typeof val === "string") return val;
+  if (Array.isArray(val) && val.length > 0) return val[0];
 
   return null;
 }
@@ -92,8 +85,8 @@ function getImagenesDrive(categoria, nombre) {
 
   const val = catMap[key];
 
-  if (typeof val === "string") return [driveUrl(val)];
-  if (Array.isArray(val)) return val.map(driveUrl);
+  if (typeof val === "string") return [val];
+  if (Array.isArray(val)) return val;
 
   return [];
 }

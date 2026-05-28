@@ -2,28 +2,29 @@
 //  APPS SCRIPT — Mapa de imágenes desde Google Drive
 //
 //  ESTRUCTURA DEL DRIVE:
-//
 //  📁 Carpeta raíz (FOLDER_ID)
-//    📁 Mascotas                    ← mismo nombre que la pestaña del Sheet
-//      📁 Arnes para perros         ← subcarpeta con el nombre exacto del producto
-//          🖼️ 1.jpg                 ← imágenes numeradas: 1, 2, 3...
+//    📁 Mascotas
+//      📁 Arnes para perros   ← mismo nombre que columna A del Sheet
+//          🖼️ 1.jpg           ← numeradas: 1, 2, 3...
 //          🖼️ 2.jpg
-//          🖼️ 3.jpg
-//      🖼️ Cama para mascotas.jpg    ← o imagen directa si solo hay una foto
+//      🖼️ Cama.jpg            ← imagen directa si tiene una sola foto
 //
-//  RETORNA JSON:
+//  RETORNA JSON con URLs listas para usar:
 //  {
 //    "Mascotas": {
-//      "Arnes para perros": ["fileId1", "fileId2", "fileId3"],
-//      "Cama para mascotas": "fileId"
+//      "Arnes para perros": ["https://...", "https://..."],
+//      "Cama": "https://..."
 //    }
 //  }
 //
-//  CÓMO ACTUALIZAR DESPUÉS DE CAMBIOS:
-//  Implementar → Administrar implementaciones → lápiz → Nueva versión → Implementar
+//  PARA ACTUALIZAR: Implementar → Administrar → lápiz → Nueva versión → Implementar
 // ============================================================
 
 const FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
+
+function getImgUrl(file) {
+  return "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w800";
+}
 
 function doGet() {
   try {
@@ -36,36 +37,39 @@ function doGet() {
       const catName   = catFolder.getName().trim();
       result[catName] = {};
 
-      // ── Archivos directos en la categoría (imagen única, sin subcarpeta) ──
+      // Archivos directos en la categoría (producto con una sola imagen)
       const directFiles = catFolder.getFiles();
       while (directFiles.hasNext()) {
         const file     = directFiles.next();
         const fileName = file.getName().replace(/\.[^/.]+$/, "").trim();
-        result[catName][fileName] = file.getId();
+        result[catName][fileName] = getImgUrl(file);
       }
 
-      // ── Subcarpetas = productos con múltiples imágenes numeradas ──────────
+      // Subcarpetas = productos con múltiples imágenes numeradas
       const productFolders = catFolder.getFolders();
       while (productFolders.hasNext()) {
         const productFolder = productFolders.next();
         const productName   = productFolder.getName().trim();
 
-        // Recopilar archivos y ordenarlos numéricamente por nombre
         const filesArr = [];
         const varFiles = productFolder.getFiles();
         while (varFiles.hasNext()) {
           const f = varFiles.next();
-          filesArr.push({ name: f.getName(), id: f.getId() });
+          filesArr.push({ name: f.getName(), url: getImgUrl(f) });
         }
 
-        // Ordenar: 1.jpg < 2.jpg < 10.jpg (orden numérico)
+        // Ordenar numéricamente: 1 < 2 < 10
         filesArr.sort((a, b) => {
           const na = parseInt(a.name) || 0;
           const nb = parseInt(b.name) || 0;
           return na !== nb ? na - nb : a.name.localeCompare(b.name);
         });
 
-        result[catName][productName] = filesArr.map(f => f.id);
+        if (filesArr.length === 1) {
+          result[catName][productName] = filesArr[0].url;
+        } else if (filesArr.length > 1) {
+          result[catName][productName] = filesArr.map(f => f.url);
+        }
       }
     }
 

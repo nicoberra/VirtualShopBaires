@@ -1298,7 +1298,7 @@ footer {
   .topbar .container span:nth-child(2),
   .topbar .container span:nth-child(4),
   .topbar .container span:nth-child(5) { display: none; }
-  .topbar-camion { height: 80%; bottom: 10%; animation-duration: 10s; }
+  .topbar-camion { display: block; position: absolute; bottom: 10%; left: 0; height: 80%; width: auto; object-fit: contain; pointer-events: none; animation: camionPasa 10s linear infinite; z-index: 0; }
 
   /* Hero banner */
   .hero-banner { min-height: 340px; }

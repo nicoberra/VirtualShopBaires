@@ -37,7 +37,9 @@ ul { list-style: none; }
   color: var(--white);
   font-size: 0.82rem;
   font-weight: 600;
-  padding: 7px 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
   letter-spacing: 0.2px;
   position: relative;
   overflow: hidden;
@@ -55,15 +57,14 @@ ul { list-style: none; }
 
 @keyframes camionPasa {
   from { transform: translateX(110vw); }
-  to   { transform: translateX(-260px); }
+  to   { transform: translateX(-300px); }
 }
 .topbar-camion {
   position: absolute;
   bottom: 0;
   left: 0;
-  height: 130%;
+  height: 100%;
   width: auto;
-  object-fit: contain;
   pointer-events: none;
   animation: camionPasa 14s linear infinite;
   z-index: 0;

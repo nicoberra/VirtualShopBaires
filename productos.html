@@ -197,14 +197,23 @@
   if (params.get("cat")) selectedCat = params.get("cat");
   if (params.get("buscar")) document.getElementById("search-input").value = params.get("buscar");
 
+  const CAT_EXTERNAL = { "herramientas": "https://sanou.com.ar" };
+
   function buildCatFilters() {
-    document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => `
-      <label>
+    document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => {
+      const extUrl = CAT_EXTERNAL[cat.toLowerCase().trim()];
+      if (extUrl) {
+        return `<label style="cursor:pointer;" onclick="window.open('${extUrl}','_blank')">
+          <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem;color:var(--red);"></i>
+          ${cat} <small style="color:var(--red);">↗</small>
+        </label>`;
+      }
+      return `<label>
         <input type="radio" name="cat" value="${cat}" ${cat === selectedCat ? "checked" : ""}
           onchange="selectedCat=this.value; applyFilters()">
         ${cat}
-      </label>
-    `).join("");
+      </label>`;
+    }).join("");
   }
 
   function updatePriceDisplay(val) {

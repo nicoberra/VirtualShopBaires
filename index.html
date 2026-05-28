@@ -344,15 +344,24 @@
     return CAT_ICONS[key] || "fa-tag";
   }
 
+  // Categorías que redirigen a otro sitio
+  const CAT_EXTERNAL = {
+    "herramientas": "https://sanou.com.ar"
+  };
+
   function buildCategoriesGrid(categorias) {
     // "Todos" viene primero pero no lo mostramos en la grilla; lo reemplazamos por "Ver todo" al final
     const cats = categorias.filter(c => c !== "Todos");
-    const html = cats.map(cat => `
-      <a href="productos.html?cat=${encodeURIComponent(cat)}" class="category-card">
+    const html = cats.map(cat => {
+      const externalUrl = CAT_EXTERNAL[cat.toLowerCase().trim()];
+      const href   = externalUrl ? externalUrl : `productos.html?cat=${encodeURIComponent(cat)}`;
+      const target = externalUrl ? ' target="_blank"' : '';
+      return `
+      <a href="${href}"${target} class="category-card">
         <div class="cat-icon"><i class="fa-solid ${getIconForCat(cat)}"></i></div>
         <h3>${cat}</h3>
-      </a>
-    `).join("") + `
+      </a>`;
+    }).join("") + `
       <a href="productos.html" class="category-card">
         <div class="cat-icon"><i class="fa-solid fa-grid-2"></i></div>
         <h3>Ver todo</h3>

@@ -39,6 +39,8 @@ ul { list-style: none; }
   font-weight: 600;
   padding: 7px 0;
   letter-spacing: 0.2px;
+  position: relative;
+  overflow: hidden;
 }
 .topbar .container {
   display: flex;
@@ -46,8 +48,26 @@ ul { list-style: none; }
   align-items: center;
   gap: 28px;
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 .topbar a { color: var(--white); opacity: 0.9; }
+
+@keyframes camionPasa {
+  from { transform: translateX(110vw); }
+  to   { transform: translateX(-220px); }
+}
+.topbar-camion {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 100%;
+  width: auto;
+  object-fit: contain;
+  pointer-events: none;
+  animation: camionPasa 14s linear infinite;
+  z-index: 0;
+}
 .topbar a:hover { opacity: 1; }
 
 /* ===== HEADER ===== */

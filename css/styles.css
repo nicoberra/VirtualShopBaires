@@ -1292,13 +1292,13 @@ footer {
   .header-actions .si-fb { display: none; }
   .header-actions .si-ig { display: flex; }
 
-  /* Topbar: una sola línea, sin "Respuesta rápida" */
-  .topbar { padding: 5px 0; }
+  /* Topbar: una sola línea con camión visible */
+  .topbar { padding: 0; height: 48px; display: flex; align-items: center; }
   .topbar .container { flex-direction: row; gap: 12px; font-size: 0.72rem; }
   .topbar .container span:nth-child(2),
   .topbar .container span:nth-child(4),
   .topbar .container span:nth-child(5) { display: none; }
-  .topbar-camion { height: 140%; }
+  .topbar-camion { height: 80%; bottom: 10%; animation-duration: 10s; }
 
   /* Hero banner */
   .hero-banner { min-height: 340px; }

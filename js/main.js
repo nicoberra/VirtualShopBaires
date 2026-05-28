@@ -1,13 +1,13 @@
-// Ocultar buscador al hacer scroll
+// Ocultar buscador solo al bajar, mostrar al subir
 let lastScroll = 0;
 window.addEventListener("scroll", () => {
   const strip = document.querySelector(".search-strip");
   if (!strip) return;
   const current = window.scrollY;
-  if (current > 60) {
-    strip.classList.add("hidden");
-  } else {
-    strip.classList.remove("hidden");
+  if (current > lastScroll && current > 80) {
+    strip.classList.add("hidden");   // scrolleando hacia abajo
+  } else if (current < lastScroll) {
+    strip.classList.remove("hidden"); // scrolleando hacia arriba
   }
   lastScroll = current;
 });

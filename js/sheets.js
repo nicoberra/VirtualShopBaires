@@ -58,6 +58,11 @@ function _findKey(map, name) {
   return Object.keys(map).find(k => k.toLowerCase() === name.toLowerCase()) || null;
 }
 
+// Convierte un fileId de Drive a URL de imagen confiable
+function driveUrl(fileId) {
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w600`;
+}
+
 // Devuelve la URL de la imagen principal (primera) de un producto.
 function getImagenDrive(categoria, nombre) {
   const catMap = IMAGE_MAP[categoria];
@@ -69,14 +74,10 @@ function getImagenDrive(categoria, nombre) {
   const val = catMap[key];
 
   // Imagen directa (string)
-  if (typeof val === "string") {
-    return `https://lh3.googleusercontent.com/d/${val}`;
-  }
+  if (typeof val === "string") return driveUrl(val);
 
   // Array de imágenes numeradas → devolver la primera
-  if (Array.isArray(val) && val.length > 0) {
-    return `https://lh3.googleusercontent.com/d/${val[0]}`;
-  }
+  if (Array.isArray(val) && val.length > 0) return driveUrl(val[0]);
 
   return null;
 }
@@ -91,13 +92,8 @@ function getImagenesDrive(categoria, nombre) {
 
   const val = catMap[key];
 
-  if (typeof val === "string") {
-    return [`https://lh3.googleusercontent.com/d/${val}`];
-  }
-
-  if (Array.isArray(val)) {
-    return val.map(id => `https://lh3.googleusercontent.com/d/${id}`);
-  }
+  if (typeof val === "string") return [driveUrl(val)];
+  if (Array.isArray(val)) return val.map(driveUrl);
 
   return [];
 }

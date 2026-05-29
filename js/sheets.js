@@ -31,7 +31,7 @@
 
 const SHEET_ID        = "1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw";
 const DRIVE_FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwaQe4JKKlKEjgwBcyyhH4-MzUGSH-w56NDKAPGDYdz99cYF2ie1UA72DpPMtLLxxig6w/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS-UBfke2GiPSuEwhPTbivnbP4b3S3GAYm22qXPtxe68ORtHdRgaQnTDD13EK-jjgV_w/exec";
 
 let PRODUCTOS  = [];
 let CATEGORIAS = ["Todos"];

@@ -37,7 +37,7 @@ ul { list-style: none; }
   color: var(--white);
   font-size: 1rem;
   font-weight: 700;
-  height: 52px;
+  height: 36px;
   display: flex;
   align-items: center;
   letter-spacing: 0.2px;

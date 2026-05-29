@@ -473,6 +473,8 @@ nav { display: none; }
 .category-card .cat-icon { font-size: 2rem; margin-bottom: 10px; position: relative; color: var(--red); }
 .category-card h3 { font-size: 0.92rem; font-weight: 700; color: var(--white); position: relative; }
 .category-card p { font-size: 0.78rem; color: var(--gray); margin-top: 4px; position: relative; }
+.cat-external { background-color: var(--black-3); justify-content: flex-end; gap: 0; padding-bottom: 16px; }
+.cat-external h3 { background: rgba(0,0,0,0.55); padding: 4px 10px; border-radius: 6px; }
 
 /* ===== PRODUCTS SECTION ===== */
 .products-section {

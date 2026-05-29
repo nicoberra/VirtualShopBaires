@@ -5,10 +5,11 @@ function formatPrecio(n) {
   return "$" + n.toLocaleString("es-AR");
 }
 
-function getWAText(nombre, color, talle) {
+function getWAText(nombre, color, talle, precio) {
   let msg = `Hola! Me interesa: *${nombre}*`;
   if (color) msg += ` - Color: ${color}`;
   if (talle) msg += ` - Talle: ${talle}`;
+  if (precio) msg += ` - Precio: ${formatPrecio(precio)}`;
   msg += `. ¿Está disponible?`;
   return encodeURIComponent(msg);
 }
@@ -77,9 +78,10 @@ function updateVariantState(pid) {
     }
     if (waBtn) {
       waBtn.classList.toggle('btn-variant-disabled', !inStock);
-      waBtn.dataset.ready = inStock ? 'true' : 'false';
-      waBtn.dataset.color = sel.color || '';
-      waBtn.dataset.talle = sel.talle || '';
+      waBtn.dataset.ready  = inStock ? 'true' : 'false';
+      waBtn.dataset.color  = sel.color || '';
+      waBtn.dataset.talle  = sel.talle || '';
+      waBtn.dataset.precio = variant.precio || '';
     }
   } else {
     if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
@@ -110,7 +112,8 @@ function buyWithWA(pid) {
   const card  = document.querySelector(`.product-card[data-id="${pid}"]`);
   const waBtn = card?.querySelector('.btn-wa-product');
   if (!waBtn || waBtn.dataset.ready !== 'true') return false;
-  const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null);
+  const precio = waBtn.dataset.precio ? Number(waBtn.dataset.precio) : p.precio;
+  const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null, precio);
   window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
   return false;
 }
@@ -204,11 +207,12 @@ function renderProductCard(p) {
                onclick="return buyWithWA(${p.id})"
                data-ready="${!btnDisabled ? 'true' : 'false'}"
                data-color="${sel.color || ''}"
-               data-talle="${sel.talle || ''}">
+               data-talle="${sel.talle || ''}"
+               data-precio="${displayPrice || ''}">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </button>`
     : `<a class="btn-wa-product"
-          href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null)}"
+          href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null, p.precio)}"
           target="_blank">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </a>`;
@@ -392,7 +396,7 @@ function updateModalVariantState(pid) {
 
     const inStock = variant.stock;
     if (addBtn) { addBtn.disabled = !inStock; addBtn.classList.toggle('btn-variant-disabled', !inStock); }
-    if (waBtn)  { waBtn.classList.toggle('btn-variant-disabled', !inStock); waBtn.dataset.ready = inStock ? 'true' : 'false'; waBtn.dataset.color = sel.color || ''; waBtn.dataset.talle = sel.talle || ''; }
+    if (waBtn)  { waBtn.classList.toggle('btn-variant-disabled', !inStock); waBtn.dataset.ready = inStock ? 'true' : 'false'; waBtn.dataset.color = sel.color || ''; waBtn.dataset.talle = sel.talle || ''; waBtn.dataset.precio = variant.precio || ''; }
   } else {
     if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
     if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
@@ -407,10 +411,13 @@ function addToCartFromModal(pid) {
 function buyWithWAModal(pid) {
   const waBtn = document.getElementById('modal-btn-wa');
   if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  const p2    = PRODUCTOS.find(x => x.id === pid);
+  const precio = waBtn.dataset.precio ? Number(waBtn.dataset.precio) : p2?.precio;
   const text = getWAText(
-    PRODUCTOS.find(x => x.id === pid)?.nombre || '',
+    p2?.nombre || '',
     waBtn.dataset.color || null,
-    waBtn.dataset.talle || null
+    waBtn.dataset.talle || null,
+    precio
   );
   window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
   return false;

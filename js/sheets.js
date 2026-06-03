@@ -122,7 +122,16 @@ async function fetchHoja(nombreHoja) {
     // F(5):descripcion | G(6):destacado (checkbox) | H(7):descuento (precio rebajado)
 
     const rawRows = rows
-      .filter(row => row.c && row.c[0] && row.c[0].v)
+      .filter(row => {
+        if (!row.c || !row.c[0] || !row.c[0].v) return false;
+        const nombre = String(row.c[0].v).trim().toLowerCase();
+        // Ignorar filas donde el nombre es igual al nombre de la hoja (encabezado/título)
+        if (nombre === nombreHoja.toLowerCase()) return false;
+        // Ignorar filas donde el precio (col B) es 0 o vacío y no hay descripción (son encabezados)
+        const tieneContenido = row.c[1]?.v || row.c[5]?.v;
+        if (!tieneContenido) return false;
+        return true;
+      })
       .map(row => {
         const c   = row.c;
         const get = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;

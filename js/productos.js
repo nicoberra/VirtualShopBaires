@@ -24,8 +24,35 @@ function isVariantComplete(pid) {
 }
 
 function selectVariant(pid, type, value, btn) {
+  const p = PRODUCTOS.find(x => x.id === pid);
   if (!selectedVariants[pid]) selectedVariants[pid] = {};
   selectedVariants[pid][type] = value;
+
+  // Si la otra dimensión seleccionada ya no es válida para esta nueva selección, limpiarla
+  if (p && p.tieneVariantes) {
+    const otroTipo = type === 'color' ? 'talle' : 'color';
+    const otroValor = selectedVariants[pid][otroTipo];
+    if (otroValor) {
+      const combinacionValida = p.variantes.some(v =>
+        v[type] === value && v[otroTipo] === otroValor && v.stock
+      );
+      if (!combinacionValida) {
+        selectedVariants[pid][otroTipo] = null;
+        // Desmarcar visualmente el botón de la otra dimensión
+        const card = document.querySelector(`.product-card[data-id="${pid}"]`);
+        if (card) {
+          card.querySelectorAll(`[data-type="${otroTipo}"] .variant-btn`)
+            .forEach(b => b.classList.remove('selected'));
+        }
+        const modal = document.getElementById('product-modal');
+        if (modal && modal.classList.contains('open')) {
+          modal.querySelectorAll(`[data-type="${otroTipo}"] .variant-btn`)
+            .forEach(b => b.classList.remove('selected'));
+        }
+      }
+    }
+  }
+
   btn.closest('.variant-options').querySelectorAll('.variant-btn')
     .forEach(b => b.classList.remove('selected'));
   btn.classList.add('selected');
@@ -74,6 +101,18 @@ function updateVariantState(pid) {
   const hint    = card.querySelector('.variant-hint');
 
   if (hint) hint.style.display = complete ? 'none' : 'flex';
+
+  // Mostrar precio parcial: si solo hay un talle seleccionado, buscar precio de ese talle
+  // (útil cuando el precio varía por talle y el color no importa para el precio)
+  if (!complete && priceEl) {
+    let parcialVariant = null;
+    if (sel.talle && !sel.color) {
+      parcialVariant = p.variantes.find(v => v.talle === sel.talle && v.stock);
+    } else if (sel.color && !sel.talle) {
+      parcialVariant = p.variantes.find(v => v.color === sel.color && v.stock);
+    }
+    if (parcialVariant) priceEl.textContent = formatPrecio(parcialVariant.precio);
+  }
 
   if (complete && variant) {
     if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
@@ -427,6 +466,17 @@ function updateModalVariantState(pid) {
   }
 
   if (hint) hint.style.display = complete ? 'none' : 'flex';
+
+  // Mostrar precio parcial en modal también
+  if (!complete && priceEl) {
+    let parcialVariant = null;
+    if (sel.talle && !sel.color) {
+      parcialVariant = p.variantes.find(v => v.talle === sel.talle && v.stock);
+    } else if (sel.color && !sel.talle) {
+      parcialVariant = p.variantes.find(v => v.color === sel.color && v.stock);
+    }
+    if (parcialVariant) priceEl.textContent = formatPrecio(parcialVariant.precio);
+  }
 
   if (complete && variant) {
     if (priceEl) priceEl.textContent = formatPrecio(variant.precio);

@@ -177,7 +177,7 @@ function renderProductCard(p) {
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
 
   const descHTML = p.descripcion
-    ? `<p class="product-desc">${p.descripcion}</p>`
+    ? `<p class="product-desc product-desc-short">${p.descripcion}</p>`
     : "";
 
   let variantesHTML = "";

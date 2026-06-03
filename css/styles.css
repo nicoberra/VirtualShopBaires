@@ -511,7 +511,7 @@ nav { display: none; }
   font-size: 3.5rem;
   position: relative;
 }
-.product-img img { width: 100%; height: 100%; object-fit: cover; }
+.product-img img { width: 100%; height: 100%; object-fit: contain; background: #fff; padding: 16px; }
 .badge-new, .badge-offer {
   position: absolute;
   top: 10px; left: 10px;

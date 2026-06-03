@@ -46,6 +46,28 @@ function updateVariantState(pid) {
   const card = document.querySelector(`.product-card[data-id="${pid}"]`);
   if (!card) return;
 
+  // Deshabilitar talles que no existen para el color seleccionado (y viceversa)
+  if (sel.color && p.talles.length > 0) {
+    const tallesDisponibles = p.variantes
+      .filter(v => v.color === sel.color && v.stock)
+      .map(v => v.talle);
+    card.querySelectorAll('[data-type="talle"] .variant-btn').forEach(btn => {
+      const noDisponible = !tallesDisponibles.includes(btn.textContent.trim());
+      btn.classList.toggle('btn-variant-disabled', noDisponible);
+      btn.disabled = noDisponible;
+    });
+  }
+  if (sel.talle && p.colores.length > 0) {
+    const coloresDisponibles = p.variantes
+      .filter(v => v.talle === sel.talle && v.stock)
+      .map(v => v.color);
+    card.querySelectorAll('[data-type="color"] .variant-btn').forEach(btn => {
+      const noDisponible = !coloresDisponibles.includes(btn.textContent.trim());
+      btn.classList.toggle('btn-variant-disabled', noDisponible);
+      btn.disabled = noDisponible;
+    });
+  }
+
   const priceEl = card.querySelector('.price-main');
   const addBtn  = card.querySelector('.btn-add');
   const waBtn   = card.querySelector('.btn-wa-product');
@@ -385,6 +407,24 @@ function updateModalVariantState(pid) {
   const addBtn     = document.getElementById('modal-btn-add');
   const waBtn      = document.getElementById('modal-btn-wa');
   const hint       = document.querySelector('#product-modal .variant-hint');
+
+  // Deshabilitar variantes no disponibles en el modal
+  if (sel.color && p.talles.length > 0) {
+    const tallesDisponibles = p.variantes.filter(v => v.color === sel.color && v.stock).map(v => v.talle);
+    document.querySelectorAll('#product-modal [data-type="talle"] .variant-btn').forEach(btn => {
+      const noDisponible = !tallesDisponibles.includes(btn.textContent.trim());
+      btn.classList.toggle('btn-variant-disabled', noDisponible);
+      btn.disabled = noDisponible;
+    });
+  }
+  if (sel.talle && p.colores.length > 0) {
+    const coloresDisponibles = p.variantes.filter(v => v.talle === sel.talle && v.stock).map(v => v.color);
+    document.querySelectorAll('#product-modal [data-type="color"] .variant-btn').forEach(btn => {
+      const noDisponible = !coloresDisponibles.includes(btn.textContent.trim());
+      btn.classList.toggle('btn-variant-disabled', noDisponible);
+      btn.disabled = noDisponible;
+    });
+  }
 
   if (hint) hint.style.display = complete ? 'none' : 'flex';
 

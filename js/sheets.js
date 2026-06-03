@@ -219,9 +219,10 @@ async function cargarProductos() {
     let id = 1;
     PRODUCTOS = resultados.flat().map(p => ({ ...p, id: id++ }));
 
-    // 4. Categorías dinámicas (solo las que tienen productos)
+    // 4. Categorías: las que tienen productos + las del Sheet (para externas sin productos)
     const catsConProductos = [...new Set(PRODUCTOS.map(p => p.categoria))];
-    CATEGORIAS = ["Todos", ...catsConProductos];
+    const todasLasHojas    = hojas.filter(h => !catsConProductos.includes(h));
+    CATEGORIAS = ["Todos", ...catsConProductos, ...todasLasHojas];
 
     ocultarCargando();
     return PRODUCTOS;

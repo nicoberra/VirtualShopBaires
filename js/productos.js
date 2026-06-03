@@ -331,10 +331,11 @@ function openProductModal(pid) {
     ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-wa"
                onclick="return buyWithWAModal(${pid})"
                data-ready="${!btnDisabled ? 'true' : 'false'}"
-               data-color="${sel.color || ''}" data-talle="${sel.talle || ''}">
+               data-color="${sel.color || ''}" data-talle="${sel.talle || ''}"
+               data-precio="${displayPrice || ''}">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </button>`
-    : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null)}" target="_blank">
+    : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null,p.precio)}" target="_blank">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </a>`;
 

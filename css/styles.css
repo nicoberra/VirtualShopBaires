@@ -1162,6 +1162,25 @@ nav { display: none; }
 }
 .mp-logo { text-align: center; margin-top: 10px; font-size: 0.76rem; color: var(--gray); }
 
+/* ===== BACK TO TOP ===== */
+.back-to-top {
+  position: fixed;
+  bottom: 100px; right: 28px;
+  width: 42px; height: 42px;
+  background: var(--black-3);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--white);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem;
+  cursor: pointer;
+  opacity: 0; visibility: hidden;
+  transition: var(--transition);
+  z-index: 150;
+}
+.back-to-top.visible { opacity: 1; visibility: visible; }
+.back-to-top:hover { background: var(--red); border-color: var(--red); transform: translateY(-3px); }
+
 /* ===== WHATSAPP FLOATING BUTTON ===== */
 .wa-float {
   position: fixed;

@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Productos | Virtual Shop Baires</title>
   <meta name="description" content="Catálogo completo de productos importados - Virtual Shop Baires" />
+  <meta property="og:title" content="Productos | Virtual Shop Baires" />
+  <meta property="og:description" content="Catálogo completo de productos importados. Mascotas, hogar, jardín, herramientas y más." />
+  <meta property="og:image" content="https://nicoberra.github.io/VirtualShopBaires/Logo negro.png" />
+  <meta property="og:url" content="https://nicoberra.github.io/VirtualShopBaires/productos.html" />
+  <meta property="og:type" content="website" />
   <link rel="icon" href="Logo negro.png" type="image/png" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -77,9 +82,9 @@
         <div class="filter-group" id="cat-filters"></div>
 
         <h3 style="margin-top:20px;">Precio máximo</h3>
-        <div class="filter-group">
-          <input type="range" id="price-range" min="0" max="70000" step="500" value="70000" oninput="updatePriceDisplay(this.value)" />
-          <div class="price-display" id="price-display">Hasta $70.000</div>
+        <div class="filter-group" id="price-filter-group" style="opacity:0;transition:opacity 0.3s;">
+          <input type="range" id="price-range" min="0" max="999999" step="500" value="999999" oninput="updatePriceDisplay(this.value)" />
+          <div class="price-display" id="price-display">Todos los precios</div>
         </div>
 
         <h3 style="margin-top:20px;">Tipo</h3>
@@ -161,11 +166,12 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2025 Virtual Shop Baires. Todos los derechos reservados.</span>
+      <span>© <span class="copyright-year">2025</span> Virtual Shop Baires. Todos los derechos reservados.</span>
     </div>
   </div>
 </footer>
 
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver arriba"><i class="fa-solid fa-chevron-up"></i></button>
 <a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
   <span class="wa-float-pulse"></span><i class="fa-brands fa-whatsapp"></i>
 </a>
@@ -197,11 +203,9 @@
   if (params.get("cat")) selectedCat = params.get("cat");
   if (params.get("buscar")) document.getElementById("search-input").value = params.get("buscar");
 
-  const CAT_EXTERNAL = { "herramientas": "https://sanou.com.ar" };
-
   function buildCatFilters() {
     document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => {
-      const extUrl = CAT_EXTERNAL[cat.toLowerCase().trim()];
+      const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
       if (extUrl) {
         return `<label style="cursor:pointer;" onclick="window.open('${extUrl}','_blank')">
           <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem;color:var(--red);"></i>
@@ -273,6 +277,7 @@
     rangeEl.value = maxP;
     maxPrice = maxP;
     document.getElementById("price-display").textContent = "Todos los precios";
+    document.getElementById("price-filter-group").style.opacity = "1";
     buildCatFilters();
     applyFilters();
   });

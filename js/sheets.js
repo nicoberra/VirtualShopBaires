@@ -213,7 +213,10 @@ async function fetchHoja(nombreHoja) {
 // ---------------------------------------------------------------------------
 
 // Categorías que redirigen a otro sitio — NO se cargan como productos
-const CATS_EXTERNAS = ["herramientas"];
+// Fuente única de verdad: usada en sheets.js, index.html y productos.html
+const CATS_EXTERNAS = {
+  "herramientas": "https://sanou.com.ar"
+};
 
 async function cargarProductos() {
   mostrarCargando();
@@ -225,7 +228,7 @@ async function cargarProductos() {
     ]);
 
     // 2. Cargar hojas de productos (omitir categorías externas)
-    const hojasCargables = hojas.filter(h => !CATS_EXTERNAS.includes(h.toLowerCase().trim()));
+    const hojasCargables = hojas.filter(h => !Object.keys(CATS_EXTERNAS).includes(h.toLowerCase().trim()));
     const resultados = await Promise.all(hojasCargables.map(h => fetchHoja(h)));
 
     // 3. Combinar y asignar IDs (descartar productos con precio 0 sin descripción — fallback de gviz)
@@ -236,7 +239,7 @@ async function cargarProductos() {
 
     // 4. Categorías: las que tienen productos + las externas del Sheet
     const catsConProductos = [...new Set(PRODUCTOS.map(p => p.categoria))];
-    const catsExternas     = hojas.filter(h => CATS_EXTERNAS.includes(h.toLowerCase().trim()));
+    const catsExternas     = hojas.filter(h => Object.keys(CATS_EXTERNAS).includes(h.toLowerCase().trim()));
     CATEGORIAS = ["Todos", ...catsConProductos, ...catsExternas];
 
     ocultarCargando();

@@ -7,6 +7,10 @@ window.addEventListener("scroll", () => {
   } else {
     strip.classList.remove("hidden");
   }
+
+  // Botón volver arriba
+  const btn = document.getElementById("back-to-top");
+  if (btn) btn.classList.toggle("visible", window.scrollY > 300);
 });
 
 // Nav mobile toggle
@@ -41,4 +45,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (q) window.location.href = `productos.html?buscar=${encodeURIComponent(q)}`;
     });
   }
+
+  // Año dinámico copyright
+  document.querySelectorAll(".copyright-year").forEach(el => {
+    el.textContent = new Date().getFullYear();
+  });
 });

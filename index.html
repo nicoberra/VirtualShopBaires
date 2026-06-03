@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Virtual Shop Baires | Importador de Productos</title>
   <meta name="description" content="Virtual Shop Baires - Los mejores productos importados al mejor precio. Electrónica, accesorios, computación y más." />
+  <meta property="og:title" content="Virtual Shop Baires | Importador de Productos" />
+  <meta property="og:description" content="Los mejores productos importados al mejor precio. Mascotas, hogar, jardín y más. Envíos a todo el país." />
+  <meta property="og:image" content="https://nicoberra.github.io/VirtualShopBaires/Logo negro.png" />
+  <meta property="og:url" content="https://nicoberra.github.io/VirtualShopBaires/" />
+  <meta property="og:type" content="website" />
   <link rel="icon" href="Logo negro.png" type="image/png" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
@@ -263,10 +268,13 @@
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2025 Virtual Shop Baires. Todos los derechos reservados.</span>
+      <span>© <span class="copyright-year">2025</span> Virtual Shop Baires. Todos los derechos reservados.</span>
     </div>
   </div>
 </footer>
+
+<!-- VOLVER ARRIBA -->
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver arriba"><i class="fa-solid fa-chevron-up"></i></button>
 
 <!-- WHATSAPP FLOTANTE -->
 <a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
@@ -344,16 +352,11 @@
     return CAT_ICONS[key] || "fa-tag";
   }
 
-  // Categorías que redirigen a otro sitio
-  const CAT_EXTERNAL = {
-    "herramientas": "https://sanou.com.ar"
-  };
-
   function buildCategoriesGrid(categorias) {
     // "Todos" viene primero pero no lo mostramos en la grilla; lo reemplazamos por "Ver todo" al final
     const cats = categorias.filter(c => c !== "Todos");
     const html = cats.map(cat => {
-      const externalUrl = CAT_EXTERNAL[cat.toLowerCase().trim()];
+      const externalUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
       const href   = externalUrl ? externalUrl : `productos.html?cat=${encodeURIComponent(cat)}`;
       const target = externalUrl ? ' target="_blank"' : '';
       const isExt  = !!externalUrl;

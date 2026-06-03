@@ -79,8 +79,7 @@ const Cart = (() => {
       });
     }
     save();
-    showToast(`${p.nombre} agregado al carrito`);
-    openCart();
+    showToast(`✓ ${p.nombre} agregado al carrito`);
   }
 
   function remove(cartKey) {

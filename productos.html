@@ -208,8 +208,8 @@
       const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
       if (extUrl) {
         return `<label style="cursor:pointer;" onclick="window.open('${extUrl}','_blank')">
-          <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:0.75rem;color:var(--red);"></i>
-          ${cat} <small style="color:var(--red);">↗</small>
+          <input type="radio" name="cat" value="${cat}" onclick="event.preventDefault()">
+          ${cat}
         </label>`;
       }
       return `<label>

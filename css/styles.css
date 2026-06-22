@@ -318,7 +318,26 @@ nav { display: none; }
   text-align: center;
   max-width: 680px;
   margin: 0 auto;
+  padding-top: 260px;
 }
+
+/* Trust strip bajo los botones del hero */
+.hero-trust {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+.hero-trust span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.65);
+  font-weight: 600;
+}
+.hero-trust span i { color: var(--red); font-size: 0.85rem; }
 .hero-logo img { height: 120px; margin: 0 auto 28px; }
 .hero-slogan {
   font-size: 3rem;
@@ -650,6 +669,46 @@ nav { display: none; }
   border-radius: 8px;
   border: 1px solid rgba(255, 215, 0, 0.2);
 }
+
+/* ===== TESTIMONIOS ===== */
+.testimonios-section {
+  background: var(--black-2);
+  padding: 60px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.testimonios-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.testimonio-card {
+  background: var(--black-3);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: var(--transition);
+}
+.testimonio-card:hover { border-color: rgba(204,18,18,0.3); transform: translateY(-3px); }
+.testimonio-stars { color: var(--yellow); font-size: 1.1rem; letter-spacing: 2px; }
+.testimonio-text {
+  font-size: 0.9rem;
+  color: var(--gray-light);
+  line-height: 1.75;
+  flex: 1;
+  font-style: italic;
+}
+.testimonio-autor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.testimonio-autor strong { font-size: 0.88rem; color: var(--white); }
+.testimonio-autor span { font-size: 0.78rem; color: var(--gray); }
 
 /* ===== WHY US SECTION ===== */
 .why-us {
@@ -1324,6 +1383,7 @@ footer {
   .shop-layout { grid-template-columns: 1fr; }
   .sidebar { display: none; }
   .hero-banner { min-height: 420px; }
+  .testimonios-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 640px) {
@@ -1346,10 +1406,13 @@ footer {
   /* Hero banner */
   .hero-banner { min-height: 340px; }
   .hero-banner-overlay { padding: 0 0 32px; }
-  .hero-content { padding-top: 160px !important; }
+  .hero-content { padding-top: 120px; }
   .hero-slogan { font-size: 1.6rem; }
   .hero-buttons { flex-direction: column; align-items: center; gap: 10px; }
   .hero-buttons a { width: 100%; max-width: 300px; text-align: center; justify-content: center; }
+  .hero-trust { gap: 12px; }
+  .hero-trust span { font-size: 0.75rem; }
+  .testimonios-grid { grid-template-columns: 1fr; }
 
   /* Grillas */
   .categories-grid { grid-template-columns: repeat(3, 1fr); }

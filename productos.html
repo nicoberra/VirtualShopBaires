@@ -244,7 +244,24 @@
     if (sort === "price-asc") results.sort((a, b) => a.precio - b.precio);
     else if (sort === "price-desc") results.sort((a, b) => b.precio - a.precio);
     else if (sort === "name") results.sort((a, b) => a.nombre.localeCompare(b.nombre));
-    else results.sort((a, b) => (b.destacado ? 1 : 0) - (a.destacado ? 1 : 0));
+    else if (selectedCat !== "Todos") {
+      // Orden del Sheet para una categoría específica
+      results.sort((a, b) => a.id - b.id);
+    } else {
+      // Mezclar productos de distintas categorías (round-robin entre categorías)
+      const bycat = {};
+      results.forEach(p => {
+        if (!bycat[p.categoria]) bycat[p.categoria] = [];
+        bycat[p.categoria].push(p);
+      });
+      const cats = Object.keys(bycat);
+      const mixed = [];
+      const maxLen = Math.max(...cats.map(c => bycat[c].length), 0);
+      for (let i = 0; i < maxLen; i++) {
+        cats.forEach(cat => { if (bycat[cat][i]) mixed.push(bycat[cat][i]); });
+      }
+      results = mixed;
+    }
 
     document.getElementById("results-count").textContent = `${results.length} producto${results.length !== 1 ? "s" : ""}`;
     document.getElementById("products-container").innerHTML = results.length

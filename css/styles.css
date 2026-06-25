@@ -1447,9 +1447,32 @@ footer {
 
   /* Modal */
   .modal-box { flex-direction: column; max-height: 92vh; border-radius: 16px 16px 0 0; bottom: 0; top: auto; position: fixed; width: 100%; }
-  .modal-img { width: 100%; min-width: unset; height: 260px; }
-  .modal-img img { object-fit: contain; padding: 16px; }
-  #product-modal { align-items: flex-end; }
+  .modal-img { width: 100%; min-width: unset; height: 220px; }
+  .modal-img img { object-fit: contain; padding: 12px; }
+  .modal-info { padding: 18px 16px; gap: 8px; }
+  .modal-nombre { font-size: 1.1rem; }
+  #product-modal { align-items: flex-end; padding: 0; }
+
+  /* Toast — evita overflow horizontal con nombres largos */
+  .toast { white-space: normal; max-width: calc(100vw - 40px); text-align: center; }
+
+  /* Tarjetas de producto — reduce altura mínima forzada */
+  .product-info-top { min-height: 120px; }
+
+  /* Hero trust — apilar verticalmente en pantallas chicas */
+  .hero-trust { flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+
+  /* Touch targets — botones más fáciles de tocar */
+  .btn-add { padding: 13px 11px; }
+  .btn-wa-product { padding: 13px 10px; }
+}
+
+/* Pantallas muy pequeñas (iPhone SE, < 390px) */
+@media (max-width: 390px) {
+  .categories-grid { grid-template-columns: repeat(2, 1fr); }
+  .products-grid { grid-template-columns: 1fr; }
+  .hero-slogan { font-size: 1.4rem; }
+  .section-header h2 { font-size: 1.3rem; }
 }
 
 /* ===== MODAL DE PRODUCTO ===== */

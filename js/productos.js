@@ -5,12 +5,21 @@ function formatPrecio(n) {
   return "$" + n.toLocaleString("es-AR");
 }
 
-function getWAText(nombre, color, talle, precio) {
+function getProductUrl(pid) {
+  const url = new URL(window.location.href);
+  url.pathname = url.pathname.replace(/[^/]*$/, '') + 'productos.html';
+  url.search = '?id=' + pid;
+  url.hash = '';
+  return url.toString();
+}
+
+function getWAText(nombre, color, talle, precio, pid) {
   let msg = `Hola! Me interesa: *${nombre}*`;
   if (color) msg += ` - Color: ${color}`;
   if (talle) msg += ` - Talle: ${talle}`;
   if (precio) msg += ` - Precio: ${formatPrecio(precio)}`;
-  msg += `. ¿Está disponible?`;
+  if (pid) msg += `\nVer producto: ${getProductUrl(pid)}`;
+  msg += `\n¿Está disponible?`;
   return encodeURIComponent(msg);
 }
 
@@ -174,7 +183,7 @@ function buyWithWA(pid) {
   const waBtn = card?.querySelector('.btn-wa-product');
   if (!waBtn || waBtn.dataset.ready !== 'true') return false;
   const precio = waBtn.dataset.precio ? Number(waBtn.dataset.precio) : p.precio;
-  const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null, precio);
+  const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null, precio, pid);
   window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
   return false;
 }
@@ -273,7 +282,7 @@ function renderProductCard(p) {
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </button>`
     : `<a class="btn-wa-product"
-          href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null, p.precio)}"
+          href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null, p.precio, p.id)}"
           target="_blank">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </a>`;
@@ -396,7 +405,7 @@ function openProductModal(pid) {
                data-precio="${displayPrice || ''}">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </button>`
-    : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null,p.precio)}" target="_blank">
+    : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null,p.precio,pid)}" target="_blank">
          <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
        </a>`;
 
@@ -508,7 +517,8 @@ function buyWithWAModal(pid) {
     p2?.nombre || '',
     waBtn.dataset.color || null,
     waBtn.dataset.talle || null,
-    precio
+    precio,
+    pid
   );
   window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
   return false;

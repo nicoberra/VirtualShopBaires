@@ -287,6 +287,12 @@
 
   // Cargar productos desde Google Sheets y luego inicializar filtros
   cargarProductos().then(() => {
+    // Abrir producto directamente si viene un ?id= en la URL
+    const idParam = params.get("id");
+    if (idParam) {
+      const p = PRODUCTOS.find(x => x.id === parseInt(idParam));
+      if (p) openProductModal(p.id);
+    }
     // Ajustar precio máximo dinámicamente
     const maxP = Math.max(...PRODUCTOS.map(p => p.precio), 0);
     const rangeEl = document.getElementById("price-range");

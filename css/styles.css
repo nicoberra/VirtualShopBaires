@@ -1447,8 +1447,8 @@ footer {
   .category-card .cat-icon { font-size: 1.5rem; margin-bottom: 6px; }
   .category-card h3 { font-size: 0.78rem; }
 
-  /* Grillas — 2 columnas en mobile (no 1) */
-  .products-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  /* Grillas — 1 columna en mobile para productos */
+  .products-grid { grid-template-columns: 1fr; gap: 10px; }
   .why-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .steps-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .testimonios-grid { grid-template-columns: 1fr; }
@@ -1517,7 +1517,7 @@ footer {
   .category-card { flex: 0 1 calc(50% - 5px); padding: 14px 6px; }
   .category-card .cat-icon { font-size: 1.3rem; }
   .category-card h3 { font-size: 0.72rem; }
-  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .products-grid { grid-template-columns: 1fr; }
   .why-grid { grid-template-columns: 1fr; }
   .hero-slogan { font-size: 1.35rem; }
   .section-header h2 { font-size: 1.25rem; }

@@ -313,6 +313,16 @@
   </div>
 </footer>
 
+<!-- WELCOME TOAST -->
+<div id="welcome-toast" class="welcome-toast">
+  <img src="logo.png" alt="VSB" class="wt-logo" />
+  <div class="wt-body">
+    <p class="wt-title">¡Bienvenido a Virtual Shop Baires! 👋</p>
+    <p class="wt-sub">Productos importados al mejor precio. ¡Mirá las ofertas!</p>
+  </div>
+  <button class="wt-close" onclick="this.closest('.welcome-toast').classList.remove('visible')" aria-label="Cerrar">&times;</button>
+</div>
+
 <!-- VOLVER ARRIBA -->
 <button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver arriba"><i class="fa-solid fa-chevron-up"></i></button>
 
@@ -412,6 +422,19 @@
       </a>`;
     document.getElementById("categories-grid").innerHTML = html;
   }
+
+  // WELCOME TOAST — muestra 1 vez por día
+  (function() {
+    const KEY = 'vsb_welcome_seen';
+    const last = localStorage.getItem(KEY);
+    if (last && Date.now() - Number(last) < 86400000) return;
+    setTimeout(function() {
+      const t = document.getElementById('welcome-toast');
+      if (t) t.classList.add('visible');
+      localStorage.setItem(KEY, Date.now());
+      setTimeout(function() { if (t) t.classList.remove('visible'); }, 6000);
+    }, 1800);
+  })();
 
   cargarProductos().then(productos => {
     // Construir grilla de categorías dinámicamente

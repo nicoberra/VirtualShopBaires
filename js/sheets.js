@@ -60,20 +60,18 @@ function _writeCache(key, data) {
 }
 
 // ---------------------------------------------------------------------------
-//  IMÁGENES DESDE DRIVE (via Apps Script)
+//  IMÁGENES LOCALES (manifest estático en el repo)
 // ---------------------------------------------------------------------------
 
 async function cargarImagenes() {
-  if (!APPS_SCRIPT_URL) return;
   const cached = _readCache(_CACHE_IMAGES, _TTL_IMAGES);
   if (cached) { IMAGE_MAP = cached; return; }
   try {
-    const res = await _fetchWithTimeout(APPS_SCRIPT_URL, 20000);
+    const res = await _fetchWithTimeout("images-manifest.json", 8000);
     IMAGE_MAP = await res.json();
     _writeCache(_CACHE_IMAGES, IMAGE_MAP);
   } catch (e) {
-    console.warn("No se pudo cargar el mapa de imágenes:", e.message);
-    // Fallo silencioso — los productos cargan igual, sin imágenes
+    console.warn("No se pudo cargar el manifest de imágenes:", e.message);
   }
 }
 
@@ -84,37 +82,31 @@ function _findKey(map, name) {
   return Object.keys(map).find(k => k.toLowerCase() === name.toLowerCase()) || null;
 }
 
+// Convierte un path con espacios/tildes a URL segura
+function _encodePath(p) {
+  return p.split('/').map(encodeURIComponent).join('/');
+}
+
 // Devuelve la URL de la imagen principal (primera) de un producto.
-// El Apps Script ya devuelve URLs completas — no hay conversión.
 function getImagenDrive(categoria, nombre) {
   const catMap = IMAGE_MAP[categoria];
   if (!catMap) return null;
-
   const key = _findKey(catMap, nombre);
   if (!key) return null;
-
   const val = catMap[key];
-
-  if (typeof val === "string") return val;
-  if (Array.isArray(val) && val.length > 0) return val[0];
-
-  return null;
+  const raw = Array.isArray(val) ? val[0] : (typeof val === "string" ? val : null);
+  return raw ? _encodePath(raw) : null;
 }
 
 // Devuelve un array con todas las URLs de imágenes de un producto.
 function getImagenesDrive(categoria, nombre) {
   const catMap = IMAGE_MAP[categoria];
   if (!catMap) return [];
-
   const key = _findKey(catMap, nombre);
   if (!key) return [];
-
   const val = catMap[key];
-
-  if (typeof val === "string") return [val];
-  if (Array.isArray(val)) return val;
-
-  return [];
+  const arr = Array.isArray(val) ? val : (typeof val === "string" ? [val] : []);
+  return arr.map(_encodePath);
 }
 
 // ---------------------------------------------------------------------------

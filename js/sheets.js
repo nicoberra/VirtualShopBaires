@@ -68,11 +68,12 @@ async function cargarImagenes() {
   const cached = _readCache(_CACHE_IMAGES, _TTL_IMAGES);
   if (cached) { IMAGE_MAP = cached; return; }
   try {
-    const res = await fetch(APPS_SCRIPT_URL);
+    const res = await _fetchWithTimeout(APPS_SCRIPT_URL, 20000);
     IMAGE_MAP = await res.json();
     _writeCache(_CACHE_IMAGES, IMAGE_MAP);
   } catch (e) {
     console.warn("No se pudo cargar el mapa de imágenes:", e.message);
+    // Fallo silencioso — los productos cargan igual, sin imágenes
   }
 }
 
@@ -120,11 +121,25 @@ function getImagenesDrive(categoria, nombre) {
 //  GOOGLE SHEETS
 // ---------------------------------------------------------------------------
 
+function _fetchWithTimeout(url, ms = 12000) {
+  const ctrl = new AbortController();
+  const id = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, { signal: ctrl.signal }).finally(() => clearTimeout(id));
+}
+
+function _parseGviz(text) {
+  // Regex robusto — no depende del largo exacto del prefijo
+  const m = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+  if (m) return JSON.parse(m[1]);
+  // Fallback: intenta parsear directo
+  return JSON.parse(text);
+}
+
 async function obtenerCategorias() {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Categorias`;
-  const res  = await fetch(url);
+  const res  = await _fetchWithTimeout(url);
   const text = await res.text();
-  const json = JSON.parse(text.substring(47).slice(0, -2));
+  const json = _parseGviz(text);
   return json.table.rows
     .filter(row => row.c && row.c[0] && row.c[0].v)
     .map(row => String(row.c[0].v).trim());
@@ -136,9 +151,9 @@ async function obtenerCategorias() {
 async function fetchHoja(nombreHoja) {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nombreHoja)}`;
   try {
-    const res  = await fetch(url);
+    const res  = await _fetchWithTimeout(url);
     const text = await res.text();
-    const json = JSON.parse(text.substring(47).slice(0, -2));
+    const json = _parseGviz(text);
     const rows = json.table.rows;
     if (!rows) return [];
 

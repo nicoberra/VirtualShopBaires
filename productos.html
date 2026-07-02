@@ -73,6 +73,9 @@
   </div>
 </div>
 
+<!-- FILTRO CATEGORÍAS MOBILE (visible solo en < 980px) -->
+<div class="mobile-cat-strip" id="mobile-cat-strip"></div>
+
 <div class="shop-page">
   <div class="container">
     <div class="shop-layout">
@@ -203,6 +206,20 @@
   if (params.get("cat")) selectedCat = params.get("cat");
   if (params.get("buscar")) document.getElementById("search-input").value = params.get("buscar");
 
+  function buildMobileChips() {
+    const strip = document.getElementById("mobile-cat-strip");
+    if (!strip) return;
+    strip.innerHTML = CATEGORIAS.map(cat => {
+      const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
+      if (extUrl) {
+        return `<button class="mobile-cat-chip" onclick="window.open('${extUrl}','_blank')">${cat} ↗</button>`;
+      }
+      return `<button class="mobile-cat-chip${cat === selectedCat ? ' active' : ''}"
+        onclick="selectedCat=this.dataset.cat; document.querySelectorAll('.mobile-cat-chip').forEach(c=>c.classList.remove('active')); this.classList.add('active'); buildCatFilters(); applyFilters();"
+        data-cat="${cat}">${cat}</button>`;
+    }).join("");
+  }
+
   function buildCatFilters() {
     document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => {
       const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
@@ -302,6 +319,7 @@
     document.getElementById("price-display").textContent = "Todos los precios";
     document.getElementById("price-filter-group").style.opacity = "1";
     buildCatFilters();
+    buildMobileChips();
     applyFilters();
   });
 </script>

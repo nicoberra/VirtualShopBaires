@@ -56,8 +56,10 @@ ul { list-style: none; }
 .topbar a { color: var(--white); opacity: 0.9; }
 
 @keyframes camionPasa {
-  from { transform: translateX(110vw); }
-  to   { transform: translateX(-300px); }
+  0%     { transform: translateX(110vw); }
+  40%    { transform: translateX(-320px); }
+  40.01% { transform: translateX(110vw); }
+  100%   { transform: translateX(110vw); }
 }
 .topbar-camion {
   position: absolute;
@@ -66,7 +68,7 @@ ul { list-style: none; }
   height: 100%;
   width: auto;
   pointer-events: none;
-  animation: camionPasa 14s linear infinite;
+  animation: camionPasa 15s linear infinite;
   z-index: 0;
 }
 .topbar a:hover { opacity: 1; }
@@ -1403,7 +1405,7 @@ footer {
   .topbar .container span:nth-child(2),
   .topbar .container span:nth-child(4),
   .topbar .container span:nth-child(5) { display: none; }
-  .topbar-camion { display: block; position: absolute; bottom: 10%; left: 0; height: 80%; width: auto; object-fit: contain; pointer-events: none; animation: camionPasa 10s linear infinite; z-index: 0; }
+  .topbar-camion { display: block; position: absolute; bottom: 10%; left: 0; height: 80%; width: auto; object-fit: contain; pointer-events: none; animation: camionPasa 15s linear infinite; z-index: 0; }
 
   /* Hero banner */
   .hero-banner { min-height: 340px; }

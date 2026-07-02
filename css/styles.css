@@ -70,6 +70,7 @@ ul { list-style: none; }
   pointer-events: none;
   animation: camionPasa 15s linear infinite;
   z-index: 0;
+  filter: brightness(0) invert(1) opacity(0.85);
 }
 .topbar a:hover { opacity: 1; }
 

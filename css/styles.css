@@ -1852,4 +1852,106 @@ select:focus-visible {
   align-self: flex-start;
 }
 .wt-close:hover { color: #fff; }
+.wt-register-btn {
+  display: inline-block;
+  margin-top: 8px;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+.wt-register-btn:hover { background: #c0392b; }
+
+/* ===== MODAL REGISTRO ===== */
+.reg-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 10000;
+}
+.reg-overlay.visible { display: block; }
+.reg-modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  z-index: 10001;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 18px;
+  padding: 36px 32px 32px;
+  width: min(420px, calc(100vw - 32px));
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  opacity: 0;
+}
+.reg-modal.visible {
+  display: block;
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+.reg-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.reg-modal-close:hover { color: #fff; }
+.reg-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+.reg-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 8px;
+}
+.reg-desc {
+  font-size: 0.88rem;
+  color: #aaa;
+  margin: 0 0 22px;
+  line-height: 1.5;
+}
+.reg-modal .form-group {
+  text-align: left;
+  margin-bottom: 14px;
+}
+.reg-modal .form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #bbb;
+  margin-bottom: 6px;
+}
+.reg-modal .form-group input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #444;
+  background: #111;
+  color: #fff;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+.reg-modal .form-group input:focus {
+  outline: 2px solid var(--red);
+  border-color: transparent;
+}
 

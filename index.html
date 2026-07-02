@@ -317,10 +317,31 @@
 <div id="welcome-toast" class="welcome-toast">
   <img src="logo.png" alt="VSB" class="wt-logo" />
   <div class="wt-body">
-    <p class="wt-title">¡Bienvenido a Virtual Shop Baires! 👋</p>
-    <p class="wt-sub">Productos importados al mejor precio. ¡Mirá las ofertas!</p>
+    <p class="wt-title" id="wt-title"></p>
+    <p class="wt-sub" id="wt-sub"></p>
+    <button class="wt-register-btn" id="wt-register-btn" style="display:none" onclick="document.getElementById('welcome-toast').classList.remove('visible'); openRegModal()">Registrate gratis →</button>
   </div>
   <button class="wt-close" onclick="this.closest('.welcome-toast').classList.remove('visible')" aria-label="Cerrar">&times;</button>
+</div>
+
+<!-- MODAL REGISTRO -->
+<div id="reg-overlay" class="reg-overlay" onclick="closeRegModal()"></div>
+<div id="reg-modal" class="reg-modal">
+  <button class="reg-modal-close" onclick="closeRegModal()">&times;</button>
+  <img src="logo.png" alt="VSB" class="reg-logo" />
+  <h2 class="reg-title">Creá tu cuenta</h2>
+  <p class="reg-desc">Ingresá tu nombre y te saludaremos cada vez que entrés a la tienda.</p>
+  <form id="reg-form" onsubmit="registrarUsuario(event)">
+    <div class="form-group">
+      <label for="reg-nombre">Tu nombre *</label>
+      <input type="text" id="reg-nombre" placeholder="Ej: Nicolás" required maxlength="40" autocomplete="given-name" />
+    </div>
+    <div class="form-group">
+      <label for="reg-email">Email (opcional)</label>
+      <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email" />
+    </div>
+    <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px;padding:14px;">Registrarme</button>
+  </form>
 </div>
 
 <!-- VOLVER ARRIBA -->
@@ -423,11 +444,49 @@
     document.getElementById("categories-grid").innerHTML = html;
   }
 
-  // WELCOME TOAST — siempre al entrar
+  // REGISTRO
+  function openRegModal() {
+    document.getElementById('reg-overlay').classList.add('visible');
+    document.getElementById('reg-modal').classList.add('visible');
+    setTimeout(function(){ document.getElementById('reg-nombre').focus(); }, 100);
+  }
+  function closeRegModal() {
+    document.getElementById('reg-overlay').classList.remove('visible');
+    document.getElementById('reg-modal').classList.remove('visible');
+  }
+  function registrarUsuario(e) {
+    e.preventDefault();
+    const nombre = document.getElementById('reg-nombre').value.trim();
+    const email  = document.getElementById('reg-email').value.trim();
+    if (!nombre) return;
+    localStorage.setItem('vsb_user', JSON.stringify({ nombre: nombre, email: email }));
+    closeRegModal();
+    mostrarToast(nombre);
+  }
+
+  // WELCOME TOAST
+  function mostrarToast(nombre) {
+    const t    = document.getElementById('welcome-toast');
+    const tit  = document.getElementById('wt-title');
+    const sub  = document.getElementById('wt-sub');
+    const btn  = document.getElementById('wt-register-btn');
+    if (!t) return;
+    if (nombre) {
+      tit.textContent = '¡Hola, ' + nombre + '! 👋';
+      sub.textContent = 'Bienvenido de vuelta a Virtual Shop Baires.';
+      btn.style.display = 'none';
+    } else {
+      tit.textContent = '¡Bienvenido a Virtual Shop Baires! 👋';
+      sub.textContent = 'Creá tu cuenta y te saludamos por tu nombre.';
+      btn.style.display = 'inline-block';
+    }
+    t.classList.add('visible');
+    setTimeout(function() { t.classList.remove('visible'); }, 7000);
+  }
+
   setTimeout(function() {
-    const t = document.getElementById('welcome-toast');
-    if (t) t.classList.add('visible');
-    setTimeout(function() { if (t) t.classList.remove('visible'); }, 6000);
+    const userData = JSON.parse(localStorage.getItem('vsb_user') || 'null');
+    mostrarToast(userData && userData.nombre ? userData.nombre : null);
   }, 1800);
 
   cargarProductos().then(productos => {

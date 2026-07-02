@@ -1414,6 +1414,11 @@ footer {
   /* Search strip — ajustado al header más pequeño (~68px) */
   .search-strip { top: 68px; }
 
+  /* Productos page: ocultar hero para que los productos queden visibles de entrada */
+  .page-hero { display: none; }
+  .shop-page { padding: 8px 0 40px; }
+  .sort-bar { padding: 8px 0; }
+
   /* Hero */
   .hero-banner { min-height: 300px; }
   .hero-banner-overlay { padding: 0 0 24px; }

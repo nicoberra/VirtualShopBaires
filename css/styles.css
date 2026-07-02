@@ -464,11 +464,13 @@ nav { display: none; }
   padding: 60px 0;
 }
 .categories-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 14px;
 }
 .category-card {
+  flex: 0 1 160px;
   background: var(--black-3);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: var(--radius);
@@ -1415,7 +1417,7 @@ footer {
   .testimonios-grid { grid-template-columns: 1fr; }
 
   /* Grillas */
-  .categories-grid { grid-template-columns: repeat(3, 1fr); }
+  .categories-grid { gap: 10px; }
   .why-grid { grid-template-columns: 1fr; }
   .steps-grid { grid-template-columns: 1fr; }
   .values-grid { grid-template-columns: 1fr 1fr; }
@@ -1469,7 +1471,7 @@ footer {
 
 /* Pantallas muy pequeñas (iPhone SE, < 390px) */
 @media (max-width: 390px) {
-  .categories-grid { grid-template-columns: repeat(2, 1fr); }
+  .category-card { flex: 0 1 calc(50% - 7px); }
   .products-grid { grid-template-columns: 1fr; }
   .hero-slogan { font-size: 1.4rem; }
   .section-header h2 { font-size: 1.3rem; }
@@ -1626,7 +1628,7 @@ footer {
 .modal-close:hover { background: var(--red); }
 
 @media (max-width: 380px) {
-  .categories-grid { grid-template-columns: repeat(2, 1fr); }
+  .category-card { flex: 0 1 calc(50% - 7px); }
   .products-grid { grid-template-columns: 1fr; }
   .hero-slogan { font-size: 1.4rem; }
   .values-grid { grid-template-columns: 1fr; }

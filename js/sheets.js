@@ -38,14 +38,39 @@ let CATEGORIAS = ["Todos"];
 let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 
 // ---------------------------------------------------------------------------
+//  CACHE localStorage
+// ---------------------------------------------------------------------------
+const _CACHE_DATA   = 'vsb_data_v2';
+const _CACHE_IMAGES = 'vsb_images_v2';
+const _TTL_DATA     = 10 * 60 * 1000;   // 10 minutos
+const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
+
+function _readCache(key, ttl) {
+  try {
+    const s = localStorage.getItem(key);
+    if (!s) return null;
+    const obj = JSON.parse(s);
+    if (Date.now() - obj.ts > ttl) return null;
+    return obj.data;
+  } catch { return null; }
+}
+
+function _writeCache(key, data) {
+  try { localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
+// ---------------------------------------------------------------------------
 //  IMÁGENES DESDE DRIVE (via Apps Script)
 // ---------------------------------------------------------------------------
 
 async function cargarImagenes() {
   if (!APPS_SCRIPT_URL) return;
+  const cached = _readCache(_CACHE_IMAGES, _TTL_IMAGES);
+  if (cached) { IMAGE_MAP = cached; return; }
   try {
-    const res  = await fetch(APPS_SCRIPT_URL);
-    IMAGE_MAP  = await res.json();
+    const res = await fetch(APPS_SCRIPT_URL);
+    IMAGE_MAP = await res.json();
+    _writeCache(_CACHE_IMAGES, IMAGE_MAP);
   } catch (e) {
     console.warn("No se pudo cargar el mapa de imágenes:", e.message);
   }
@@ -219,6 +244,15 @@ const CATS_EXTERNAS = {
 };
 
 async function cargarProductos() {
+  // Servir desde cache si existe (carga instantánea)
+  const cached = _readCache(_CACHE_DATA, _TTL_DATA);
+  if (cached) {
+    PRODUCTOS  = cached.productos;
+    CATEGORIAS = cached.categorias;
+    IMAGE_MAP  = cached.imageMap || {};
+    return PRODUCTOS;
+  }
+
   mostrarCargando();
   try {
     // 1. Cargar imágenes desde Drive (en paralelo con categorías)
@@ -242,6 +276,7 @@ async function cargarProductos() {
     const catsExternas     = hojas.filter(h => Object.keys(CATS_EXTERNAS).includes(h.toLowerCase().trim()));
     CATEGORIAS = ["Todos", ...catsConProductos, ...catsExternas];
 
+    _writeCache(_CACHE_DATA, { productos: PRODUCTOS, categorias: CATEGORIAS, imageMap: IMAGE_MAP });
     ocultarCargando();
     return PRODUCTOS;
   } catch (e) {

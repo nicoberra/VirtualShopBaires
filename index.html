@@ -418,9 +418,48 @@
     "cocina":                          "fa-utensils",
   };
 
+  // SVG personalizados para categorías específicas (color rojo via currentColor)
+  const CAT_SVG = {
+    "pilates y yoga": `<svg viewBox="0 0 24 32" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2rem;height:2.6rem">
+      <circle cx="12" cy="3" r="2.4"/>
+      <path d="M12 5.8 L8.5 2.5 L7.5 3.5 L11 6.6 L11 15.5 L13 15.5 L13 6.6 L16.5 3.5 L15.5 2.5 Z"/>
+      <rect x="11" y="15" width="2" height="11" rx="1"/>
+      <path d="M11 18 L7.5 22 L8.5 23 L11 20 Z"/>
+    </svg>`,
+    "fitness y musculacion": `<svg viewBox="0 0 28 20" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2.3rem;height:1.6rem">
+      <path d="M3 16 C3 16 5 18 8 18 L20 18 C22 18 23 17 23 15.5 L23 13 C23 11.5 22 10.5 20 10.5 L15.5 10.5 C14.5 8 13 5 11 3 C9 1 6 1.5 5 3.5 C4 5.5 4.5 8.5 6 10.5 C7 12 7.5 13 7.5 14.5 L5.5 14.5 C3.5 14.5 3 15 3 16 Z"/>
+      <ellipse cx="10" cy="4" rx="2.5" ry="3" transform="rotate(-15 10 4)"/>
+    </svg>`,
+    "jardin, caza y pesca": `<svg viewBox="0 0 28 20" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2.3rem;height:1.6rem">
+      <path d="M26 10 L20 5 L20 8 C15 8 8 6 4 10 C8 14 15 12 20 12 L20 15 Z"/>
+      <ellipse cx="7" cy="10" rx="5" ry="3.5"/>
+      <circle cx="5" cy="9" r="1" fill="white"/>
+      <path d="M22 8 L26 6 L26 8.5 Z" fill="var(--red)"/>
+      <path d="M22 12 L26 14 L26 11.5 Z" fill="var(--red)"/>
+    </svg>`,
+    "jardín, caza y pesca": null,
+    "fitness y musculación": null,
+  };
+
   function getIconForCat(nombre) {
     const key = nombre.toLowerCase().trim();
     return CAT_ICONS[key] || "fa-tag";
+  }
+
+  function getIconHtmlForCat(cat) {
+    const key = cat.toLowerCase().trim();
+    // Buscar SVG propio (también buscar sin tildes)
+    const svgKey = Object.keys(CAT_SVG).find(k => k === key);
+    if (svgKey !== undefined) {
+      const svg = CAT_SVG[svgKey];
+      // null = apuntar a la versión sin tilde
+      if (svg === null) {
+        const base = Object.keys(CAT_SVG).find(k => CAT_SVG[k] !== null && k.replace(/[áéíóúü]/g, m => ({á:'a',é:'e',í:'i',ó:'o',ú:'u',ü:'u'})[m]) === key.replace(/[áéíóúü]/g, m => ({á:'a',é:'e',í:'i',ó:'o',ú:'u',ü:'u'})[m]));
+        if (base && CAT_SVG[base]) return CAT_SVG[base];
+      }
+      if (svg) return svg;
+    }
+    return `<i class="fa-solid ${getIconForCat(cat)}"></i>`;
   }
 
   function buildCategoriesGrid(categorias) {
@@ -430,10 +469,9 @@
       const externalUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
       const href   = externalUrl ? externalUrl : `productos.html?cat=${encodeURIComponent(cat)}`;
       const target = externalUrl ? ' target="_blank"' : '';
-      const isExt  = !!externalUrl;
       return `
       <a href="${href}"${target} class="category-card">
-        <div class="cat-icon"><i class="fa-solid ${getIconForCat(cat)}"></i></div>
+        <div class="cat-icon">${getIconHtmlForCat(cat)}</div>
         <h3>${cat}</h3>
       </a>`;
     }).join("") + `

@@ -401,8 +401,8 @@
       const target = externalUrl ? ' target="_blank"' : '';
       const isExt  = !!externalUrl;
       return `
-      <a href="${href}"${target} class="category-card${isExt ? ' cat-external' : ''}" ${isExt ? `style="background-image:url('https://sanou.com.ar/Logo%202.png'); background-size:contain; background-repeat:no-repeat; background-position:center;"` : ''}>
-        ${isExt ? '' : `<div class="cat-icon"><i class="fa-solid ${getIconForCat(cat)}"></i></div>`}
+      <a href="${href}"${target} class="category-card">
+        <div class="cat-icon"><i class="fa-solid ${getIconForCat(cat)}"></i></div>
         <h3>${cat}</h3>
       </a>`;
     }).join("") + `

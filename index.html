@@ -423,18 +423,12 @@
     document.getElementById("categories-grid").innerHTML = html;
   }
 
-  // WELCOME TOAST — muestra 1 vez por día
-  (function() {
-    const KEY = 'vsb_welcome_seen';
-    const last = localStorage.getItem(KEY);
-    if (last && Date.now() - Number(last) < 86400000) return;
-    setTimeout(function() {
-      const t = document.getElementById('welcome-toast');
-      if (t) t.classList.add('visible');
-      localStorage.setItem(KEY, Date.now());
-      setTimeout(function() { if (t) t.classList.remove('visible'); }, 6000);
-    }, 1800);
-  })();
+  // WELCOME TOAST — siempre al entrar
+  setTimeout(function() {
+    const t = document.getElementById('welcome-toast');
+    if (t) t.classList.add('visible');
+    setTimeout(function() { if (t) t.classList.remove('visible'); }, 6000);
+  }, 1800);
 
   cargarProductos().then(productos => {
     // Construir grilla de categorías dinámicamente

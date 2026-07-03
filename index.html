@@ -419,29 +419,15 @@
   };
 
   // SVG personalizados para categorías específicas
+  const YOGA_SVG   = `<svg viewBox="0 0 256 256" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2rem;height:2rem"><path d="M96,48a32,32,0,1,1,32,32A32,32,0,0,1,96,48ZM216,96H40a8,8,0,0,0,0,16h80v28.44L42.65,210.05A8,8,0,0,0,53.35,222l76.2-68.58L176,173.28V216a8,8,0,0,0,16,0V168a8,8,0,0,0-4.85-7.35L136,138.72V112h80a8,8,0,0,0,0-16Z"/></svg>`;
+  const BICEP_SVG  = `<svg viewBox="0 0 36 36" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2rem;height:2rem"><path d="M15.977 9.36h3.789c.114-.191.147-.439.058-.673l-3.846-4.705V9.36z"/><path d="M12.804 22.277c-.057-.349-.124-.679-.206-.973-.62-2.223-1.14-3.164-.918-5.494.29-1.584.273-4.763 4.483-4.268 1.112.131 2.843.927 3.834.91.567-.01.98-1.157 1.017-1.539.051-.526-.865-1.42-1.248-1.554-.383-.134-2.012-.631-2.681-.824-1.039-.301-.985-1.705-1.051-2.205-.031-.235.084-.467.294-.591.21-.124.375-.008.579.125l.885.648c.497.426-.874 1.24-.503 1.376 0 0 1.755.659 2.507.796.412.075 1.834-1.529 1.917-2.47.065-.74-3.398-4.083-5.867-5.381-.868-.456-1.377-.721-1.949-.694-.683.032-.898.302-1.748 1.03C8.302 4.46 4.568 11.577 4.02 13.152c-2.246 6.461-2.597 9.865-2.677 11.788-.049.59-.076 1.177-.076 1.758.065 0-1 5 0 6s5.326 1 5.326 1c10 3.989 28.57 2.948 28.57-7.233 0-12.172-18.813-10.557-22.359-4.188z"/></svg>`;
+  const TENT_SVG   = `<svg viewBox="0 0 576 512" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2rem;height:1.8rem"><path d="M269.4 6C280.5-2 295.5-2 306.6 6l224 160c7.4 5.3 12.2 13.5 13.2 22.5l32 288c1 9-1.9 18.1-8 24.9s-14.7 10.7-23.8 10.7H464 435.8c-12.1 0-23.2-6.8-28.6-17.7L306.7 293.5c-1.7-3.4-5.1-5.5-8.8-5.5c-5.5 0-9.9 4.4-9.9 9.9V480c0 17.7-14.3 32-32 32H240 32c-9.1 0-17.8-3.9-23.8-10.7s-9-15.8-8-24.9l32-288c1-9 5.8-17.2 13.2-22.5L269.4 6z"/></svg>`;
   const CAT_SVG = {
-    "pilates y yoga": `<svg viewBox="0 0 220 165" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2.4rem;height:1.8rem">
-      <circle cx="158" cy="20" r="13"/>
-      <path d="M150 13 C148 7 156 4 163 9 C167 4 171 9 166 14 Z"/>
-      <path d="M144 32 L130 78 L165 78 L162 32 Z"/>
-      <path d="M132 48 L18 56 L16 68 L130 62 Z"/>
-      <path d="M162 44 L208 38 L210 50 L164 56 Z"/>
-      <path d="M150 78 L145 128 L162 130 L168 78 Z"/>
-      <path d="M145 128 L140 165 L156 165 L162 130 Z"/>
-      <path d="M142 78 L72 93 L75 108 L148 93 Z"/>
-      <ellipse cx="148" cy="164" rx="13" ry="5"/>
-      <ellipse cx="65" cy="106" rx="14" ry="5" transform="rotate(-20 65 106)"/>
-    </svg>`,
-    "fitness y musculacion": `<svg viewBox="0 0 90 90" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2rem;height:2rem">
-      <path d="M18 82 C6 72 2 52 6 36 C10 20 22 10 38 8 C52 6 64 16 66 30 C68 40 60 50 65 56 C72 64 84 60 86 70 C88 80 78 88 68 84 C58 80 52 72 42 72 C32 72 24 78 18 82 Z"/>
-    </svg>`,
-    "jardin, caza y pesca": `<svg viewBox="0 0 100 88" fill="var(--red)" xmlns="http://www.w3.org/2000/svg" style="width:2rem;height:1.8rem">
-      <polygon points="50,5 5,75 95,75"/>
-      <polygon points="5,75 0,85 18,80"/>
-      <polygon points="95,75 100,85 82,80"/>
-    </svg>`,
-    "jardín, caza y pesca": null,
-    "fitness y musculación": null,
+    "pilates y yoga":       YOGA_SVG,
+    "fitness y musculacion":BICEP_SVG,
+    "fitness y musculación":BICEP_SVG,
+    "jardin, caza y pesca": TENT_SVG,
+    "jardín, caza y pesca": TENT_SVG,
   };
 
   function getIconForCat(nombre) {
@@ -451,17 +437,8 @@
 
   function getIconHtmlForCat(cat) {
     const key = cat.toLowerCase().trim();
-    // Buscar SVG propio (también buscar sin tildes)
-    const svgKey = Object.keys(CAT_SVG).find(k => k === key);
-    if (svgKey !== undefined) {
-      const svg = CAT_SVG[svgKey];
-      // null = apuntar a la versión sin tilde
-      if (svg === null) {
-        const base = Object.keys(CAT_SVG).find(k => CAT_SVG[k] !== null && k.replace(/[áéíóúü]/g, m => ({á:'a',é:'e',í:'i',ó:'o',ú:'u',ü:'u'})[m]) === key.replace(/[áéíóúü]/g, m => ({á:'a',é:'e',í:'i',ó:'o',ú:'u',ü:'u'})[m]));
-        if (base && CAT_SVG[base]) return CAT_SVG[base];
-      }
-      if (svg) return svg;
-    }
+    const svg = CAT_SVG[key];
+    if (svg) return svg;
     return `<i class="fa-solid ${getIconForCat(cat)}"></i>`;
   }
 

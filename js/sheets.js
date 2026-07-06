@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  CONFIGURACIÓN GOOGLE SHEETS + GOOGLE DRIVE
 //
 //  ESTRUCTURA DEL GOOGLE SHEET:
@@ -75,11 +75,19 @@ async function cargarImagenes() {
   }
 }
 
-// Busca una clave en un mapa sin distinguir mayúsculas/minúsculas
+// Normaliza un string: minúsculas, sin tildes, '/' → '-'
+function _normalizeStr(s) {
+  return s.toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/\//g, "-");
+}
+
+// Busca una clave en un mapa ignorando mayúsculas, tildes y '/' vs '-'
 function _findKey(map, name) {
   if (!map) return null;
   if (map[name] !== undefined) return name;
-  return Object.keys(map).find(k => k.toLowerCase() === name.toLowerCase()) || null;
+  const norm = _normalizeStr(name);
+  return Object.keys(map).find(k => _normalizeStr(k) === norm) || null;
 }
 
 // Convierte un path con espacios/tildes a URL segura
@@ -89,7 +97,8 @@ function _encodePath(p) {
 
 // Devuelve la URL de la imagen principal (primera) de un producto.
 function getImagenDrive(categoria, nombre) {
-  const catMap = IMAGE_MAP[categoria];
+  const catKey = _findKey(IMAGE_MAP, categoria);
+  const catMap = catKey ? IMAGE_MAP[catKey] : null;
   if (!catMap) return null;
   const key = _findKey(catMap, nombre);
   if (!key) return null;
@@ -100,7 +109,8 @@ function getImagenDrive(categoria, nombre) {
 
 // Devuelve un array con todas las URLs de imágenes de un producto.
 function getImagenesDrive(categoria, nombre) {
-  const catMap = IMAGE_MAP[categoria];
+  const catKey = _findKey(IMAGE_MAP, categoria);
+  const catMap = catKey ? IMAGE_MAP[catKey] : null;
   if (!catMap) return [];
   const key = _findKey(catMap, nombre);
   if (!key) return [];

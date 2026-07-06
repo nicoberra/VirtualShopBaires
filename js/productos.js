@@ -279,12 +279,12 @@ function renderProductCard(p) {
                data-color="${sel.color || ''}"
                data-talle="${sel.talle || ''}"
                data-precio="${displayPrice || ''}">
-         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+         <i class="fa-brands fa-whatsapp"></i> Comprar
        </button>`
     : `<a class="btn-wa-product"
           href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null, p.precio, p.id)}"
           target="_blank">
-         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+         <i class="fa-brands fa-whatsapp"></i> Comprar
        </a>`;
 
   return `
@@ -403,10 +403,10 @@ function openProductModal(pid) {
                data-ready="${!btnDisabled ? 'true' : 'false'}"
                data-color="${sel.color || ''}" data-talle="${sel.talle || ''}"
                data-precio="${displayPrice || ''}">
-         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+         <i class="fa-brands fa-whatsapp"></i> Comprar
        </button>`
     : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null,p.precio,pid)}" target="_blank">
-         <i class="fa-brands fa-whatsapp"></i> Comprar por WhatsApp
+         <i class="fa-brands fa-whatsapp"></i> Comprar
        </a>`;
 
   const modal = document.getElementById('product-modal');

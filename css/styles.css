@@ -1487,7 +1487,7 @@ footer {
   .cart-panel.open { bottom: 0; }
 
   /* Nav mobile drawer */
-  nav { display: block; background: var(--black-2); border-bottom: 1px solid rgba(255,255,255,0.06); }
+  nav { display: block; background: var(--black-2); border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 68px; z-index: 98; }
   .nav-inner { display: none; flex-direction: column; }
   .nav-inner.open { display: flex; }
   .nav-inner a { padding: 13px 20px; border-bottom: 1px solid rgba(255,255,255,0.05); }

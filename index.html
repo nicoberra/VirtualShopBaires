@@ -472,6 +472,8 @@
     document.getElementById('reg-overlay').classList.remove('visible');
     document.getElementById('reg-modal').classList.remove('visible');
   }
+  const REGISTRO_URL = "https://script.google.com/macros/s/AKfycbw1ZTxQPxPqW1IOqY53ItbdrO2qMAIO6z7RZ6oaNDythi4YbvN3vQY1fR_9hKsV466nxA/exec";
+
   function registrarUsuario(e) {
     e.preventDefault();
     const nombre = document.getElementById('reg-nombre').value.trim();
@@ -480,6 +482,11 @@
     localStorage.setItem('vsb_user', JSON.stringify({ nombre: nombre, email: email }));
     closeRegModal();
     mostrarToast(nombre);
+    // Guardar en Google Sheets
+    try {
+      const params = new URLSearchParams({ nombre: nombre, email: email });
+      fetch(REGISTRO_URL + '?' + params, { mode: 'no-cors' });
+    } catch(_) {}
   }
 
   // WELCOME TOAST

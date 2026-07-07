@@ -495,7 +495,7 @@ nav { display: none; }
 .category-card:hover { transform: translateY(-4px); border-color: var(--red); box-shadow: 0 8px 32px rgba(204,18,18,0.2); }
 .category-card:hover::before { opacity: 0.04; }
 .category-card .cat-icon { font-size: 2rem; margin-bottom: 10px; position: relative; color: var(--red); display: flex; align-items: center; justify-content: center; min-height: 2rem; }
-.category-card .cat-icon img { display: block; width: 2rem; height: 2rem; object-fit: contain; }
+.category-card .cat-icon img { display: block; width: 1em; height: 1em; object-fit: contain; }
 .category-card h3 { font-size: 0.92rem; font-weight: 700; color: var(--white); position: relative; }
 .category-card p { font-size: 0.78rem; color: var(--gray); margin-top: 4px; position: relative; }
 .cat-external { background-color: var(--black-3); justify-content: flex-end; gap: 0; padding-bottom: 16px; }

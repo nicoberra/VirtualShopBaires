@@ -42,7 +42,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 const _CACHE_DATA   = 'vsb_data_v2';
 const _CACHE_IMAGES = 'vsb_images_v2';
-const _TTL_DATA     = 10 * 60 * 1000;   // 10 minutos
+const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
 
 function _readCache(key, ttl) {

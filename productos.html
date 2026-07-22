@@ -222,7 +222,7 @@
         return `<button class="mobile-cat-chip" onclick="window.open('${extUrl}','_blank')">${cat} ↗</button>`;
       }
       return `<button class="mobile-cat-chip${cat === selectedCat ? ' active' : ''}"
-        onclick="selectedCat=this.dataset.cat; document.querySelectorAll('.mobile-cat-chip').forEach(c=>c.classList.remove('active')); this.classList.add('active'); buildCatFilters(); applyFilters();"
+        onclick="selectCategory(this.dataset.cat); document.querySelectorAll('.mobile-cat-chip').forEach(c=>c.classList.remove('active')); this.classList.add('active');"
         data-cat="${cat}">${cat}</button>`;
     }).join("");
   }
@@ -238,7 +238,7 @@
       }
       return `<label>
         <input type="radio" name="cat" value="${cat}" ${cat === selectedCat ? "checked" : ""}
-          onchange="selectedCat=this.value; applyFilters()">
+          onchange="selectCategory(this.value)">
         ${cat}
       </label>`;
     }).join("");
@@ -253,6 +253,14 @@
         ? `Hasta $${formatted} (máx)`
         : `Hasta $${formatted}`;
     applyFilters();
+  }
+
+  function selectCategory(cat) {
+    selectedCat = cat;
+    buildCatFilters();
+    applyFilters();
+    const grid = document.getElementById("products-container");
+    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function applyFilters() {

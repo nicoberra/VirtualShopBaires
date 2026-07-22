@@ -734,8 +734,8 @@ nav { display: none; }
 
 /* ===== REPUTACIÓN MERCADOLIBRE ===== */
 .ml-rep-section .section-label {
-  background: #FFE600;
-  color: #000;
+  background: #FFE600 !important;
+  color: #000 !important;
 }
 .ml-rep-section .section-header h2 span {
   color: #FFE600;

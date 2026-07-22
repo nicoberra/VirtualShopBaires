@@ -75,11 +75,11 @@ async function cargarImagenes() {
   }
 }
 
-// Normaliza un string: minúsculas, sin tildes, '/' → '-'
+// Normaliza un string: minúsculas, sin tildes, sin barras
 function _normalizeStr(s) {
   return s.toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/\//g, "-");
+    .replace(/\//g, "");
 }
 
 // Busca una clave en un mapa ignorando mayúsculas, tildes y '/' vs '-'
@@ -188,7 +188,7 @@ async function fetchHoja(nombreHoja) {
           stock:          stockVal !== false && String(stockVal).toLowerCase() !== "false",
           color:          get(3) ? String(get(3)).trim() : null,
           talle:          get(4) ? String(get(4)).trim() : null,
-          descripcion:    String(get(5) || ""),
+          descripcion:    typeof get(5) === "string" ? get(5).trim() : "",
           destacado:      get(6) === true,
         };
       });

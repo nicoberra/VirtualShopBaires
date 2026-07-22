@@ -319,13 +319,15 @@ nav { display: none; }
   position: relative;
   z-index: 1;
   text-align: center;
+  background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(0,0,0,0.55) 0%, transparent 100%);
   max-width: 680px;
   margin: 0 auto;
   padding-top: 120px;
 }
 .hero-subtitle {
-  color: rgba(255,255,255,0.82);
+  color: rgba(255,255,255,0.95);
   font-size: 1rem;
+  text-shadow: 0 1px 8px rgba(0,0,0,0.9);
   margin: 12px auto 20px;
   max-width: 480px;
   line-height: 1.6;
@@ -355,8 +357,12 @@ nav { display: none; }
   line-height: 1.1;
   margin-bottom: 16px;
   letter-spacing: -0.5px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.7);
 }
-.hero-slogan .highlight { color: var(--red); }
+.hero-slogan .highlight {
+  color: var(--red);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.9), 0 0 30px rgba(0,0,0,0.8);
+}
 .hero-sub {
   font-size: 1.08rem;
   color: var(--gray-light);

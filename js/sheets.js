@@ -75,14 +75,16 @@ async function cargarImagenes() {
   }
 }
 
-// Normaliza un string: minúsculas, sin tildes, sin barras
+// Normaliza un string: minúsculas, sin tildes, sin caracteres especiales
 function _normalizeStr(s) {
   return s.toLowerCase()
     .normalize("NFD").replace(/[̀-ͯ]/g, "")
-    .replace(/\//g, "");
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-// Busca una clave en un mapa ignorando mayúsculas, tildes y '/' vs '-'
+// Busca una clave en un mapa ignorando mayúsculas, tildes, '/', '-', '!', etc.
 function _findKey(map, name) {
   if (!map) return null;
   if (map[name] !== undefined) return name;

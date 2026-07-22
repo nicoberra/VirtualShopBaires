@@ -230,7 +230,7 @@ function renderProductCard(p) {
 
   let variantesHTML = "";
   if (hasVariants) {
-    if (p.colores.length > 0) {
+    if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
           <span class="variant-label">Color:</span>
@@ -243,7 +243,7 @@ function renderProductCard(p) {
           </div>
         </div>`;
     }
-    if (p.talles.length > 0) {
+    if (p.talles.length > 1) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
           <span class="variant-label">Talle:</span>
@@ -353,7 +353,7 @@ function openProductModal(pid) {
 
   let variantesHTML = "";
   if (p.tieneVariantes) {
-    if (p.colores.length > 0) {
+    if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group">
           <span class="variant-label">Color:</span>
@@ -366,7 +366,7 @@ function openProductModal(pid) {
           </div>
         </div>`;
     }
-    if (p.talles.length > 0) {
+    if (p.talles.length > 1) {
       variantesHTML += `
         <div class="variant-group">
           <span class="variant-label">Talle:</span>

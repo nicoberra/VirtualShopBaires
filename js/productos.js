@@ -188,6 +188,21 @@ function buyWithWA(pid) {
   return false;
 }
 
+function cardImgNav(btn, dir) {
+  const card = btn.closest('.product-card');
+  const pid = parseInt(card.dataset.id);
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return;
+  const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  if (imgs.length < 2) return;
+  const imgEl = card.querySelector('.product-img img');
+  if (!imgEl) return;
+  let idx = (parseInt(imgEl.dataset.idx || '0') + dir + imgs.length) % imgs.length;
+  imgEl.src = imgs[idx];
+  imgEl.dataset.idx = String(idx);
+  card.querySelectorAll('.card-img-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+}
+
 function renderProductCard(p) {
   // Pre-seleccionar opciones únicas antes de renderizar
   if (p.tieneVariantes) {
@@ -220,9 +235,14 @@ function renderProductCard(p) {
     ? `<span class="price-old">${formatPrecio(displayOldPrice)}</span>`
     : "";
 
-  const imgHTML = p.imagen
-    ? `<img src="${p.imagen}" alt="${p.nombre}" loading="lazy" />`
+  const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  const hasMultiImgs = imgs.length > 1;
+  const imgHTML = imgs.length > 0
+    ? `<img src="${imgs[0]}" alt="${p.nombre}" loading="lazy" data-idx="0" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
+  const carouselHTML = hasMultiImgs
+    ? `<button class="card-arrow card-arrow-prev" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button class="card-arrow card-arrow-next" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
+    : '';
 
   const descHTML = p.descripcion
     ? `<p class="product-desc product-desc-short">${p.descripcion}</p>`
@@ -289,7 +309,7 @@ function renderProductCard(p) {
 
   return `
     <div class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})">
-      <div class="product-img">${imgHTML}${badgeHTML}</div>
+      <div class="product-img">${imgHTML}${carouselHTML}${badgeHTML}</div>
       <div class="product-info">
         <div class="product-info-top">
           <div class="category">${p.categoria}</div>

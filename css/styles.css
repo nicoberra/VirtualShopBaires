@@ -528,7 +528,7 @@ nav { display: none; }
   box-shadow: 0 8px 32px rgba(204,18,18,0.15);
 }
 .product-img {
-  background: #fff;
+  background: #1a1a1a;
   aspect-ratio: 1 / 1;
   width: 100%;
   display: flex;
@@ -539,11 +539,54 @@ nav { display: none; }
   overflow: hidden;
 }
 .product-img img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center;
 }
+.card-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.55);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  padding: 0;
+}
+.card-arrow-prev { left: 6px; }
+.card-arrow-next { right: 6px; }
+.product-img:hover .card-arrow { opacity: 1; }
+.card-img-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 5px;
+  z-index: 3;
+}
+.card-img-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.45);
+  transition: background 0.2s;
+}
+.card-img-dot.active { background: #fff; }
 .badge-new, .badge-offer {
   position: absolute;
   top: 10px; left: 10px;

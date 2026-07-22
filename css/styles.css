@@ -733,6 +733,13 @@ nav { display: none; }
 }
 
 /* ===== REPUTACIÓN MERCADOLIBRE ===== */
+.ml-rep-section .section-label {
+  background: #FFE600;
+  color: #000;
+}
+.ml-rep-section .section-header h2 span {
+  color: #FFE600;
+}
 .ml-rep-section {
   background: var(--black-2);
   padding: 60px 0;

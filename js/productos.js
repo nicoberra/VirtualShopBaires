@@ -198,6 +198,8 @@ function cardImgNav(btn, dir) {
   const imgEl = card.querySelector('.product-img img');
   if (!imgEl) return;
   let idx = (parseInt(imgEl.dataset.idx || '0') + dir + imgs.length) % imgs.length;
+  imgEl.style.display = '';
+  imgEl.onerror = function() { this.style.display = 'none'; };
   imgEl.src = imgs[idx];
   imgEl.dataset.idx = String(idx);
   card.querySelectorAll('.card-img-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
@@ -238,7 +240,7 @@ function renderProductCard(p) {
   const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
   const hasMultiImgs = imgs.length > 1;
   const imgHTML = imgs.length > 0
-    ? `<img src="${imgs[0]}" alt="${p.nombre}" loading="lazy" data-idx="0" />`
+    ? `<img src="${imgs[0]}" alt="${p.nombre}" loading="lazy" data-idx="0" onerror="this.style.display='none'" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
   const carouselHTML = hasMultiImgs
     ? `<button class="card-arrow card-arrow-prev" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button class="card-arrow card-arrow-next" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`

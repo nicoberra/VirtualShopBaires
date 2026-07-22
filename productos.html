@@ -90,7 +90,10 @@
         <h3 style="margin-top:20px;">Precio máximo</h3>
         <div class="filter-group" id="price-filter-group" style="opacity:0;transition:opacity 0.3s;">
           <input type="range" id="price-range" min="0" max="999999" step="500" value="999999" oninput="updatePriceDisplay(this.value)" />
-          <div class="price-display" id="price-display">Todos los precios</div>
+          <div class="price-display" id="price-display"></div>
+          <div class="price-range-labels" id="price-range-labels" style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--gray);margin-top:2px;">
+            <span>$0</span><span id="price-max-label"></span>
+          </div>
         </div>
 
         <h3 style="margin-top:20px;">Tipo</h3>
@@ -243,7 +246,12 @@
 
   function updatePriceDisplay(val) {
     maxPrice = parseInt(val);
-    document.getElementById("price-display").textContent = `Hasta $${parseInt(val).toLocaleString("es-AR")}`;
+    const rangeEl = document.getElementById("price-range");
+    const formatted = parseInt(val).toLocaleString("es-AR");
+    document.getElementById("price-display").textContent =
+      parseInt(val) >= parseInt(rangeEl.max)
+        ? `Hasta $${formatted} (máx)`
+        : `Hasta $${formatted}`;
     applyFilters();
   }
 
@@ -295,9 +303,10 @@
 
   function resetFilters() {
     selectedCat = "Todos";
-    maxPrice = 999999;
-    document.getElementById("price-range").value = document.getElementById("price-range").max;
-    document.getElementById("price-display").textContent = "Todos los precios";
+    const rangeEl2 = document.getElementById("price-range");
+    maxPrice = parseInt(rangeEl2.max);
+    rangeEl2.value = rangeEl2.max;
+    document.getElementById("price-display").textContent = `Hasta $${maxPrice.toLocaleString("es-AR")} (máx)`;
     document.getElementById("filter-new").checked = false;
     document.getElementById("filter-offer").checked = false;
     document.getElementById("sort-select").value = "default";
@@ -320,7 +329,8 @@
     rangeEl.max = maxP;
     rangeEl.value = maxP;
     maxPrice = maxP;
-    document.getElementById("price-display").textContent = "Todos los precios";
+    document.getElementById("price-display").textContent = `Hasta $${maxP.toLocaleString("es-AR")} (máx)`;
+    document.getElementById("price-max-label").textContent = `$${maxP.toLocaleString("es-AR")}`;
     document.getElementById("price-filter-group").style.opacity = "1";
     buildCatFilters();
     buildMobileChips();

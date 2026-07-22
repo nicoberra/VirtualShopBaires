@@ -541,8 +541,8 @@ nav { display: none; }
 .product-img img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  padding: 12px;
+  object-fit: cover;
+  object-position: center;
 }
 .badge-new, .badge-offer {
   position: absolute;

@@ -1,0 +1,37 @@
+name = "vsb-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# Rutas: todo /api/* en el dominio principal va a este Worker
+# Configurar en Cloudflare Dashboard → Workers → vsb-api → Triggers → Routes
+# O descommentar:
+# routes = [
+#   { pattern = "virtualshopbaires.com.ar/api/*", zone_name = "virtualshopbaires.com.ar" }
+# ]
+
+# Variables de entorno (sin secretos)
+[vars]
+DISCOUNT_PCT = "30"
+ORDER_EXPIRY_HOURS = "48"
+SITE_NAME = "Virtual Shop Baires"
+SITE_URL = "https://virtualshopbaires.com.ar"
+FROM_EMAIL = "pedidos@virtualshopbaires.com.ar"
+ADMIN_EMAIL = "virtualshopbuenosaires@gmail.com"
+SHEETS_WEBHOOK_URL = ""  # URL del Apps Script publicado
+
+# Secretos (configurar con: wrangler secret put NOMBRE)
+# SUPABASE_URL
+# SUPABASE_SERVICE_KEY     <- NUNCA en el frontend
+# RESEND_API_KEY
+# ADMIN_TOKEN              <- token para el panel admin
+# TURNSTILE_SECRET         <- Cloudflare Turnstile secret
+# BANK_ALIAS               <- Alias CBU/CVU
+# BANK_CBU                 <- CBU completo
+# BANK_HOLDER              <- Titular de la cuenta
+# BANK_BANK                <- Nombre del banco
+
+# KV para rate limiting
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = ""     # Completar con: wrangler kv:namespace create "RATE_LIMIT" → copiar id aquí
+preview_id = ""  # Completar con el preview_id

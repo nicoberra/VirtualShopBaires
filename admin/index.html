@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Virtual Shop Baires</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" href="../logo.png" type="image/png" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --red: #CC1212; --red-dark: #a00e0e;
+      --accent: #1B2B4B;
+      --bg: #0F1117; --surface: #1A1D27; --surface2: #22263A;
+      --border: rgba(255,255,255,0.08);
+      --text: #E8EAF0; --muted: #6B7280; --muted2: #9CA3AF;
+      --radius: 10px;
+    }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height: 100vh; }
+
+    /* Login */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 24px; }
+    .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 36px; width: 100%; max-width: 380px; }
+    .login-card h1 { font-size: 1.2rem; margin-bottom: 6px; }
+    .login-card p { color: var(--muted2); font-size: 0.82rem; margin-bottom: 24px; }
+    .login-card label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--muted2); margin-bottom: 6px; }
+    .login-card input { width: 100%; padding: 10px 14px; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text); font-size: 0.9rem; margin-bottom: 16px; }
+    .login-card input:focus { outline: none; border-color: var(--red); }
+    .btn-login { width: 100%; padding: 12px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 700; cursor: pointer; }
+    .btn-login:hover { background: var(--red-dark); }
+    .login-err { color: var(--red); font-size: 0.8rem; margin-top: 8px; min-height: 18px; }
+
+    /* Layout */
+    .app { display: none; min-height: 100vh; }
+    .app.show { display: flex; flex-direction: column; }
+    .topbar-admin { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar-admin .brand { font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 10px; }
+    .topbar-admin .brand span { background: var(--red); padding: 3px 8px; border-radius: 5px; font-size: 0.72rem; }
+    .btn-logout { background: none; border: 1px solid var(--border); color: var(--muted2); padding: 5px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+    .btn-logout:hover { color: var(--text); }
+
+    .admin-body { display: flex; flex: 1; }
+    .sidebar-admin { width: 200px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 12px; flex-shrink: 0; }
+    .sidebar-admin a { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: var(--muted2); font-size: 0.85rem; text-decoration: none; cursor: pointer; transition: all 0.15s; margin-bottom: 2px; }
+    .sidebar-admin a:hover, .sidebar-admin a.active { background: rgba(204,18,18,0.12); color: var(--red); }
+    .sidebar-admin .section-label { font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; padding: 16px 12px 6px; }
+    @media (max-width: 640px) { .sidebar-admin { display: none; } }
+
+    .main-admin { flex: 1; padding: 24px; overflow-x: hidden; }
+
+    /* Filtros */
+    .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+    .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--muted2); font-size: 0.8rem; cursor: pointer; transition: all 0.15s; }
+    .filter-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+    .filter-btn.active { background: var(--red); border-color: var(--red); color: #fff; }
+    .count-badge { display: inline-block; background: rgba(255,255,255,0.1); padding: 1px 6px; border-radius: 8px; font-size: 0.72rem; margin-left: 4px; }
+    .reload-btn { margin-left: auto; background: none; border: 1px solid var(--border); color: var(--muted2); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; }
+    .reload-btn:hover { color: var(--text); }
+
+    /* Tabla de pedidos */
+    .orders-table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { padding: 10px 12px; text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .order-num-link { color: var(--text); font-weight: 600; cursor: pointer; }
+    .order-num-link:hover { color: var(--red); }
+    .customer-info { color: var(--muted2); font-size: 0.75rem; }
+
+    .pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+    .pill-yellow { background: rgba(255,215,0,0.12); color: #B8860B; }
+    .pill-blue { background: rgba(27,43,75,0.2); color: #7EB3FF; }
+    .pill-green { background: rgba(37,211,102,0.12); color: #25D366; }
+    .pill-red { background: rgba(204,18,18,0.12); color: var(--red); }
+    .pill-gray { background: rgba(107,114,128,0.15); color: var(--muted2); }
+    .pill-orange { background: rgba(251,146,60,0.12); color: #FB923C; }
+    .pill-purple { background: rgba(167,139,250,0.12); color: #A78BFA; }
+
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .action-btn { padding: 5px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: opacity 0.15s; }
+    .action-btn:hover { opacity: 0.85; }
+    .btn-confirm { background: rgba(37,211,102,0.15); color: #25D366; }
+    .btn-reject { background: rgba(204,18,18,0.12); color: var(--red); }
+    .btn-view { background: rgba(255,255,255,0.06); color: var(--muted2); }
+    .btn-status { background: rgba(167,139,250,0.12); color: #A78BFA; }
+
+    /* Modal */
+    .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    .modal-backdrop.show { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+    .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 1rem; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--muted2); font-size: 1.2rem; cursor: pointer; padding: 4px; }
+    .modal-body { padding: 20px 24px; }
+    .detail-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: var(--muted2); min-width: 130px; flex-shrink: 0; }
+    .detail-val { color: var(--text); word-break: break-all; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+
+    .modal textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 10px; font-size: 0.85rem; resize: vertical; min-height: 72px; margin-top: 10px; }
+    .modal textarea:focus { outline: none; border-color: var(--red); }
+    .modal input[type=text] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 9px 12px; font-size: 0.85rem; margin-top: 8px; }
+    .modal input[type=text]:focus { outline: none; border-color: var(--red); }
+    .modal select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 9px 12px; font-size: 0.85rem; margin-top: 8px; }
+
+    .btn-modal-primary { padding: 9px 18px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; }
+    .btn-modal-primary:hover { background: var(--red-dark); }
+    .btn-modal-secondary { padding: 9px 18px; background: var(--surface2); color: var(--muted2); border: none; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
+
+    /* Items list in modal */
+    .items-list { margin-top: 8px; }
+    .item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+    .item-row:last-child { border-bottom: none; }
+    .item-name { color: var(--text); }
+    .item-price { color: var(--muted2); }
+
+    /* Loading */
+    .loading-state { text-align: center; padding: 48px; color: var(--muted2); }
+    .empty-state { text-align: center; padding: 48px; color: var(--muted2); }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .stat-val { font-size: 1.5rem; font-weight: 800; color: var(--text); }
+    .stat-label { font-size: 0.72rem; color: var(--muted2); margin-top: 4px; }
+    .stat-card.red { border-color: rgba(204,18,18,0.3); }
+    .stat-card.red .stat-val { color: var(--red); }
+  </style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-card">
+    <h1>🛍️ VSB Admin</h1>
+    <p>Ingresá tu token de administrador para continuar.</p>
+    <label>Token de acceso</label>
+    <input type="password" id="token-input" placeholder="••••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+    <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app">
+  <div class="topbar-admin">
+    <div class="brand">
+      <i class="fa-solid fa-store" style="color:var(--red);"></i>
+      Virtual Shop Baires
+      <span>ADMIN</span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+  </div>
+  <div class="admin-body">
+    <div class="sidebar-admin">
+      <div class="section-label">Pedidos</div>
+      <a class="active" onclick="setView('orders')"><i class="fa-solid fa-list-check"></i> Todos</a>
+      <a onclick="setView('pending')"><i class="fa-solid fa-clock"></i> Pendientes</a>
+      <a onclick="setView('review')"><i class="fa-solid fa-eye"></i> En revisión</a>
+      <a onclick="setView('confirmed')"><i class="fa-solid fa-check"></i> Confirmados</a>
+      <div class="section-label">Sistema</div>
+      <a onclick="syncProducts()"><i class="fa-solid fa-rotate"></i> Sincronizar precios</a>
+    </div>
+    <div class="main-admin">
+      <div class="stats-row" id="stats-row"></div>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterOrders('all', this)">Todos <span class="count-badge" id="cnt-all">0</span></button>
+        <button class="filter-btn" onclick="filterOrders('pending_transfer', this)">Sin comprobante <span class="count-badge" id="cnt-pending">0</span></button>
+        <button class="filter-btn" onclick="filterOrders('proof_uploaded', this)">En revisión <span class="count-badge" id="cnt-review">0</span></button>
+        <button class="filter-btn" onclick="filterOrders('payment_confirmed', this)">Confirmados <span class="count-badge" id="cnt-confirmed">0</span></button>
+        <button class="filter-btn" onclick="filterOrders('payment_rejected', this)">Rechazados <span class="count-badge" id="cnt-rejected">0</span></button>
+        <button class="reload-btn" onclick="loadOrders()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+      </div>
+      <div class="orders-table-wrap">
+        <table id="orders-table">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Pago</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="orders-body">
+            <tr><td colspan="7" class="loading-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: detalle del pedido -->
+<div class="modal-backdrop" id="modal-detail">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Detalle del pedido</h3>
+      <button class="modal-close" onclick="closeModal('modal-detail')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn-modal-secondary" onclick="closeModal('modal-detail')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmar pago -->
+<div class="modal-backdrop" id="modal-confirm">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Confirmar pago</h3>
+      <button class="modal-close" onclick="closeModal('modal-confirm')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted2);font-size:0.85rem;">El cliente recibirá un email confirmando el pago.</p>
+      <p style="font-size:0.82rem;color:var(--muted2);margin-top:12px;">Notas internas (opcional):</p>
+      <textarea id="confirm-notes" placeholder="Ej: Transferencia verificada en homebanking..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-secondary" onclick="closeModal('modal-confirm')">Cancelar</button>
+      <button class="btn-modal-primary" onclick="executeConfirm()" style="background:#25D366;">
+        <i class="fa-solid fa-check"></i> Confirmar pago
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: rechazar pago -->
+<div class="modal-backdrop" id="modal-reject">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Rechazar comprobante</h3>
+      <button class="modal-close" onclick="closeModal('modal-reject')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--muted2);font-size:0.85rem;">El cliente recibirá un email indicando el problema y podrá subir un nuevo comprobante.</p>
+      <p style="font-size:0.82rem;color:var(--muted2);margin-top:12px;">Motivo del rechazo:</p>
+      <textarea id="reject-reason" placeholder="Ej: El monto no coincide. El comprobante está vencido..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-secondary" onclick="closeModal('modal-reject')">Cancelar</button>
+      <button class="btn-modal-primary" onclick="executeReject()">
+        <i class="fa-solid fa-xmark"></i> Rechazar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: cambiar estado -->
+<div class="modal-backdrop" id="modal-status">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Actualizar estado del pedido</h3>
+      <button class="modal-close" onclick="closeModal('modal-status')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:0.82rem;color:var(--muted2);">Nuevo estado:</p>
+      <select id="status-select">
+        <option value="preparing_order">Preparando pedido</option>
+        <option value="ready_for_pickup">Listo para retiro</option>
+        <option value="shipped">Enviado</option>
+        <option value="delivered">Entregado</option>
+        <option value="cancelled">Cancelado</option>
+      </select>
+      <p style="font-size:0.82rem;color:var(--muted2);margin-top:12px;">Número de seguimiento (opcional):</p>
+      <input type="text" id="tracking-input" placeholder="Ej: OCA-123456789" />
+      <p style="font-size:0.82rem;color:var(--muted2);margin-top:12px;">Notas internas (opcional):</p>
+      <textarea id="status-notes" placeholder="Notas..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-secondary" onclick="closeModal('modal-status')">Cancelar</button>
+      <button class="btn-modal-primary" onclick="executeStatus()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = "https://virtualshopbaires.com.ar/api";
+let adminToken = "";
+let allOrders = [];
+let activeOrderId = "";
+let activeFilter = "all";
+
+// ── Auth ──────────────────────────────────────────────────
+
+function doLogin() {
+  const token = document.getElementById("token-input").value.trim();
+  if (!token) { document.getElementById("login-err").textContent = "Ingresá el token."; return; }
+  adminToken = token;
+  sessionStorage.setItem("vsb_admin_token", token);
+  document.getElementById("login-wrap").style.display = "none";
+  document.getElementById("app").classList.add("show");
+  loadOrders();
+}
+
+function doLogout() {
+  adminToken = ""; sessionStorage.removeItem("vsb_admin_token");
+  location.reload();
+}
+
+function setView(v) {
+  document.querySelectorAll(".sidebar-admin a").forEach(a => a.classList.remove("active"));
+  event.target.closest("a").classList.add("active");
+  const map = { orders: "all", pending: "pending_transfer", review: "proof_uploaded", confirmed: "payment_confirmed" };
+  filterOrders(map[v] || "all", document.querySelector(`.filter-btn[onclick*="'${map[v] || 'all'}'"]`) || document.querySelectorAll(".filter-btn")[0]);
+}
+
+// ── Cargar pedidos ────────────────────────────────────────
+
+async function loadOrders() {
+  document.getElementById("orders-body").innerHTML = `<tr><td colspan="7" class="loading-state"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</td></tr>`;
+  try {
+    const res = await fetch(`${API_BASE}/admin/orders?limit=100`, {
+      headers: { "Authorization": `Bearer ${adminToken}` },
+    });
+    if (res.status === 401) { doLogout(); return; }
+    const data = await res.json();
+    if (!Array.isArray(data)) throw new Error("Respuesta inesperada");
+    allOrders = data;
+    updateCounts();
+    renderOrders(activeFilter);
+    renderStats();
+  } catch (e) {
+    document.getElementById("orders-body").innerHTML = `<tr><td colspan="7" class="empty-state" style="color:var(--red);">Error al cargar pedidos: ${e.message}</td></tr>`;
+  }
+}
+
+function updateCounts() {
+  document.getElementById("cnt-all").textContent = allOrders.length;
+  document.getElementById("cnt-pending").textContent = allOrders.filter(o => o.payment_status === "pending_transfer").length;
+  document.getElementById("cnt-review").textContent = allOrders.filter(o => o.payment_status === "proof_uploaded").length;
+  document.getElementById("cnt-confirmed").textContent = allOrders.filter(o => o.payment_status === "payment_confirmed").length;
+  document.getElementById("cnt-rejected").textContent = allOrders.filter(o => o.payment_status === "payment_rejected").length;
+}
+
+function renderStats() {
+  const total = allOrders.reduce((s, o) => s + Number(o.total || 0), 0);
+  const confirmed = allOrders.filter(o => o.payment_status === "payment_confirmed");
+  const totalConfirmed = confirmed.reduce((s, o) => s + Number(o.total || 0), 0);
+  const needsAction = allOrders.filter(o => o.payment_status === "proof_uploaded").length;
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-card"><div class="stat-val">${allOrders.length}</div><div class="stat-label">Pedidos totales</div></div>
+    <div class="stat-card"><div class="stat-val">$${totalConfirmed.toLocaleString("es-AR")}</div><div class="stat-label">Total confirmado</div></div>
+    <div class="stat-card red"><div class="stat-val">${needsAction}</div><div class="stat-label">Requieren acción</div></div>
+    <div class="stat-card"><div class="stat-val">${confirmed.length}</div><div class="stat-label">Pagos confirmados</div></div>`;
+}
+
+function filterOrders(status, btn) {
+  activeFilter = status;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  if (btn) btn.classList.add("active");
+  renderOrders(status);
+}
+
+function renderOrders(status) {
+  const filtered = status === "all" ? allOrders : allOrders.filter(o => o.payment_status === status);
+  const tbody = document.getElementById("orders-body");
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No hay pedidos.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = filtered.map(o => `
+    <tr>
+      <td><span class="order-num-link" onclick="showDetail('${o.id}')">${o.order_number}</span></td>
+      <td>
+        <div>${o.customer_name}</div>
+        <div class="customer-info">${o.customer_email}<br>${o.customer_phone || ""}</div>
+      </td>
+      <td style="white-space:nowrap;">$${Number(o.total).toLocaleString("es-AR")}</td>
+      <td>${paymentPill(o.payment_status)}</td>
+      <td>${orderStatusPill(o.order_status)}</td>
+      <td style="white-space:nowrap;color:var(--muted2);font-size:0.75rem;">${fmtDate(o.created_at)}</td>
+      <td>${actionBtns(o)}</td>
+    </tr>`).join("");
+}
+
+function paymentPill(s) {
+  const m = {
+    pending_transfer: ["pill-yellow", "Esperando pago"],
+    proof_uploaded:   ["pill-blue", "En revisión"],
+    payment_confirmed:["pill-green", "Confirmado"],
+    payment_rejected: ["pill-red", "Rechazado"],
+    expired:          ["pill-gray", "Expirado"],
+    cancelled:        ["pill-gray", "Cancelado"],
+  };
+  const [cls, label] = m[s] || ["pill-gray", s];
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+
+function orderStatusPill(s) {
+  const m = {
+    pending_payment:  ["pill-yellow", "Pend. pago"],
+    payment_review:   ["pill-blue", "Revisión"],
+    preparing_order:  ["pill-orange", "Preparando"],
+    ready_for_pickup: ["pill-purple", "Listo"],
+    shipped:          ["pill-blue", "Enviado"],
+    delivered:        ["pill-green", "Entregado"],
+    cancelled:        ["pill-gray", "Cancelado"],
+  };
+  const [cls, label] = m[s] || ["pill-gray", s];
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+
+function actionBtns(o) {
+  let btns = `<div class="action-btns"><button class="action-btn btn-view" onclick="showDetail('${o.id}')"><i class="fa-solid fa-eye"></i></button>`;
+  if (o.payment_status === "proof_uploaded") {
+    btns += `<button class="action-btn btn-confirm" onclick="openConfirm('${o.id}')"><i class="fa-solid fa-check"></i> Confirmar</button>`;
+    btns += `<button class="action-btn btn-reject" onclick="openReject('${o.id}')"><i class="fa-solid fa-xmark"></i> Rechazar</button>`;
+  }
+  if (o.payment_status === "payment_confirmed") {
+    btns += `<button class="action-btn btn-status" onclick="openStatus('${o.id}')"><i class="fa-solid fa-pen"></i> Estado</button>`;
+  }
+  return btns + "</div>";
+}
+
+// ── Detalle ───────────────────────────────────────────────
+
+function showDetail(orderId) {
+  const o = allOrders.find(x => x.id === orderId);
+  if (!o) return;
+  document.getElementById("modal-title").textContent = `Pedido ${o.order_number}`;
+  const items = Array.isArray(o.items) ? o.items : [];
+  const itemsHtml = items.map(i =>
+    `<div class="item-row">
+      <span class="item-name">${i.nombre}${i.color ? ` — ${i.color}` : ""}${i.talle ? ` / ${i.talle}` : ""} x${i.qty}</span>
+      <span class="item-price">$${Number(i.subtotal || i.precio_unit * i.qty).toLocaleString("es-AR")}</span>
+    </div>`).join("");
+
+  document.getElementById("modal-body").innerHTML = `
+    <div class="detail-row"><span class="detail-label">Número</span><span class="detail-val">${o.order_number}</span></div>
+    <div class="detail-row"><span class="detail-label">Cliente</span><span class="detail-val">${o.customer_name}</span></div>
+    <div class="detail-row"><span class="detail-label">Email</span><span class="detail-val">${o.customer_email}</span></div>
+    <div class="detail-row"><span class="detail-label">Teléfono</span><span class="detail-val">${o.customer_phone || "—"}</span></div>
+    <div class="detail-row"><span class="detail-label">Dirección</span><span class="detail-val">${o.customer_address || "—"}</span></div>
+    <div class="detail-row"><span class="detail-label">Notas del cliente</span><span class="detail-val">${o.customer_notes || "—"}</span></div>
+    <div class="detail-row"><span class="detail-label">Ítems</span><span class="detail-val"><div class="items-list">${itemsHtml}</div></span></div>
+    <div class="detail-row"><span class="detail-label">Subtotal</span><span class="detail-val">$${Number(o.subtotal).toLocaleString("es-AR")}</span></div>
+    <div class="detail-row"><span class="detail-label">Descuento (${o.discount_pct}%)</span><span class="detail-val" style="color:var(--red);">-$${Number(o.discount_amount).toLocaleString("es-AR")}</span></div>
+    <div class="detail-row"><span class="detail-label">Total</span><span class="detail-val" style="font-weight:700;font-size:1rem;">$${Number(o.total).toLocaleString("es-AR")}</span></div>
+    <div class="detail-row"><span class="detail-label">Estado pago</span><span class="detail-val">${paymentPill(o.payment_status)}</span></div>
+    <div class="detail-row"><span class="detail-label">Estado pedido</span><span class="detail-val">${orderStatusPill(o.order_status)}</span></div>
+    <div class="detail-row"><span class="detail-label">Creado</span><span class="detail-val">${fmtDate(o.created_at)}</span></div>
+    ${o.proof_uploaded_at ? `<div class="detail-row"><span class="detail-label">Comprobante</span><span class="detail-val">${fmtDate(o.proof_uploaded_at)}${o.proof_url ? ` <a href="${o.proof_url}" target="_blank" style="color:var(--red);margin-left:8px;">Ver archivo ↗</a>` : ""}</span></div>` : ""}
+    ${o.confirmed_at ? `<div class="detail-row"><span class="detail-label">Confirmado</span><span class="detail-val">${fmtDate(o.confirmed_at)}</span></div>` : ""}
+    ${o.tracking_number ? `<div class="detail-row"><span class="detail-label">Seguimiento</span><span class="detail-val">${o.tracking_number}</span></div>` : ""}
+    ${o.admin_notes ? `<div class="detail-row"><span class="detail-label">Notas admin</span><span class="detail-val">${o.admin_notes}</span></div>` : ""}`;
+
+  openModal("modal-detail");
+}
+
+// ── Confirmar pago ────────────────────────────────────────
+
+function openConfirm(orderId) { activeOrderId = orderId; document.getElementById("confirm-notes").value = ""; openModal("modal-confirm"); }
+
+async function executeConfirm() {
+  const notes = document.getElementById("confirm-notes").value.trim();
+  try {
+    const res = await fetch(`${API_BASE}/admin/orders/${activeOrderId}/confirm`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${adminToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ notes }),
+    });
+    if (!res.ok) { const d = await res.json(); alert("Error: " + (d.error || "No se pudo confirmar")); return; }
+    closeModal("modal-confirm");
+    await loadOrders();
+    alert("✓ Pago confirmado. Se envió email al cliente.");
+  } catch { alert("Error de conexión."); }
+}
+
+// ── Rechazar pago ─────────────────────────────────────────
+
+function openReject(orderId) { activeOrderId = orderId; document.getElementById("reject-reason").value = ""; openModal("modal-reject"); }
+
+async function executeReject() {
+  const reason = document.getElementById("reject-reason").value.trim();
+  if (!reason) { alert("Por favor escribí el motivo del rechazo."); return; }
+  try {
+    const res = await fetch(`${API_BASE}/admin/orders/${activeOrderId}/reject`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${adminToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) { const d = await res.json(); alert("Error: " + (d.error || "No se pudo rechazar")); return; }
+    closeModal("modal-reject");
+    await loadOrders();
+    alert("✓ Comprobante rechazado. Se envió email al cliente.");
+  } catch { alert("Error de conexión."); }
+}
+
+// ── Cambiar estado ────────────────────────────────────────
+
+function openStatus(orderId) {
+  activeOrderId = orderId;
+  document.getElementById("tracking-input").value = "";
+  document.getElementById("status-notes").value = "";
+  openModal("modal-status");
+}
+
+async function executeStatus() {
+  const order_status = document.getElementById("status-select").value;
+  const tracking_number = document.getElementById("tracking-input").value.trim();
+  const admin_notes = document.getElementById("status-notes").value.trim();
+  try {
+    const res = await fetch(`${API_BASE}/admin/orders/${activeOrderId}/status`, {
+      method: "PATCH",
+      headers: { "Authorization": `Bearer ${adminToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ order_status, tracking_number, admin_notes }),
+    });
+    if (!res.ok) { const d = await res.json(); alert("Error: " + (d.error || "No se pudo actualizar")); return; }
+    closeModal("modal-status");
+    await loadOrders();
+  } catch { alert("Error de conexión."); }
+}
+
+// ── Sincronizar productos ─────────────────────────────────
+
+async function syncProducts() {
+  if (!confirm("¿Sincronizar los precios desde Google Sheets? Esto puede tardar unos segundos.")) return;
+  alert("Para sincronizar, ejecutá el Apps Script desde Google Sheets → Extensiones → Apps Script → Ejecutar 'syncPricesToSupabase'. O publicá una nueva versión del script.");
+}
+
+// ── Modal utils ───────────────────────────────────────────
+
+function openModal(id) { document.getElementById(id).classList.add("show"); }
+function closeModal(id) { document.getElementById(id).classList.remove("show"); }
+
+document.addEventListener("click", e => {
+  if (e.target.classList.contains("modal-backdrop")) e.target.classList.remove("show");
+});
+
+function fmtDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+// ── Init ──────────────────────────────────────────────────
+
+const savedToken = sessionStorage.getItem("vsb_admin_token");
+if (savedToken) {
+  adminToken = savedToken;
+  document.getElementById("login-wrap").style.display = "none";
+  document.getElementById("app").classList.add("show");
+  loadOrders();
+}
+
+// Auto-refresh cada 2 minutos
+setInterval(() => { if (adminToken) loadOrders(); }, 120000);
+</script>
+</body>
+</html>

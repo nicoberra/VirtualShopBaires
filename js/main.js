@@ -1,14 +1,5 @@
-// Ocultar buscador al bajar, mostrar solo al llegar arriba del todo
+// Botón volver arriba
 window.addEventListener("scroll", () => {
-  const strip = document.querySelector(".search-strip");
-  if (!strip) return;
-  if (window.scrollY > 10) {
-    strip.classList.add("hidden");
-  } else {
-    strip.classList.remove("hidden");
-  }
-
-  // Botón volver arriba
   const btn = document.getElementById("back-to-top");
   if (btn) btn.classList.toggle("visible", window.scrollY > 300);
 });

@@ -2258,8 +2258,9 @@ footer {
   width: 100%;
 }
 .hero-text-col {
-  flex: 0 0 52%;
-  max-width: 52%;
+  flex: 0 0 100%;
+  max-width: 700px;
+  margin: 0 auto;
 }
 .hero-img-col {
   flex: 0 0 48%;

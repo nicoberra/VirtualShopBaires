@@ -138,11 +138,11 @@ function showToast(msg, type = "success") {
   if (!toast) {
     toast = document.createElement("div");
     toast.id = "toast";
-    toast.className = "toast";
     document.body.appendChild(toast);
   }
   toast.className = `toast ${type}`;
-  toast.textContent = msg;
+  toast.innerHTML = `<div class="toast-inner"><div class="toast-app">Virtual Shop Baires</div><div class="toast-msg">${msg}</div></div>`;
   toast.classList.add("show");
-  setTimeout(() => toast.classList.remove("show"), 3000);
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.classList.remove("show"), 3200);
 }

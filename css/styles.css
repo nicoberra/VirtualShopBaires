@@ -253,7 +253,9 @@ header {
 }
 
 /* ===== NAV (mobile legacy — oculto) ===== */
-nav { display: none; background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); }
+.nav-inner-wrap { display: none; background: #fff; border-bottom: 1px solid rgba(0,0,0,0.08); }
+/* El header-dropdown-nav es un nav pero NO debe ocultarse */
+.header-dropdown-nav { display: block; }
 .nav-inner {
   display: flex;
   align-items: center;

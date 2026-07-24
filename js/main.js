@@ -4,28 +4,34 @@ window.addEventListener("scroll", () => {
   if (btn) btn.classList.toggle("visible", window.scrollY > 300);
 });
 
-// Nav mobile toggle
+// Hamburger → dropdown nav
 document.addEventListener("DOMContentLoaded", () => {
   const hamburger = document.getElementById("hamburger");
-  const navInner = document.getElementById("nav-inner");
-  if (hamburger && navInner) {
-    hamburger.addEventListener("click", () => {
-      navInner.classList.toggle("open");
+  const dropdownNav = document.getElementById("header-dropdown-nav");
+
+  if (hamburger && dropdownNav) {
+    hamburger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      dropdownNav.classList.toggle("open");
+      hamburger.classList.toggle("open");
+    });
+
+    // Cerrar al hacer click fuera
+    document.addEventListener("click", (e) => {
+      if (!dropdownNav.contains(e.target) && !hamburger.contains(e.target)) {
+        dropdownNav.classList.remove("open");
+        hamburger.classList.remove("open");
+      }
+    });
+
+    // Cerrar al elegir un ítem
+    dropdownNav.querySelectorAll("a").forEach(a => {
+      a.addEventListener("click", () => {
+        dropdownNav.classList.remove("open");
+        hamburger.classList.remove("open");
+      });
     });
   }
-
-  // Cerrar nav al hacer click fuera
-  document.addEventListener("click", (e) => {
-    if (navInner && !navInner.contains(e.target) && !hamburger?.contains(e.target)) {
-      navInner.classList.remove("open");
-    }
-  });
-
-  // Marcar nav activo
-  const links = document.querySelectorAll(".nav-inner a");
-  links.forEach(link => {
-    if (link.href === window.location.href) link.classList.add("active");
-  });
 
   // Buscador
   const searchForm = document.getElementById("search-form");

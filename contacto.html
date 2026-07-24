@@ -33,35 +33,31 @@
 <header>
   <div class="container">
     <div class="header-inner">
+      <div class="header-left">
+        <button class="hamburger" id="hamburger" aria-label="Menú"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form">
+          <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </form>
+      </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
-      <nav class="header-nav">
-        <a href="index.html">Inicio</a>
-        <a href="productos.html">Productos</a>
-        <a href="nosotros.html">Nosotros</a>
-        <a href="contacto.html" class="active">Contacto</a>
-      </nav>
       <div class="header-actions">
         <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
         <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
         <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
         <button class="cart-action-btn" onclick="openCart()"><i class="fa-solid fa-cart-shopping"></i><span id="cart-label">0</span></button>
-        <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
       </div>
     </div>
   </div>
-</header>
-
-
-<nav>
-  <div class="container">
-    <div class="nav-inner" id="nav-inner">
+  <nav class="header-dropdown-nav" id="header-dropdown-nav">
+    <div class="container">
       <a href="index.html">Inicio</a>
       <a href="productos.html">Productos</a>
       <a href="nosotros.html">Nosotros</a>
       <a href="contacto.html" class="active">Contacto</a>
     </div>
-  </div>
-</nav>
+  </nav>
+</header>
 
 <div style="margin-bottom: 0;">
   <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" class="map-link-block" style="border-radius:0;">

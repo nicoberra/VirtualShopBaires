@@ -85,6 +85,7 @@ header {
   z-index: 100;
   box-shadow: 0 2px 16px rgba(0,0,0,0.10);
   border-bottom: 3px solid var(--red);
+  overflow: visible;
 }
 /* 3 columnas: [búsqueda+hamburger] [logo centrado] [íconos] */
 .header-inner {
@@ -92,10 +93,11 @@ header {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   padding: 0;
+  min-height: 64px;
   gap: 16px;
 }
-.logo { display: flex; justify-content: center; line-height: 0; }
-.logo img { height: 140px; width: auto; display: block; }
+.logo { display: flex; justify-content: center; line-height: 0; position: relative; z-index: 101; }
+.logo img { height: 130px; width: auto; display: block; }
 
 /* Columna izquierda: hamburger + buscador */
 .header-left {

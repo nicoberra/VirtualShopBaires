@@ -95,7 +95,7 @@ header {
   gap: 16px;
 }
 .logo { display: flex; justify-content: center; line-height: 0; }
-.logo img { height: 100px; width: auto; display: block; }
+.logo img { height: 140px; width: auto; display: block; }
 
 /* Columna izquierda: hamburger + buscador */
 .header-left {

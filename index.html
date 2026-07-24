@@ -142,7 +142,9 @@
 </header>
 
 <!-- CAROUSEL CATEGORÍAS INFINITO -->
-<div class="cat-carousel-wrap">
+<div class="cat-carousel-outer">
+  <button class="cat-arrow cat-arrow-prev" id="cat-prev" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
+  <div class="cat-carousel-wrap" id="cat-carousel-wrap">
   <div class="cat-track" id="cat-track">
     <!-- Set 1 -->
     <a href="productos.html?cat=Mascotas" class="cat-slide">
@@ -211,7 +213,9 @@
       <span class="cat-slide-name">Caza y Pesca</span>
     </a>
   </div>
-</div>
+  </div><!-- /cat-carousel-wrap -->
+  <button class="cat-arrow cat-arrow-next" id="cat-next" aria-label="Siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+</div><!-- /cat-carousel-outer -->
 
 <!-- HERO -->
 <section class="hero hero-split">

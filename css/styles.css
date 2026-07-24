@@ -511,25 +511,53 @@ header {
 }
 
 /* ===== CATEGORY CAROUSEL ===== */
-.cat-carousel-wrap {
-  overflow: hidden;
+.cat-carousel-outer {
+  position: relative;
   background: #fff;
   border-bottom: 1px solid rgba(0,0,0,0.07);
-  padding: 0;
+}
+.cat-carousel-wrap {
+  overflow-x: scroll;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  cursor: grab;
   user-select: none;
 }
+.cat-carousel-wrap::-webkit-scrollbar { display: none; }
+.cat-carousel-wrap.is-dragging { cursor: grabbing; }
 .cat-track {
   display: flex;
   width: max-content;
-  animation: cat-scroll 32s linear infinite;
 }
-.cat-track:hover {
-  animation-play-state: paused;
+.cat-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(255,255,255,0.95);
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.20);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: #333;
+  opacity: 0;
+  transition: opacity 0.22s, box-shadow 0.2s;
+  pointer-events: none;
 }
-@keyframes cat-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+.cat-carousel-outer:hover .cat-arrow {
+  opacity: 1;
+  pointer-events: auto;
 }
+.cat-arrow:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.28); }
+.cat-arrow-prev { left: 8px; }
+.cat-arrow-next { right: 8px; }
 .cat-slide {
   flex: 0 0 auto;
   width: 160px;

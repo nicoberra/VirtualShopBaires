@@ -40,8 +40,8 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v3';
-const _CACHE_IMAGES = 'vsb_images_v2';
+const _CACHE_DATA   = 'vsb_data_v4';
+const _CACHE_IMAGES = 'vsb_images_v3';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
 
@@ -262,6 +262,11 @@ const CATS_EXTERNAS = {
   "herramientas": "https://sanou.com.ar"
 };
 
+// Alias para renombres de categorías: pestaña vieja → nombre nuevo
+const CATEGORY_ALIASES = {
+  "Jardin, Caza y Pesca": "Camping",
+};
+
 async function cargarProductos() {
   // Servir desde cache si existe (carga instantánea)
   const cached = _readCache(_CACHE_DATA, _TTL_DATA);
@@ -288,7 +293,7 @@ async function cargarProductos() {
     let id = 1;
     PRODUCTOS = resultados.flat()
       .filter(p => p.precio > 0 || p.descripcion)
-      .map(p => ({ ...p, id: id++ }));
+      .map(p => ({ ...p, categoria: CATEGORY_ALIASES[p.categoria] || p.categoria, id: id++ }));
 
     // 4. Categorías: las que tienen productos + las externas del Sheet
     const catsConProductos = [...new Set(PRODUCTOS.map(p => p.categoria))];

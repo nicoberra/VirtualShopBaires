@@ -629,28 +629,29 @@ async function handleSyncProducts(request, env) {
   const body = await request.json().catch(() => null);
   if (!body || !Array.isArray(body.products)) return err("Formato inválido. Enviar { products: [...] }");
 
-  let synced = 0;
-  const errors = [];
-
+  const seen = new Map();
   for (const p of body.products) {
-    const { ok, data } = await supabase(env, "/products_cache", {
-      method: "POST",
-      body: JSON.stringify({
-        nombre: String(p.nombre || "").trim(),
-        categoria: String(p.categoria || "").trim(),
-        precio: Number(p.precio) || 0,
-        precio_original: p.precio_original ? Number(p.precio_original) : null,
-        color: String(p.color || "").trim(),
-        talle: String(p.talle || "").trim(),
-        stock: p.stock !== false,
-      }),
-      headers: { "Prefer": "resolution=merge-duplicates" },
-    });
-    if (ok) synced++;
-    else errors.push({ producto: p.nombre, error: JSON.stringify(data) });
+    const row = {
+      nombre: String(p.nombre || "").trim(),
+      categoria: String(p.categoria || "").trim(),
+      precio: Number(p.precio) || 0,
+      precio_original: p.precio_original ? Number(p.precio_original) : null,
+      color: String(p.color || "").trim(),
+      talle: String(p.talle || "").trim(),
+      stock: p.stock !== false,
+    };
+    seen.set(`${row.nombre}|${row.categoria}|${row.color}|${row.talle}`, row);
   }
+  const rows = Array.from(seen.values());
 
-  return json({ synced, errors, total: body.products.length });
+  const { ok, data } = await supabase(env, "/products_cache?on_conflict=nombre,categoria,color,talle", {
+    method: "POST",
+    body: JSON.stringify(rows),
+    headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+  });
+
+  if (!ok) return json({ synced: 0, errors: [{ error: JSON.stringify(data) }], total: body.products.length });
+  return json({ synced: rows.length, errors: [], total: rows.length });
 }
 
 // ── Router principal ──────────────────────────────────────

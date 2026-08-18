@@ -2433,34 +2433,33 @@ footer {
   color: var(--red);
 }
 
-/* ── HERO CON FONDO DE 4 VIDEOS ───────────────────────── */
+/* ── HERO CON 4 VIDEOS VERTICALES (modo teléfono) ────── */
 .hero-video-bg {
   background: #0d0d0d;
-  min-height: 500px;
+  min-height: 88vh;   /* casi pantalla completa */
 }
 .hero-video-grid {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-columns: repeat(4, 1fr);  /* 4 columnas verticales */
+  grid-template-rows: 1fr;
   overflow: hidden;
   z-index: 0;
+  gap: 3px;           /* separador fino entre "teléfonos" */
 }
 .hero-vid {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
-  /* Línea divisoria sutil entre paneles */
-  outline: 1px solid rgba(255,255,255,0.08);
 }
 .hero-video-overlay {
   position: absolute;
   inset: 0;
-  /* Degradado: más oscuro arriba/abajo, menos en el centro para ver los videos */
+  /* Más oscuro en el centro (donde está el texto), más transparente en los costados */
   background:
-    linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.52) 100%);
+    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.3) 100%);
   z-index: 1;
 }
 /* Texto sobre fondo oscuro */
@@ -2471,18 +2470,23 @@ footer {
   border: 1px solid rgba(255,255,255,0.25);
   backdrop-filter: blur(4px);
 }
-.hero-video-bg .hero-slogan { color: #fff; text-shadow: 0 2px 16px rgba(0,0,0,0.4); }
+.hero-video-bg .hero-slogan { color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
 .hero-video-bg .hero-slogan .highlight { color: #ff5252; }
-.hero-video-bg .hero-subtitle { color: rgba(255,255,255,0.88); text-shadow: 0 1px 8px rgba(0,0,0,0.3); }
+.hero-video-bg .hero-subtitle { color: rgba(255,255,255,0.88); text-shadow: 0 1px 10px rgba(0,0,0,0.4); }
 .hero-video-bg .hero-trust span { color: rgba(255,255,255,0.82); }
 .hero-video-bg .hero-trust span i { color: #fff; }
 
-/* Mobile: 1 solo video para no saturar */
+/* Tablet: 2 videos */
 @media (max-width: 768px) {
-  .hero-video-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr;
-  }
+  .hero-video-bg { min-height: 70vh; }
+  .hero-video-grid { grid-template-columns: repeat(2, 1fr); }
+  .hero-vid:nth-child(3),
+  .hero-vid:nth-child(4) { display: none; }
+}
+/* Mobile: 1 video */
+@media (max-width: 480px) {
+  .hero-video-bg { min-height: 60vh; }
+  .hero-video-grid { grid-template-columns: 1fr; }
   .hero-vid:not(:first-child) { display: none; }
 }
 

@@ -95,7 +95,10 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="dns-prefetch" href="https://script.google.com" />
+  <!-- Font Awesome: carga asíncrona para no bloquear el render -->
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
 </head>
 <body>
 
@@ -179,37 +182,37 @@
       <div class="cat-slide-img"><img src="Productos/Playa/categoria.png" alt="Playa" /></div>
       <span class="cat-slide-name">Playa</span>
     </a>
-    <!-- Set 2 — duplicado para loop infinito -->
+    <!-- Set 2 — duplicado para loop infinito (lazy load) -->
     <a href="productos.html?cat=Mascotas" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Mascotas/categoria.png" alt="Mascotas" /></div>
+      <div class="cat-slide-img"><img src="Productos/Mascotas/categoria.png" alt="Mascotas" loading="lazy" /></div>
       <span class="cat-slide-name">Mascotas</span>
     </a>
     <a href="productos.html?cat=Bazar%2C+ba%C3%B1o+y+cocina" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Bazar,%20ba%C3%B1o%20y%20cocina/categoria.png" alt="Bazar y cocina" /></div>
+      <div class="cat-slide-img"><img src="Productos/Bazar,%20ba%C3%B1o%20y%20cocina/categoria.png" alt="Bazar y cocina" loading="lazy" /></div>
       <span class="cat-slide-name">Bazar y cocina</span>
     </a>
     <a href="productos.html?cat=Muebles+para+el+hogar" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Muebles%20para%20el%20hogar/categoria.png" alt="Muebles" /></div>
+      <div class="cat-slide-img"><img src="Productos/Muebles%20para%20el%20hogar/categoria.png" alt="Muebles" loading="lazy" /></div>
       <span class="cat-slide-name">Muebles</span>
     </a>
     <a href="productos.html?cat=Fitness+y+musculacion" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Fitness%20y%20musculacion/categoria.png" alt="Fitness" /></div>
+      <div class="cat-slide-img"><img src="Productos/Fitness%20y%20musculacion/categoria.png" alt="Fitness" loading="lazy" /></div>
       <span class="cat-slide-name">Fitness</span>
     </a>
     <a href="productos.html?cat=Pilates+y+Yoga" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Pilates%20y%20Yoga/categoria.png" alt="Pilates y Yoga" /></div>
+      <div class="cat-slide-img"><img src="Productos/Pilates%20y%20Yoga/categoria.png" alt="Pilates y Yoga" loading="lazy" /></div>
       <span class="cat-slide-name">Pilates y Yoga</span>
     </a>
     <a href="https://sanou.com.ar" target="_blank" rel="noopener" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Herramientas/categoria.png" alt="Herramientas" /></div>
+      <div class="cat-slide-img"><img src="Productos/Herramientas/categoria.png" alt="Herramientas" loading="lazy" /></div>
       <span class="cat-slide-name">Herramientas</span>
     </a>
     <a href="productos.html?cat=Camping" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Camping/categoria.png" alt="Camping" /></div>
+      <div class="cat-slide-img"><img src="Productos/Camping/categoria.png" alt="Camping" loading="lazy" /></div>
       <span class="cat-slide-name">Camping</span>
     </a>
     <a href="productos.html?cat=Playa" class="cat-slide">
-      <div class="cat-slide-img"><img src="Productos/Playa/categoria.png" alt="Playa" /></div>
+      <div class="cat-slide-img"><img src="Productos/Playa/categoria.png" alt="Playa" loading="lazy" /></div>
       <span class="cat-slide-name">Playa</span>
     </a>
   </div>
@@ -218,7 +221,26 @@
 </div><!-- /cat-carousel-outer -->
 
 <!-- HERO -->
-<section class="hero hero-split">
+<section class="hero hero-split hero-video-bg">
+
+  <!-- GRILLA DE 4 VIDEOS DE FONDO -->
+  <!-- Subí tus 4 videos a Supabase Storage → bucket "videos" y reemplazá los src -->
+  <div class="hero-video-grid" id="hero-video-grid">
+    <video class="hero-vid" autoplay muted loop playsinline preload="none" poster="Productos/Mascotas/categoria.png">
+      <source src="" data-src="videos/hero1.mp4" type="video/mp4" />
+    </video>
+    <video class="hero-vid" autoplay muted loop playsinline preload="none" poster="Productos/Fitness%20y%20musculacion/categoria.png">
+      <source src="" data-src="videos/hero2.mp4" type="video/mp4" />
+    </video>
+    <video class="hero-vid" autoplay muted loop playsinline preload="none" poster="Productos/Pilates%20y%20Yoga/categoria.png">
+      <source src="" data-src="videos/hero3.mp4" type="video/mp4" />
+    </video>
+    <video class="hero-vid" autoplay muted loop playsinline preload="none" poster="Productos/Camping/categoria.png">
+      <source src="" data-src="videos/hero4.mp4" type="video/mp4" />
+    </video>
+  </div>
+  <div class="hero-video-overlay"></div>
+
   <div class="container">
     <div class="hero-split-inner">
       <div class="hero-text-col">
@@ -514,6 +536,18 @@
   </div>
 </div>
 
+<script>
+  // Carga los videos del hero solo después de que la página es interactiva
+  // para no bloquear el renderizado inicial
+  window.addEventListener('load', function() {
+    document.querySelectorAll('.hero-vid source[data-src]').forEach(function(src) {
+      if (src.getAttribute('data-src')) {
+        src.setAttribute('src', src.getAttribute('data-src'));
+        src.parentElement.load();
+      }
+    });
+  });
+</script>
 <script src="js/sheets.js"></script>
 <script src="js/productos.js"></script>
 <script src="js/cart.js"></script>

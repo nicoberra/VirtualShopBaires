@@ -2505,30 +2505,25 @@ footer {
 .hero-video-bg .hero-trust span { color: rgba(255,255,255,0.82); }
 .hero-video-bg .hero-trust span i { color: #fff; }
 
-/* Tablet: 2 iPhones más chicos */
+/* Tablet: 4 iPhones en fila con marcos más chicos */
 @media (max-width: 768px) {
-  .hero-video-bg { min-height: 70vh; }
-  .hero-video-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; gap: 10px; }
-  .hero-phone-frame:nth-child(3),
-  .hero-phone-frame:nth-child(4) { display: none; }
+  .hero-video-bg { min-height: 80vh; }
+  .hero-video-grid { grid-template-columns: repeat(4, 1fr); padding: 16px 12px; gap: 8px; }
   .hero-phone-frame { border-radius: 28px; }
-  .hero-phone-frame::before { width: 56px; height: 16px; top: 8px; }
+  .hero-phone-frame::before { width: 48px; height: 14px; top: 8px; }
 }
-/* Mobile: 1 iPhone más pequeño, centrado */
+/* Mobile: 4 iPhones en grilla 2×2 */
 @media (max-width: 480px) {
-  .hero-video-bg { min-height: 70vh; }
+  .hero-video-bg { min-height: 88vh; }
   .hero-video-grid {
-    grid-template-columns: 1fr;
-    padding: 24px 80px;   /* laterales anchos para que el teléfono sea chico */
-    gap: 0;
-    align-items: center;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    padding: 14px;
+    gap: 10px;
+    align-items: stretch;
   }
-  .hero-phone-frame:not(:first-child) { display: none; }
-  .hero-phone-frame {
-    border-radius: 36px;
-    border-width: 3px;
-  }
-  .hero-phone-frame::before { width: 52px; height: 16px; top: 9px; }
+  .hero-phone-frame { display: block; border-radius: 26px; }
+  .hero-phone-frame::before { width: 44px; height: 13px; top: 7px; border-radius: 8px; }
 }
 
 /* Precios en navy */

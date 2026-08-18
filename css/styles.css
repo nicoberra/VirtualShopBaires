@@ -2505,18 +2505,26 @@ footer {
 .hero-video-bg .hero-trust span { color: rgba(255,255,255,0.82); }
 .hero-video-bg .hero-trust span i { color: #fff; }
 
-/* Tablet: 2 iPhones */
+/* Tablet: 2 iPhones más chicos */
 @media (max-width: 768px) {
   .hero-video-bg { min-height: 70vh; }
-  .hero-video-grid { grid-template-columns: repeat(2, 1fr); padding: 20px; gap: 14px; }
+  .hero-video-grid { grid-template-columns: repeat(2, 1fr); padding: 16px; gap: 10px; }
   .hero-phone-frame:nth-child(3),
   .hero-phone-frame:nth-child(4) { display: none; }
+  .hero-phone-frame { border-radius: 28px; }
+  .hero-phone-frame::before { width: 56px; height: 16px; top: 8px; }
 }
-/* Mobile: 1 iPhone */
+/* Mobile: video como fondo completo, sin marco */
 @media (max-width: 480px) {
-  .hero-video-bg { min-height: 60vh; }
-  .hero-video-grid { grid-template-columns: 1fr; padding: 16px 40px; }
+  .hero-video-bg { min-height: 55vh; }
+  .hero-video-grid { grid-template-columns: 1fr; padding: 0; gap: 0; }
   .hero-phone-frame:not(:first-child) { display: none; }
+  .hero-phone-frame {
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+  .hero-phone-frame::before { display: none; }
 }
 
 /* Precios en navy */

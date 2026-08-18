@@ -2514,17 +2514,21 @@ footer {
   .hero-phone-frame { border-radius: 28px; }
   .hero-phone-frame::before { width: 56px; height: 16px; top: 8px; }
 }
-/* Mobile: video como fondo completo, sin marco */
+/* Mobile: 1 iPhone más pequeño, centrado */
 @media (max-width: 480px) {
-  .hero-video-bg { min-height: 55vh; }
-  .hero-video-grid { grid-template-columns: 1fr; padding: 0; gap: 0; }
+  .hero-video-bg { min-height: 70vh; }
+  .hero-video-grid {
+    grid-template-columns: 1fr;
+    padding: 24px 80px;   /* laterales anchos para que el teléfono sea chico */
+    gap: 0;
+    align-items: center;
+  }
   .hero-phone-frame:not(:first-child) { display: none; }
   .hero-phone-frame {
-    border-radius: 0;
-    border: none;
-    box-shadow: none;
+    border-radius: 36px;
+    border-width: 3px;
   }
-  .hero-phone-frame::before { display: none; }
+  .hero-phone-frame::before { width: 52px; height: 16px; top: 9px; }
 }
 
 /* Precios en navy */

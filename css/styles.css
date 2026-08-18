@@ -2435,18 +2435,47 @@ footer {
 
 /* ── HERO CON 4 VIDEOS VERTICALES (modo teléfono) ────── */
 .hero-video-bg {
-  background: #0d0d0d;
-  min-height: 88vh;   /* casi pantalla completa */
+  background: #111;
+  min-height: 88vh;
 }
 .hero-video-grid {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);  /* 4 columnas verticales */
+  grid-template-columns: repeat(4, 1fr);
   grid-template-rows: 1fr;
-  overflow: hidden;
   z-index: 0;
-  gap: 3px;           /* separador fino entre "teléfonos" */
+  gap: 18px;
+  padding: 28px 32px;
+  align-items: center;
+}
+/* Marco estilo iPhone */
+.hero-phone-frame {
+  position: relative;
+  border-radius: 44px;
+  overflow: hidden;
+  height: 100%;
+  /* Bisel del teléfono: borde exterior oscuro + brillo sutil */
+  border: 3px solid #3a3a3c;
+  box-shadow:
+    0 0 0 1px #555,
+    inset 0 0 0 1px rgba(255,255,255,0.08),
+    0 24px 60px rgba(0,0,0,0.6),
+    0 4px 16px rgba(0,0,0,0.4);
+  background: #000;
+}
+/* Dynamic Island (pastilla negra en la parte superior) */
+.hero-phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72px;
+  height: 20px;
+  background: #000;
+  border-radius: 12px;
+  z-index: 10;
 }
 .hero-vid {
   width: 100%;
@@ -2476,18 +2505,18 @@ footer {
 .hero-video-bg .hero-trust span { color: rgba(255,255,255,0.82); }
 .hero-video-bg .hero-trust span i { color: #fff; }
 
-/* Tablet: 2 videos */
+/* Tablet: 2 iPhones */
 @media (max-width: 768px) {
   .hero-video-bg { min-height: 70vh; }
-  .hero-video-grid { grid-template-columns: repeat(2, 1fr); }
-  .hero-vid:nth-child(3),
-  .hero-vid:nth-child(4) { display: none; }
+  .hero-video-grid { grid-template-columns: repeat(2, 1fr); padding: 20px; gap: 14px; }
+  .hero-phone-frame:nth-child(3),
+  .hero-phone-frame:nth-child(4) { display: none; }
 }
-/* Mobile: 1 video */
+/* Mobile: 1 iPhone */
 @media (max-width: 480px) {
   .hero-video-bg { min-height: 60vh; }
-  .hero-video-grid { grid-template-columns: 1fr; }
-  .hero-vid:not(:first-child) { display: none; }
+  .hero-video-grid { grid-template-columns: 1fr; padding: 16px 40px; }
+  .hero-phone-frame:not(:first-child) { display: none; }
 }
 
 /* Precios en navy */

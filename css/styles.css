@@ -2437,7 +2437,10 @@ footer {
 .hero-video-bg {
   background: #111;
   min-height: 88vh;
+  display: flex;
+  align-items: center;
 }
+.hero-video-bg .container { width: 100%; }
 .hero-video-grid {
   position: absolute;
   inset: 0;

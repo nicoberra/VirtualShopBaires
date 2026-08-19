@@ -2712,10 +2712,12 @@ footer {
   .cat-slide-name { font-size: 0.74rem; }
 }
 
-/* Mobile: ocultar flechas carrusel (solo swipe táctil) y camión topbar */
+/* Mobile: ocultar flechas carrusel, camión topbar; transform-based scroll */
 @media (max-width: 768px) {
   .cat-arrow { display: none !important; }
   .topbar-camion { display: none; }
+  /* overflow: hidden para que transform funcione en iOS */
+  .cat-carousel-wrap { overflow: hidden; cursor: default; }
 }
 
 /* Precios en navy */

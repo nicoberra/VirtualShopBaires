@@ -142,109 +142,109 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnNext = document.getElementById("cat-next");
     if (!wrap || !track) return;
 
-    const SPEED = 0.7;        // px por frame (auto-scroll)
-    const CARD_W = 180;       // ancho aprox de cada ítem (160px + gap)
+    const SPEED = 0.9;
+    const CARD_W = 160;
+    const isTouch = ('ontouchstart' in window);
     let autoPlay = true;
-    let isDragging = false;
-    let dragStartX = 0;
-    let dragScrollStart = 0;
     let resumeTimer = null;
 
-    // Half-width para el loop infinito (los ítems están duplicados)
     function halfWidth() { return track.scrollWidth / 2; }
-
-    // Auto-scroll con requestAnimationFrame
-    function tick() {
-      if (autoPlay && !isDragging) {
-        wrap.scrollLeft += SPEED;
-        if (wrap.scrollLeft >= halfWidth()) {
-          wrap.scrollLeft -= halfWidth();
-        }
-      }
-      requestAnimationFrame(tick);
-    }
-    requestAnimationFrame(tick);
-
     function pauseAndResume(ms) {
       autoPlay = false;
       clearTimeout(resumeTimer);
       resumeTimer = setTimeout(() => { autoPlay = true; }, ms);
     }
 
-    // Pausa al pasar el mouse solo en desktop (en mobile mouseenter bloquea autoPlay)
-    const isTouch = ('ontouchstart' in window);
-    if (!isTouch) {
+    if (isTouch) {
+      // ─── MOBILE: transform-based (scrollLeft no funciona en iOS RAF) ───
+      let offset = 0;
+      let dragging = false;
+      let touchStartX = 0;
+      let startOffset = 0;
+
+      function loop(val) {
+        const h = halfWidth();
+        if (!h) return val;
+        val = val % h;
+        return val < 0 ? val + h : val;
+      }
+
+      function mobileTick() {
+        if (autoPlay && !dragging) {
+          offset = loop(offset + SPEED);
+          track.style.transform = "translateX(-" + offset + "px)";
+        }
+        requestAnimationFrame(mobileTick);
+      }
+      requestAnimationFrame(mobileTick);
+
+      wrap.addEventListener("touchstart", function(e) {
+        dragging = true;
+        autoPlay = false;
+        touchStartX = e.touches[0].pageX;
+        startOffset = offset;
+      }, { passive: true });
+
+      wrap.addEventListener("touchmove", function(e) {
+        var dx = touchStartX - e.touches[0].pageX;
+        offset = loop(startOffset + dx);
+        track.style.transform = "translateX(-" + offset + "px)";
+      }, { passive: true });
+
+      wrap.addEventListener("touchend", function() {
+        dragging = false;
+        pauseAndResume(1500);
+      }, { passive: true });
+
+    } else {
+      // ─── DESKTOP: scrollLeft-based ────────────────────────────────────
+      let isDragging = false;
+      let dragStartX = 0;
+      let dragScrollStart = 0;
+
+      function tick() {
+        if (autoPlay && !isDragging) {
+          wrap.scrollLeft += SPEED;
+          if (wrap.scrollLeft >= halfWidth()) wrap.scrollLeft -= halfWidth();
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+
       wrap.addEventListener("mouseenter", () => { autoPlay = false; });
       wrap.addEventListener("mouseleave", () => { if (!isDragging) autoPlay = true; });
-    }
 
-    // === DRAG CON MOUSE ===
-    wrap.addEventListener("mousedown", (e) => {
-      isDragging = true;
-      autoPlay = false;
-      dragStartX = e.pageX;
-      dragScrollStart = wrap.scrollLeft;
-      wrap.classList.add("is-dragging");
-      e.preventDefault();
-    });
-    window.addEventListener("mousemove", (e) => {
-      if (!isDragging) return;
-      const dx = dragStartX - e.pageX;
-      let next = dragScrollStart + dx;
-      const hw = halfWidth();
-      if (next < 0) next += hw;
-      if (next >= hw) next -= hw;
-      wrap.scrollLeft = next;
-    });
-    window.addEventListener("mouseup", () => {
-      if (!isDragging) return;
-      isDragging = false;
-      wrap.classList.remove("is-dragging");
-      pauseAndResume(1200);
-    });
-
-    // Evitar que click en enlace se dispare después de drag
-    wrap.addEventListener("click", (e) => {
-      if (Math.abs(wrap.scrollLeft - dragScrollStart) > 5) e.preventDefault();
-    }, true);
-
-    // === TOUCH (CELULAR) ===
-    let touchStartX = 0;
-    let touchScrollStart = 0;
-    wrap.addEventListener("touchstart", (e) => {
-      autoPlay = false;
-      touchStartX = e.touches[0].pageX;
-      touchScrollStart = wrap.scrollLeft;
-    }, { passive: true });
-    wrap.addEventListener("touchmove", (e) => {
-      const dx = touchStartX - e.touches[0].pageX;
-      let next = touchScrollStart + dx;
-      const hw = halfWidth();
-      if (next < 0) next += hw;
-      if (next >= hw) next -= hw;
-      wrap.scrollLeft = next;
-    }, { passive: true });
-    wrap.addEventListener("touchend", () => {
-      pauseAndResume(1500);
-    }, { passive: true });
-
-    // === FLECHAS ===
-    if (btnPrev) {
-      btnPrev.addEventListener("click", () => {
-        let next = wrap.scrollLeft - CARD_W;
-        const hw = halfWidth();
-        if (next < 0) next += hw;
-        wrap.scrollLeft = next;
-        pauseAndResume(1500);
+      wrap.addEventListener("mousedown", (e) => {
+        isDragging = true; autoPlay = false;
+        dragStartX = e.pageX; dragScrollStart = wrap.scrollLeft;
+        wrap.classList.add("is-dragging"); e.preventDefault();
       });
-    }
-    if (btnNext) {
-      btnNext.addEventListener("click", () => {
-        let next = wrap.scrollLeft + CARD_W;
+      window.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        let next = dragScrollStart + (dragStartX - e.pageX);
         const hw = halfWidth();
-        if (next >= hw) next -= hw;
+        if (next < 0) next += hw; if (next >= hw) next -= hw;
         wrap.scrollLeft = next;
-        pauseAndResume(1500);
+      });
+      window.addEventListener("mouseup", () => {
+        if (!isDragging) return;
+        isDragging = false;
+        wrap.classList.remove("is-dragging");
+        pauseAndResume(1200);
+      });
+      wrap.addEventListener("click", (e) => {
+        if (Math.abs(wrap.scrollLeft - dragScrollStart) > 5) e.preventDefault();
+      }, true);
+
+      if (btnPrev) btnPrev.addEventListener("click", () => {
+        let next = wrap.scrollLeft - CARD_W;
+        const hw = halfWidth(); if (next < 0) next += hw;
+        wrap.scrollLeft = next; pauseAndResume(1500);
+      });
+      if (btnNext) btnNext.addEventListener("click", () => {
+        let next = wrap.scrollLeft + CARD_W;
+        const hw = halfWidth(); if (next >= hw) next -= hw;
+        wrap.scrollLeft = next; pauseAndResume(1500);
       });
     }
   })();

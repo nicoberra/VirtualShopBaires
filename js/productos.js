@@ -14,12 +14,12 @@ function getProductUrl(pid) {
 }
 
 function getWAText(nombre, color, talle, precio, pid) {
-  let msg = `Hola! Me interesa: *${nombre}*`;
-  if (color) msg += ` - Color: ${color}`;
-  if (talle) msg += ` - Talle: ${talle}`;
-  if (precio) msg += ` - Precio: ${formatPrecio(precio)}`;
-  if (pid) msg += `\nVer producto: ${getProductUrl(pid)}`;
-  msg += `\n¿Está disponible?`;
+  let msg = `Hola! 👋 Quiero consultar sobre *${nombre}*`;
+  if (color) msg += ` · Color: ${color}`;
+  if (talle) msg += ` · Talle: ${talle}`;
+  if (precio) msg += `\n💰 Precio: ${formatPrecio(precio)}`;
+  if (pid) msg += `\n🔗 ${getProductUrl(pid)}`;
+  msg += `\n\n¿Tienen stock disponible?`;
   return encodeURIComponent(msg);
 }
 

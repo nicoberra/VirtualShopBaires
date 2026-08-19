@@ -21,7 +21,7 @@ const Cart = (() => {
     if (!container) return;
 
     if (items.length === 0) {
-      container.innerHTML = `<div class="cart-empty"><i class="fa-solid fa-cart-shopping" style="font-size:2rem;color:var(--gray-light);"></i><br>Tu carrito está vacío</div>`;
+      container.innerHTML = `<div class="cart-empty"><i class="fa-solid fa-cart-shopping" style="font-size:2rem;color:var(--gray-light);"></i><p style="margin-top:10px;font-weight:600;">Tu carrito está vacío</p><p style="font-size:0.82rem;color:var(--gray-light);margin-top:4px;">Agregá productos para empezar.</p><a href="productos.html" style="display:inline-block;margin-top:14px;background:var(--red);color:#fff;padding:10px 20px;border-radius:50px;font-weight:700;font-size:0.85rem;text-decoration:none;">Ver productos →</a></div>`;
       if (totalEl) totalEl.textContent = "$0";
       return;
     }

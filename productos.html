@@ -298,7 +298,9 @@
       ? results.map(renderProductCard).join("")
       : `<div style="grid-column:1/-1;text-align:center;padding:80px 0;color:var(--gray-light);">
            <i class="fa-solid fa-magnifying-glass" style="font-size:2.5rem; color:var(--red);"></i>
-           <p style="margin-top:16px;">No se encontraron productos con esos filtros.</p>
+           <p style="margin-top:16px;font-weight:600;color:var(--white);">No encontramos resultados</p>
+           <p style="margin-top:6px;font-size:0.88rem;">Probá con otras palabras o cambiá los filtros.</p>
+           <button onclick="resetFilters()" style="margin-top:18px;background:var(--red);color:#fff;border:none;padding:10px 22px;border-radius:50px;font-weight:700;cursor:pointer;font-size:0.88rem;">Limpiar filtros</button>
          </div>`;
   }
 

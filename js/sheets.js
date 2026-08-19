@@ -331,8 +331,13 @@ function mostrarError() {
   document.querySelectorAll("#featured-products, #products-container").forEach(el => {
     el.innerHTML = `
       <div style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--gray-light);">
-        <i class="fa-solid fa-triangle-exclamation" style="font-size:2rem; color:var(--red);"></i>
-        <p style="margin-top:16px;">No se pudieron cargar los productos. Verificá que el Sheet esté publicado.</p>
+        <i class="fa-solid fa-wifi" style="font-size:2rem; color:var(--red);"></i>
+        <p style="margin-top:16px; font-weight:600; color:var(--white);">No pudimos cargar los productos</p>
+        <p style="margin-top:6px; font-size:0.88rem;">Revisá tu conexión y recargá la página, o consultanos directamente por WhatsApp.</p>
+        <div style="display:flex; gap:10px; justify-content:center; margin-top:20px; flex-wrap:wrap;">
+          <button onclick="window.location.reload()" style="background:var(--red);color:#fff;border:none;padding:10px 20px;border-radius:50px;font-weight:700;cursor:pointer;font-size:0.88rem;">Reintentar</button>
+          <a href="https://wa.me/5491149457266" target="_blank" style="background:var(--green-wa);color:#fff;padding:10px 20px;border-radius:50px;font-weight:700;font-size:0.88rem;text-decoration:none;">Consultar por WhatsApp</a>
+        </div>
       </div>`;
   });
 }

@@ -239,7 +239,6 @@ header {
   gap: 8px;
   padding-bottom: 10px;
   justify-content: flex-end;
-  justify-content: flex-end;
 }
 .social-icon-btn {
   width: 32px; height: 32px;
@@ -2737,7 +2736,8 @@ footer {
       0 0 0 2px #555,
       0 0 0 4px #222,
       inset 0 0 0 1px rgba(255,255,255,0.07),
-      0 30px 80px rgba(0,0,0,0.9);
+      0 24px 60px rgba(0,0,0,0.35),
+      0 8px 24px rgba(0,0,0,0.18);
     transition: none;
   }
 
@@ -2788,8 +2788,30 @@ footer {
     color: #1a1a1a;
     text-shadow: none;
   }
+  .hero-video-bg .hero-slogan .highlight { color: var(--red); }
   .hero-video-bg .hero-subtitle { color: rgba(0,0,0,0.6); text-shadow: none; }
+
+  /* Badge "30% OFF": mantiene estilo */
   .hero-badge-off { font-size: 0.78rem; padding: 7px 16px; }
+
+  /* Badge "Importador Directo": visible sobre fondo claro */
+  .hero-badge-direct {
+    background: rgba(27,43,75,0.09);
+    color: #1B2B4B;
+    border: 1px solid rgba(27,43,75,0.18);
+    backdrop-filter: none;
+  }
+
+  /* Botones hero: apilados full-width en mobile */
+  .hero-video-bg .hero-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .hero-video-bg .hero-buttons .btn-primary,
+  .hero-video-bg .hero-buttons .btn-wa {
+    width: 100%;
+    justify-content: center;
+  }
 
   /* Categorías más chicas */
   .cat-slide { width: 110px; padding: 10px 6px; gap: 7px; }

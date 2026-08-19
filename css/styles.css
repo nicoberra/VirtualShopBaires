@@ -179,12 +179,12 @@ header {
   border-top: 1px solid rgba(0,0,0,0.07);
   transition: max-height 0.32s cubic-bezier(0.4,0,0.2,1);
 }
-.header-dropdown-nav.open { max-height: 260px; }
+.header-dropdown-nav.open { max-height: 560px; }
 .header-dropdown-nav .container {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 12px 0;
+  padding: 12px 0 8px;
 }
 .header-dropdown-nav a {
   padding: 9px 18px;
@@ -199,6 +199,38 @@ header {
 }
 .header-dropdown-nav a:hover { color: var(--red); background: rgba(204,18,18,0.06); }
 .header-dropdown-nav a.active { color: var(--red); font-weight: 800; }
+
+/* Sección categorías dentro del dropdown */
+.dropdown-cats-section {
+  border-top: 1px solid rgba(0,0,0,0.07);
+  padding-bottom: 14px;
+}
+.dropdown-cats-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #aaa;
+  padding: 10px 0 6px;
+}
+.dropdown-cats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+}
+.dropdown-cat {
+  padding: 8px 10px;
+  color: #222;
+  font-weight: 600;
+  font-size: 0.84rem;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dropdown-cat:hover { color: var(--red); background: rgba(204,18,18,0.06); }
 
 /* Columna derecha: íconos sociales + carrito */
 .header-actions {
@@ -1737,12 +1769,12 @@ footer {
   .hamburger { display: flex; flex-direction: column; }
   .header-inner { padding: 8px 0; }
   .logo img { height: 52px; }
-  /* En móvil: WhatsApp + Instagram, ocultar Facebook */
-  .header-actions .si-fb { display: none; }
+  /* En móvil: solo Instagram, ocultar WA (botón flotante) y Facebook */
   .header-actions .si-wa,
+  .header-actions .si-fb { display: none; }
   .header-actions .si-ig { display: flex; }
-  /* Carrito: solo icono + número, sin padding extra */
-  .cart-action-btn { padding: 9px 14px; font-size: 0.88rem; }
+  /* Carrito: compacto */
+  .cart-action-btn { padding: 8px 12px; font-size: 0.85rem; gap: 7px; }
 
   /* Topbar */
   .topbar { padding: 0; height: 48px; display: flex; align-items: center; }

@@ -2615,22 +2615,42 @@ footer {
   .hero-phone-frame { border-radius: 28px; }
   .hero-phone-frame::before { width: 48px; height: 14px; top: 8px; }
 }
-/* Mobile: 4 iPhones en grilla 2×2 */
+/* Mobile: 1 celular centrado que cicla los 4 videos */
 @media (max-width: 480px) {
   .hero-video-bg { min-height: 88vh; }
   .hero-video-grid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    padding: 14px;
-    gap: 10px;
-    align-items: stretch;
+    display: block;
+    padding: 0;
   }
-  .hero-phone-frame { display: block; border-radius: 26px; }
-  .hero-phone-frame::before { width: 44px; height: 13px; top: 7px; border-radius: 8px; }
+  .hero-phone-frame {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%) !important;
+    width: 195px;
+    height: calc(100% - 36px);
+    max-width: none;
+    opacity: 0;
+    transition: opacity 0.65s ease;
+    border-radius: 36px;
+  }
+  .hero-phone-frame.mobile-active {
+    opacity: 1 !important;
+  }
+  .hero-phone-frame::before { width: 58px; height: 16px; top: 10px; border-radius: 10px; }
+  /* reset desktop nth-child rules */
   .hero-phone-frame:nth-child(1),
-  .hero-phone-frame:nth-child(4) { opacity: 1; transform: none; }
-  .hero-video-bg .hero-slogan { font-size: 1.8rem; }
+  .hero-phone-frame:nth-child(4) { opacity: 0; }
+  .hero-phone-frame:nth-child(1).mobile-active,
+  .hero-phone-frame:nth-child(4).mobile-active { opacity: 1 !important; }
+  .hero-video-bg .hero-slogan { font-size: 1.75rem; }
   .hero-badge-off { font-size: 0.78rem; padding: 7px 16px; }
+}
+
+/* Mobile: ocultar flechas carrusel (solo swipe táctil) y camión topbar */
+@media (max-width: 768px) {
+  .cat-arrow { display: none !important; }
+  .topbar-camion { display: none; }
 }
 
 /* Precios en navy */

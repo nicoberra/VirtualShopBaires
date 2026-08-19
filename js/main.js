@@ -4,6 +4,27 @@ window.addEventListener("scroll", () => {
   if (btn) btn.classList.toggle("visible", window.scrollY > 300);
 }, { passive: true });
 
+// Mobile: un solo celular centrado que cicla los 4 videos
+(function () {
+  if (window.innerWidth > 480) return;
+  const frames = Array.from(document.querySelectorAll('.hero-phone-frame'));
+  if (!frames.length) return;
+  let idx = 0;
+
+  function show(i) {
+    frames.forEach(f => f.classList.remove('mobile-active'));
+    frames[i].classList.add('mobile-active');
+    const vid = frames[i].querySelector('video');
+    if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
+  }
+
+  show(0);
+  setInterval(() => {
+    idx = (idx + 1) % frames.length;
+    show(idx);
+  }, 4500);
+})();
+
 // Header: se oculta al bajar, reaparece al subir
 (function () {
   const header = document.querySelector("header");

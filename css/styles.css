@@ -2676,89 +2676,98 @@ footer {
 }
 
 @media (max-width: 480px) {
-  /* Hero: video de fondo con texto encima, igual que desktop */
+  /* Hero: columna — iPhone arriba, texto abajo, fondo oscuro */
   .hero-video-bg {
-    min-height: 88vh !important;
+    min-height: auto !important;
     display: flex !important;
-    flex-direction: row !important;
-    align-items: center;
-    position: relative;
-    background: #000;
+    flex-direction: column !important;
+    background: #f7f7f7;
+    position: static;
   }
 
-  /* Grid: cubre todo el hero como capa de fondo */
+  /* Grid: bloque con altura fija que ocupa espacio en el flujo flex */
   .hero-video-grid {
-    position: absolute !important;
-    inset: 0 !important;
+    position: relative !important;
+    inset: auto !important;
     display: block !important;
-    height: 100% !important;
+    height: 500px;
     overflow: hidden;
+    flex-shrink: 0;
   }
 
-  /* Frames: pantalla completa apilados, todos ocultos */
+  /* Overlay oculto (texto no va encima del video) */
+  .hero-video-overlay { display: none !important; }
+
+  /* iPhone frame: todos off-screen derecha, ocultos */
   .hero-phone-frame,
   .hero-phone-frame:nth-child(1),
   .hero-phone-frame:nth-child(4) {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    top: 20px;
+    left: 50%;
+    transform: translateX(calc(-50% + 110vw));
+    width: 220px;
+    height: 460px;
     max-width: none;
-    border-radius: 0;
-    background: #000;
-    box-shadow: none;
     opacity: 0;
-    transform: none;
-    transition: opacity 0.7s ease;
+    border-radius: 46px;
+    background: #0a0a0a;
+    box-shadow:
+      0 0 0 2px #555,
+      0 0 0 4px #222,
+      inset 0 0 0 1px rgba(255,255,255,0.07),
+      0 30px 80px rgba(0,0,0,0.9);
+    transition: none;
   }
 
-  /* Primer frame: visible desde CSS sin necesitar JS */
+  /* Primer frame: centrado y visible antes de que JS tome el control */
   .hero-video-grid:not(.mobile-init-done) .hero-phone-frame:first-child {
+    transform: translateX(-50%);
     opacity: 1;
   }
 
-  /* Dynamic island: oculto en modo pantalla completa */
-  .hero-phone-frame::before { display: none !important; }
+  /* Dynamic Island */
+  .hero-phone-frame::before {
+    display: block !important;
+    width: 86px; height: 24px;
+    top: 14px; border-radius: 14px;
+    background: #000;
+  }
 
-  /* Video de fondo */
+  /* Video dentro del iPhone */
   .hero-phone-frame video {
     width: 100%; height: 100%;
     object-fit: cover;
-    border-radius: 0;
+    border-radius: 44px;
   }
 
-  /* Fade in / fade out (sin animación de slide) */
+  /* Sale hacia la izquierda */
+  .hero-video-grid .hero-phone-frame.mobile-exit {
+    opacity: 1;
+    animation: phoneFrameSlideOut 0.52s cubic-bezier(0.55,0.055,0.675,0.19) forwards;
+  }
+  /* Entra desde la derecha */
   .hero-video-grid .hero-phone-frame.mobile-active {
     opacity: 1;
-    animation: none;
-  }
-  .hero-video-grid .hero-phone-frame.mobile-exit {
-    opacity: 0;
-    animation: none;
+    animation: phoneFrameSlideIn 0.52s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
   }
 
-  /* Overlay para que el texto se lea bien */
-  .hero-video-overlay {
-    display: block !important;
-    background: linear-gradient(160deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.58) 100%);
-  }
-
-  /* Texto encima del video */
+  /* Texto: debajo del iPhone, fondo claro */
   .hero-video-bg > .container {
-    position: relative;
-    z-index: 2;
-    background: transparent !important;
-    padding-top: 0;
-    padding-bottom: 0;
+    background: #f7f7f7;
+    padding-top: 20px;
+    padding-bottom: 36px;
+    position: static;
+    z-index: auto;
   }
-  .hero-split-inner { min-height: 0 !important; padding: 28px 0; }
+  .hero-split-inner { min-height: 0 !important; padding: 0; }
   .hero-text-col { text-align: center; }
   .hero-video-bg .hero-slogan {
-    font-size: 1.75rem;
-    color: #fff;
-    text-shadow: 0 2px 16px rgba(0,0,0,0.55);
+    font-size: 1.7rem;
+    color: #1a1a1a;
+    text-shadow: none;
   }
-  .hero-video-bg .hero-subtitle { color: rgba(255,255,255,0.88); text-shadow: 0 1px 8px rgba(0,0,0,0.45); }
+  .hero-video-bg .hero-subtitle { color: rgba(0,0,0,0.6); text-shadow: none; }
   .hero-badge-off { font-size: 0.78rem; padding: 7px 16px; }
 
   /* Categorías más chicas */

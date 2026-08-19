@@ -1921,13 +1921,34 @@ footer {
   .hero-sub { font-size: 0.98rem; }
 }
 
-/* ===== FOCUS STATES (accesibilidad teclado) ===== */
+/* ===== ACCESIBILIDAD ===== */
+/* Texto solo para lectores de pantalla */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus visible para teclado */
 a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: 2px solid var(--red);
   outline-offset: 3px;
+}
+
+/* Reducir movimiento para usuarios que lo prefieren */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ===== MOBILE CATEGORY CHIPS (productos.html) ===== */

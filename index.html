@@ -119,22 +119,23 @@
   <div class="container">
     <div class="header-inner">
       <div class="header-left">
-        <button class="hamburger" id="hamburger" aria-label="Menú"><span></span><span></span><span></span></button>
-        <form class="header-search-form" id="search-form">
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
           <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
-          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass"></i></button>
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
         </form>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">
-        <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
-        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-        <button class="cart-action-btn" onclick="openCart()"><i class="fa-solid fa-cart-shopping"></i><span id="cart-label">0</span></button>
+        <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="social-icon-btn si-wa" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-ig" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-fb" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+        <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
       </div>
     </div>
   </div>
-  <nav class="header-dropdown-nav" id="header-dropdown-nav">
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
     <div class="container">
       <a href="index.html" class="active">Inicio</a>
       <a href="productos.html">Productos</a>
@@ -240,7 +241,7 @@
 
   <!-- GRILLA DE 4 VIDEOS DE FONDO -->
   <!-- Subí tus 4 videos a Supabase Storage → bucket "videos" y reemplazá los src -->
-  <div class="hero-video-grid" id="hero-video-grid">
+  <div class="hero-video-grid" id="hero-video-grid" aria-hidden="true">
     <div class="hero-phone-frame">
       <video class="hero-vid" autoplay muted loop playsinline preload="none" poster="Productos/Mascotas/categoria.png">
         <source src="videos/hero1.mp4" type="video/mp4" />

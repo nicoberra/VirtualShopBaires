@@ -36,14 +36,17 @@ window.addEventListener("scroll", () => {
     setTimeout(() => {
       outFrame.classList.remove('mobile-exit');
       busy = false;
-    }, 750);
+    }, 560);
   }
 
   // El primer frame ya está visible por CSS (:not(.mobile-init-done) :first-child)
   // Solo arrancamos el video
   playVideo(frames[0].querySelector('video'));
 
-  setInterval(advance, 4500);
+  // Respetar prefers-reduced-motion: no rotar si el usuario lo prefiere
+  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    setInterval(advance, 4500);
+  }
 })();
 
 // Header: se oculta al bajar, reaparece al subir
@@ -68,26 +71,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const dropdownNav = document.getElementById("header-dropdown-nav");
 
   if (hamburger && dropdownNav) {
+    function setMenuOpen(open) {
+      dropdownNav.classList.toggle("open", open);
+      hamburger.classList.toggle("open", open);
+      hamburger.setAttribute("aria-expanded", open ? "true" : "false");
+      dropdownNav.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
     hamburger.addEventListener("click", (e) => {
       e.stopPropagation();
-      dropdownNav.classList.toggle("open");
-      hamburger.classList.toggle("open");
+      setMenuOpen(!dropdownNav.classList.contains("open"));
     });
 
     // Cerrar al hacer click fuera
     document.addEventListener("click", (e) => {
       if (!dropdownNav.contains(e.target) && !hamburger.contains(e.target)) {
-        dropdownNav.classList.remove("open");
-        hamburger.classList.remove("open");
+        setMenuOpen(false);
+      }
+    });
+
+    // Cerrar con Escape
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && dropdownNav.classList.contains("open")) {
+        setMenuOpen(false);
+        hamburger.focus();
       }
     });
 
     // Cerrar al elegir un ítem
     dropdownNav.querySelectorAll("a").forEach(a => {
-      a.addEventListener("click", () => {
-        dropdownNav.classList.remove("open");
-        hamburger.classList.remove("open");
-      });
+      a.addEventListener("click", () => setMenuOpen(false));
     });
   }
 

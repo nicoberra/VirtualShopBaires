@@ -64,6 +64,42 @@ document.addEventListener("DOMContentLoaded", () => {
     el.textContent = new Date().getFullYear();
   });
 
+  // Animación de conteo para métricas ML
+  (function () {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const counters = document.querySelectorAll(".ml-stat-num[data-target]");
+    if (!counters.length) return;
+
+    function fmtNum(n, target) {
+      const s = Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return s + (target >= n ? "" : "");
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const target = parseInt(el.dataset.target, 10);
+        const suffix = el.dataset.suffix || "";
+        const duration = 1400;
+        const startTime = performance.now();
+
+        function tick(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const current = Math.round(eased * target);
+          el.textContent = current.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".") + suffix;
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        observer.unobserve(el);
+      });
+    }, { threshold: 0.6 });
+
+    counters.forEach(el => observer.observe(el));
+  })();
+
   // ===== CAROUSEL CATEGORÍAS INTERACTIVO =====
   (function () {
     const wrap = document.getElementById("cat-carousel-wrap");

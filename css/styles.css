@@ -2710,6 +2710,7 @@ footer {
     position: relative !important;
     inset: auto !important;
     display: block !important;
+    width: 100% !important;
     height: 500px;
     overflow: hidden;
     flex-shrink: 0;

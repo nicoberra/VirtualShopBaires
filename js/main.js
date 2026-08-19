@@ -171,9 +171,12 @@ document.addEventListener("DOMContentLoaded", () => {
       resumeTimer = setTimeout(() => { autoPlay = true; }, ms);
     }
 
-    // Pausa al pasar el mouse (en desktop)
-    wrap.addEventListener("mouseenter", () => { autoPlay = false; });
-    wrap.addEventListener("mouseleave", () => { if (!isDragging) autoPlay = true; });
+    // Pausa al pasar el mouse solo en desktop (en mobile mouseenter bloquea autoPlay)
+    const isTouch = ('ontouchstart' in window);
+    if (!isTouch) {
+      wrap.addEventListener("mouseenter", () => { autoPlay = false; });
+      wrap.addEventListener("mouseleave", () => { if (!isDragging) autoPlay = true; });
+    }
 
     // === DRAG CON MOUSE ===
     wrap.addEventListener("mousedown", (e) => {

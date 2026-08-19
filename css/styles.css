@@ -84,9 +84,11 @@ header {
   top: 0;
   z-index: 100;
   box-shadow: 0 2px 16px rgba(0,0,0,0.10);
-  border-bottom: 3px solid var(--red);
+  border-bottom: 1.5px solid var(--red);
   overflow: visible;
+  transition: transform 0.35s ease;
 }
+.header--hidden { transform: translateY(-100%); }
 /* 3 columnas: [búsqueda+hamburger] [logo centrado] [íconos] */
 .header-inner {
   display: grid;
@@ -96,7 +98,7 @@ header {
   gap: 16px;
 }
 .logo { display: flex; justify-content: center; line-height: 0; position: relative; z-index: 101; align-self: flex-end; }
-.logo img { height: 130px; width: auto; display: block; }
+.logo img { height: 82px; width: auto; display: block; }
 
 /* Columna izquierda: hamburger + buscador */
 .header-left {
@@ -208,12 +210,12 @@ header {
   justify-content: flex-end;
 }
 .social-icon-btn {
-  width: 38px; height: 38px;
+  width: 32px; height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   text-decoration: none;
   transition: var(--transition);
   flex-shrink: 0;
@@ -433,7 +435,7 @@ header {
 .btn-wa {
   background: var(--green-wa);
   color: #fff;
-  padding: 13px 32px;
+  padding: 14px 32px;
   border-radius: var(--radius-pill);
   font-size: 0.95rem;
   font-weight: 700;
@@ -443,8 +445,9 @@ header {
   align-items: center;
   gap: 8px;
   transition: var(--transition);
+  box-shadow: 0 0 28px rgba(37,211,102,0.3);
 }
-.btn-wa:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.btn-wa:hover { filter: brightness(1.08); transform: translateY(-2px); box-shadow: 0 0 42px rgba(37,211,102,0.4); }
 
 /* ===== FEATURES STRIP ===== */
 .features-strip {
@@ -469,6 +472,10 @@ header {
   transition: var(--transition);
 }
 .feature-item:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(204,18,18,0.08); border-color: rgba(204,18,18,0.2); }
+.feature-item--highlight { border-color: rgba(204,18,18,0.3); background: rgba(204,18,18,0.04); }
+.feature-item--highlight .fi-title { color: var(--red); }
+.fi-icon-wrap--red { background: var(--red); }
+.fi-icon-wrap--red .fi-icon { color: #fff; }
 .fi-icon-wrap {
   width: 44px;
   height: 44px;
@@ -2522,10 +2529,16 @@ footer {
 .hero-video-overlay {
   position: absolute;
   inset: 0;
-  /* Overlay más suave — no oscurece tanto la página */
-  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.05) 100%);
+  background: radial-gradient(ellipse 65% 60% at 50% 50%, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.10) 100%);
   z-index: 1;
 }
+/* Teléfonos laterales menos prominentes que el central */
+.hero-phone-frame:nth-child(1),
+.hero-phone-frame:nth-child(4) {
+  opacity: 0.72;
+  transform: scale(0.91);
+}
+
 /* Texto sobre fondo oscuro */
 .hero-video-bg .hero-split-inner { position: relative; z-index: 2; }
 .hero-video-bg .hero-eyebrow {
@@ -2534,11 +2547,44 @@ footer {
   border: 1px solid rgba(255,255,255,0.25);
   backdrop-filter: blur(4px);
 }
-.hero-video-bg .hero-slogan { color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,0.5); }
+.hero-video-bg .hero-slogan { color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,0.5); font-size: 2.65rem; }
 .hero-video-bg .hero-slogan .highlight { color: #ff5252; }
 .hero-video-bg .hero-subtitle { color: rgba(255,255,255,0.88); text-shadow: 0 1px 10px rgba(0,0,0,0.4); }
-.hero-video-bg .hero-trust span { color: rgba(255,255,255,0.82); }
-.hero-video-bg .hero-trust span i { color: #fff; }
+
+/* Badges 30% OFF + Importador directo */
+.hero-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+.hero-badge-off {
+  display: inline-block;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 22px;
+  border-radius: 50px;
+  box-shadow: 0 4px 20px rgba(204,18,18,0.55), 0 0 0 3px rgba(255,255,255,0.15);
+}
+.hero-badge-direct {
+  display: inline-block;
+  background: rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.9);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(4px);
+}
 
 /* Tablet: 4 iPhones en fila con marcos más chicos */
 @media (max-width: 768px) {
@@ -2559,6 +2605,10 @@ footer {
   }
   .hero-phone-frame { display: block; border-radius: 26px; }
   .hero-phone-frame::before { width: 44px; height: 13px; top: 7px; border-radius: 8px; }
+  .hero-phone-frame:nth-child(1),
+  .hero-phone-frame:nth-child(4) { opacity: 1; transform: none; }
+  .hero-video-bg .hero-slogan { font-size: 1.8rem; }
+  .hero-badge-off { font-size: 0.78rem; padding: 7px 16px; }
 }
 
 /* Precios en navy */

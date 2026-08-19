@@ -2,7 +2,23 @@
 window.addEventListener("scroll", () => {
   const btn = document.getElementById("back-to-top");
   if (btn) btn.classList.toggle("visible", window.scrollY > 300);
-});
+}, { passive: true });
+
+// Header: se oculta al bajar, reaparece al subir
+(function () {
+  const header = document.querySelector("header");
+  if (!header) return;
+  let lastY = window.scrollY;
+  window.addEventListener("scroll", () => {
+    const y = window.scrollY;
+    if (y > lastY && y > 90) {
+      header.classList.add("header--hidden");
+    } else {
+      header.classList.remove("header--hidden");
+    }
+    lastY = y;
+  }, { passive: true });
+})();
 
 // Hamburger → dropdown nav
 document.addEventListener("DOMContentLoaded", () => {

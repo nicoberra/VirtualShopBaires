@@ -2435,7 +2435,7 @@ footer {
 
 /* ── HERO CON 4 VIDEOS VERTICALES (modo teléfono) ────── */
 .hero-video-bg {
-  background: #111;
+  background: #2c2c2e;   /* gris oscuro neutro, no negro puro */
   min-height: 88vh;
   display: flex;
   align-items: center;
@@ -2448,8 +2448,8 @@ footer {
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: 1fr;
   z-index: 0;
-  gap: 18px;
-  padding: 28px 32px;
+  gap: 20px;
+  padding: 32px 80px;    /* más padding lateral → phones más angostos */
   align-items: center;
 }
 /* Marco estilo iPhone */
@@ -2458,16 +2458,18 @@ footer {
   border-radius: 44px;
   overflow: hidden;
   height: 100%;
-  /* Bisel del teléfono: borde exterior oscuro + brillo sutil */
+  max-width: 220px;      /* limita el ancho máximo */
+  width: 100%;
+  margin: 0 auto;        /* centra dentro de la columna */
   border: 3px solid #3a3a3c;
   box-shadow:
     0 0 0 1px #555,
     inset 0 0 0 1px rgba(255,255,255,0.08),
-    0 24px 60px rgba(0,0,0,0.6),
-    0 4px 16px rgba(0,0,0,0.4);
+    0 24px 60px rgba(0,0,0,0.5),
+    0 4px 16px rgba(0,0,0,0.3);
   background: #000;
 }
-/* Dynamic Island (pastilla negra en la parte superior) */
+/* Dynamic Island */
 .hero-phone-frame::before {
   content: '';
   position: absolute;
@@ -2489,9 +2491,8 @@ footer {
 .hero-video-overlay {
   position: absolute;
   inset: 0;
-  /* Más oscuro en el centro (donde está el texto), más transparente en los costados */
-  background:
-    radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.3) 100%);
+  /* Overlay más suave — no oscurece tanto la página */
+  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.10) 100%);
   z-index: 1;
 }
 /* Texto sobre fondo oscuro */

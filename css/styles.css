@@ -1767,14 +1767,30 @@ footer {
   /* Header compacto */
   .header-nav { display: none; }
   .hamburger { display: flex; flex-direction: column; }
-  .header-inner { padding: 8px 0; }
+  .header-inner { padding: 8px 0; gap: 6px; }
   .logo img { height: 52px; }
   /* En móvil: solo Instagram, ocultar WA (botón flotante) y Facebook */
   .header-actions .si-wa,
   .header-actions .si-fb { display: none; }
   .header-actions .si-ig { display: flex; }
-  /* Carrito: compacto */
-  .cart-action-btn { padding: 8px 12px; font-size: 0.85rem; gap: 7px; }
+  /* Carrito: icono circular como los botones de redes sociales */
+  .cart-action-btn {
+    width: 36px; height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    gap: 0;
+    justify-content: center;
+    position: relative;
+  }
+  .cart-action-btn i { font-size: 1rem; }
+  #cart-label {
+    position: absolute;
+    top: -4px; right: -4px;
+    width: 18px; height: 18px;
+    font-size: 0.6rem;
+    padding: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
 
   /* Topbar */
   .topbar { padding: 0; height: 48px; display: flex; align-items: center; }

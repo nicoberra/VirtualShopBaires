@@ -12,6 +12,13 @@ window.addEventListener("scroll", () => {
   let idx = 0;
   let busy = false;
 
+  function playVideo(vid) {
+    if (!vid) return;
+    vid.load();
+    vid.currentTime = 0;
+    vid.play().catch(() => {});
+  }
+
   function advance() {
     if (busy) return;
     busy = true;
@@ -19,8 +26,7 @@ window.addEventListener("scroll", () => {
     idx = (idx + 1) % frames.length;
     const outFrame = frames[oldIdx];
     const inFrame = frames[idx];
-    const vid = inFrame.querySelector('video');
-    if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
+    playVideo(inFrame.querySelector('video'));
     outFrame.classList.remove('mobile-active');
     outFrame.classList.add('mobile-exit');
     inFrame.classList.add('mobile-active');
@@ -30,10 +36,13 @@ window.addEventListener("scroll", () => {
     }, 560);
   }
 
-  // Mostrar primer frame
-  const vid0 = frames[0].querySelector('video');
-  if (vid0) vid0.play().catch(() => {});
-  frames[0].classList.add('mobile-active');
+  // Mostrar primer frame — doble RAF para que el estado inicial (off-screen) se pinte antes de animar
+  playVideo(frames[0].querySelector('video'));
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      frames[0].classList.add('mobile-active');
+    });
+  });
 
   setInterval(advance, 4500);
 })();

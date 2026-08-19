@@ -1769,10 +1769,12 @@ footer {
   .hamburger { display: flex; flex-direction: column; }
   .header-inner { padding: 8px 0; gap: 6px; }
   .logo img { height: 52px; }
-  /* En móvil: solo Instagram, ocultar WA (botón flotante) y Facebook */
+  .header-search-form { max-width: 160px; padding: 0 4px 0 10px; }
+  .header-search-form input { font-size: 0.82rem; padding: 7px 0; }
+  /* En móvil: solo carrito, ocultar todas las redes */
   .header-actions .si-wa,
-  .header-actions .si-fb { display: none; }
-  .header-actions .si-ig { display: flex; }
+  .header-actions .si-fb,
+  .header-actions .si-ig { display: none; }
   /* Carrito: icono circular como los botones de redes sociales */
   .cart-action-btn {
     width: 36px; height: 36px;

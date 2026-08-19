@@ -2440,7 +2440,38 @@ footer {
   display: flex;
   align-items: center;
 }
-.hero-video-bg .container { width: 100%; }
+.hero-video-bg .container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.hero-video-bg .hero-split-inner {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+.hero-video-bg .hero-text-col {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 680px;
+  width: 100%;
+}
+.hero-video-bg .hero-slogan,
+.hero-video-bg .hero-subtitle,
+.hero-video-bg .hero-eyebrow,
+.hero-video-bg .hero-trust {
+  text-align: center;
+  width: 100%;
+}
+.hero-video-bg .hero-buttons {
+  justify-content: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
 .hero-video-grid {
   position: absolute;
   inset: 0;

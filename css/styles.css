@@ -2435,7 +2435,7 @@ footer {
 
 /* ── HERO CON 4 VIDEOS VERTICALES (modo teléfono) ────── */
 .hero-video-bg {
-  background: #2c2c2e;   /* gris oscuro neutro, no negro puro */
+  background: #f0f0f0;   /* fondo clarito */
   min-height: 88vh;
   display: flex;
   align-items: center;
@@ -2492,7 +2492,7 @@ footer {
   position: absolute;
   inset: 0;
   /* Overlay más suave — no oscurece tanto la página */
-  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(0,0,0,0.38) 0%, rgba(0,0,0,0.10) 100%);
+  background: radial-gradient(ellipse 60% 55% at 50% 50%, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.05) 100%);
   z-index: 1;
 }
 /* Texto sobre fondo oscuro */

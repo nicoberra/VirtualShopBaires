@@ -12,10 +12,12 @@
   <meta property="og:type" content="website" />
   <link rel="canonical" href="https://virtualshopbaires.com.ar/nosotros.html" />
   <link rel="icon" href="logo.png" type="image/png" />
+  <meta name="theme-color" content="#CC1212" />
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
 </head>
 <body>
 
@@ -34,22 +36,23 @@
   <div class="container">
     <div class="header-inner">
       <div class="header-left">
-        <button class="hamburger" id="hamburger" aria-label="Menú"><span></span><span></span><span></span></button>
-        <form class="header-search-form" id="search-form">
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
           <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
-          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass"></i></button>
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
         </form>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">
-        <a href="https://wa.me/5491149457266" target="_blank" class="social-icon-btn si-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" class="social-icon-btn si-ig" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
-        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" class="social-icon-btn si-fb" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-        <button class="cart-action-btn" onclick="openCart()"><i class="fa-solid fa-cart-shopping"></i><span id="cart-label">0</span></button>
+        <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="social-icon-btn si-wa" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-ig" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-fb" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+        <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
       </div>
     </div>
   </div>
-  <nav class="header-dropdown-nav" id="header-dropdown-nav">
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
     <div class="container">
       <a href="index.html">Inicio</a>
       <a href="productos.html">Productos</a>
@@ -146,10 +149,10 @@
         <img src="logo.png" alt="Virtual Shop Baires" class="logo-footer" />
         <p>Importadores de productos para el hogar, mascotas, fitness, jardín y tiempo libre. Envíos a todo el país.</p>
         <div class="social-links">
-          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
-          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-          <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
         </div>
       </div>
       <div class="footer-col">
@@ -185,10 +188,10 @@
             <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
           </ul>
           <div class="social-links-vertical">
-            <a href="https://wa.me/5491149457266" target="_blank" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>
-            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" title="Instagram"><i class="fa-brands fa-instagram"></i></a>
-            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" title="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" title="TikTok"><i class="fa-brands fa-tiktok"></i></a>
+            <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
           </div>
         </div>
       </div>
@@ -199,9 +202,9 @@
   </div>
 </footer>
 
-<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Volver arriba"><i class="fa-solid fa-chevron-up"></i></button>
-<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" title="Consultar por WhatsApp">
-  <span class="wa-float-pulse"></span><i class="fa-brands fa-whatsapp"></i>
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" rel="noopener noreferrer" aria-label="Consultar por WhatsApp">
+  <span class="wa-float-pulse" aria-hidden="true"></span><i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
 </a>
 
 <div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>

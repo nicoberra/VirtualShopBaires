@@ -2647,50 +2647,69 @@ footer {
   .hero-phone-frame { border-radius: 28px; }
   .hero-phone-frame::before { width: 48px; height: 14px; top: 8px; }
 }
-/* Mobile: celular entra desde el frente (zoom-in), sale a la derecha encogiéndose */
-@keyframes phoneEnterFront {
-  from { transform: translateX(-50%) scale(0.45); opacity: 0; }
-  to   { transform: translateX(-50%) scale(1);    opacity: 1; }
+/* Mobile: videos fullscreen, slide derecha → izquierda */
+@keyframes videoSlideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
-@keyframes phoneExitRight {
-  from { transform: translateX(-50%) scale(1);    opacity: 1; }
-  to   { transform: translateX(calc(-50% + 110vw)) scale(0.5); opacity: 0; }
+@keyframes videoSlideOutLeft {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-100%); }
 }
 
 @media (max-width: 480px) {
-  .hero-video-bg { min-height: 88vh; }
+  .hero-video-bg { min-height: 100vh; min-height: 100svh; }
+
   .hero-video-grid {
     display: block;
     padding: 0;
     overflow: hidden;
   }
-  /* Todos los frames: ocultos al centro en estado pequeño (incluye nth-child override) */
+
+  /* Todos los frames: fullscreen, sin borde de teléfono */
   .hero-phone-frame,
   .hero-phone-frame:nth-child(1),
   .hero-phone-frame:nth-child(4) {
     position: absolute;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%) scale(0.45);
-    width: 220px;
-    height: calc(100% - 32px);
+    inset: 0;
+    width: 100%;
+    height: 100%;
     max-width: none;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #000;
     opacity: 0;
-    border-radius: 36px;
+    transform: translateX(100%);
   }
-  /* Entra desde el frente (crece) */
+  /* Sin dynamic island en modo fullscreen */
+  .hero-phone-frame::before { display: none !important; }
+  /* Video cubre todo el frame */
+  .hero-phone-frame video { width: 100%; height: 100%; object-fit: cover; }
+
+  /* Entra desde la derecha */
   .hero-video-grid .hero-phone-frame.mobile-active {
     opacity: 1;
-    animation: phoneEnterFront 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
+    animation: videoSlideInRight 0.55s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
   }
-  /* Sale hacia la derecha encogiéndose */
+  /* Sale hacia la izquierda */
   .hero-video-grid .hero-phone-frame.mobile-exit {
     opacity: 1;
-    animation: phoneExitRight 0.5s cubic-bezier(0.55,0.055,0.675,0.19) forwards;
+    animation: videoSlideOutLeft 0.55s cubic-bezier(0.55,0.055,0.675,0.19) forwards;
   }
-  .hero-phone-frame::before { width: 60px; height: 16px; top: 10px; border-radius: 10px; }
+  /* Overlay más denso para legibilidad del texto */
+  .hero-video-overlay {
+    background: linear-gradient(to bottom,
+      rgba(0,0,0,0.30) 0%,
+      rgba(0,0,0,0.55) 60%,
+      rgba(0,0,0,0.70) 100%);
+  }
   .hero-video-bg .hero-slogan { font-size: 1.75rem; }
   .hero-badge-off { font-size: 0.78rem; padding: 7px 16px; }
+
+  /* Categorías más chicas en mobile */
+  .cat-slide { width: 110px; padding: 10px 6px; gap: 7px; }
+  .cat-slide-img { width: 90px; height: 90px; border-radius: 10px; }
+  .cat-slide-name { font-size: 0.74rem; }
 }
 
 /* Mobile: ocultar flechas carrusel (solo swipe táctil) y camión topbar */

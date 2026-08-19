@@ -2615,34 +2615,48 @@ footer {
   .hero-phone-frame { border-radius: 28px; }
   .hero-phone-frame::before { width: 48px; height: 14px; top: 8px; }
 }
-/* Mobile: 1 celular centrado que cicla los 4 videos */
+/* Mobile: celular entra desde el frente (zoom-in), sale a la derecha encogiéndose */
+@keyframes phoneEnterFront {
+  from { transform: translateX(-50%) scale(0.45); opacity: 0; }
+  to   { transform: translateX(-50%) scale(1);    opacity: 1; }
+}
+@keyframes phoneExitRight {
+  from { transform: translateX(-50%) scale(1);    opacity: 1; }
+  to   { transform: translateX(calc(-50% + 110vw)) scale(0.5); opacity: 0; }
+}
+
 @media (max-width: 480px) {
   .hero-video-bg { min-height: 88vh; }
   .hero-video-grid {
     display: block;
     padding: 0;
+    overflow: hidden;
   }
-  .hero-phone-frame {
+  /* Todos los frames: ocultos al centro en estado pequeño (incluye nth-child override) */
+  .hero-phone-frame,
+  .hero-phone-frame:nth-child(1),
+  .hero-phone-frame:nth-child(4) {
     position: absolute;
-    top: 18px;
+    top: 16px;
     left: 50%;
-    transform: translateX(-50%) !important;
-    width: 195px;
-    height: calc(100% - 36px);
+    transform: translateX(-50%) scale(0.45);
+    width: 220px;
+    height: calc(100% - 32px);
     max-width: none;
     opacity: 0;
-    transition: opacity 0.65s ease;
     border-radius: 36px;
   }
-  .hero-phone-frame.mobile-active {
-    opacity: 1 !important;
+  /* Entra desde el frente (crece) */
+  .hero-video-grid .hero-phone-frame.mobile-active {
+    opacity: 1;
+    animation: phoneEnterFront 0.5s cubic-bezier(0.22,1,0.36,1) forwards;
   }
-  .hero-phone-frame::before { width: 58px; height: 16px; top: 10px; border-radius: 10px; }
-  /* reset desktop nth-child rules */
-  .hero-phone-frame:nth-child(1),
-  .hero-phone-frame:nth-child(4) { opacity: 0; }
-  .hero-phone-frame:nth-child(1).mobile-active,
-  .hero-phone-frame:nth-child(4).mobile-active { opacity: 1 !important; }
+  /* Sale hacia la derecha encogiéndose */
+  .hero-video-grid .hero-phone-frame.mobile-exit {
+    opacity: 1;
+    animation: phoneExitRight 0.5s cubic-bezier(0.55,0.055,0.675,0.19) forwards;
+  }
+  .hero-phone-frame::before { width: 60px; height: 16px; top: 10px; border-radius: 10px; }
   .hero-video-bg .hero-slogan { font-size: 1.75rem; }
   .hero-badge-off { font-size: 0.78rem; padding: 7px 16px; }
 }

@@ -4,25 +4,38 @@ window.addEventListener("scroll", () => {
   if (btn) btn.classList.toggle("visible", window.scrollY > 300);
 }, { passive: true });
 
-// Mobile: un solo celular centrado que cicla los 4 videos
+// Mobile: celular único que desliza de derecha a izquierda
 (function () {
   if (window.innerWidth > 480) return;
   const frames = Array.from(document.querySelectorAll('.hero-phone-frame'));
   if (!frames.length) return;
   let idx = 0;
+  let busy = false;
 
-  function show(i) {
-    frames.forEach(f => f.classList.remove('mobile-active'));
-    frames[i].classList.add('mobile-active');
-    const vid = frames[i].querySelector('video');
+  function advance() {
+    if (busy) return;
+    busy = true;
+    const oldIdx = idx;
+    idx = (idx + 1) % frames.length;
+    const outFrame = frames[oldIdx];
+    const inFrame = frames[idx];
+    const vid = inFrame.querySelector('video');
     if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
+    outFrame.classList.remove('mobile-active');
+    outFrame.classList.add('mobile-exit');
+    inFrame.classList.add('mobile-active');
+    setTimeout(() => {
+      outFrame.classList.remove('mobile-exit');
+      busy = false;
+    }, 560);
   }
 
-  show(0);
-  setInterval(() => {
-    idx = (idx + 1) % frames.length;
-    show(idx);
-  }, 4500);
+  // Mostrar primer frame
+  const vid0 = frames[0].querySelector('video');
+  if (vid0) vid0.play().catch(() => {});
+  frames[0].classList.add('mobile-active');
+
+  setInterval(advance, 4500);
 })();
 
 // Header: se oculta al bajar, reaparece al subir

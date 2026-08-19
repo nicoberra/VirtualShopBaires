@@ -2698,14 +2698,14 @@ footer {
   /* Ocultar overlay */
   .hero-video-overlay { display: none !important; }
 
-  /* iPhone frame (incluye override nth-child) — empieza fuera de pantalla a la derecha */
+  /* iPhone frame: todos centrados, ocultos por defecto */
   .hero-phone-frame,
   .hero-phone-frame:nth-child(1),
   .hero-phone-frame:nth-child(4) {
     position: absolute;
     top: 24px;
     left: 50%;
-    transform: translateX(calc(-50% + 110vw));
+    transform: translateX(-50%);
     width: 215px;
     height: 450px;
     max-width: none;
@@ -2715,6 +2715,11 @@ footer {
     box-shadow: 0 0 0 2px #333,
                 inset 0 0 0 1px rgba(255,255,255,0.08),
                 0 24px 60px rgba(0,0,0,0.22);
+  }
+
+  /* Primer frame visible por CSS hasta que JS tome el control con mobile-init-done */
+  .hero-video-grid:not(.mobile-init-done) .hero-phone-frame:first-child {
+    opacity: 1;
   }
 
   /* Dynamic island */

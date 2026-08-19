@@ -36,7 +36,7 @@ window.addEventListener("scroll", () => {
     setTimeout(() => {
       outFrame.classList.remove('mobile-exit');
       busy = false;
-    }, 560);
+    }, 750);
   }
 
   // El primer frame ya está visible por CSS (:not(.mobile-init-done) :first-child)

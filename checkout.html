@@ -45,10 +45,15 @@
 
     .form-row { margin-bottom: 18px; }
     .form-row label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--white); margin-bottom: 6px; }
-    .form-row input, .form-row textarea { width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid var(--black-2); border-radius: 8px; font-size: 0.92rem; background: var(--black); color: var(--white); transition: border-color 0.2s; }
-    .form-row input:focus, .form-row textarea:focus { outline: none; border-color: var(--red); }
+    .form-row input, .form-row textarea, .form-row select { width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid var(--black-2); border-radius: 8px; font-size: 0.92rem; background: var(--black); color: var(--white); transition: border-color 0.2s; }
+    .form-row input:focus, .form-row textarea:focus, .form-row select:focus { outline: none; border-color: var(--red); }
+    .form-row select option { background: var(--black); color: var(--white); }
     .form-row textarea { resize: vertical; min-height: 72px; }
     .form-row.required label::after { content: " *"; color: var(--red); }
+    .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+    @media (max-width: 540px) { .form-2col { grid-template-columns: 1fr; } }
+    .form-section-title { font-size: 0.78rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.06em; margin: 22px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--black-2); }
+    #address-fields { display: none; }
 
     .bank-box { background: rgba(204,18,18,0.06); border: 2px solid var(--red); border-radius: var(--radius); padding: 20px; margin: 20px 0; }
     .bank-box h3 { color: var(--red); font-size: 1rem; margin: 0 0 14px; }
@@ -168,30 +173,96 @@
         <!-- Paso 2: Formulario -->
         <div class="checkout-card step-panel" id="panel-2">
           <h2><i class="fa-solid fa-user"></i> Tus datos</h2>
-          <div class="form-row required">
-            <label>Nombre completo</label>
-            <input type="text" id="f-name" placeholder="Juan Pérez" autocomplete="name" />
+
+          <div class="form-section-title">Datos personales</div>
+          <div class="form-2col">
+            <div class="form-row required">
+              <label>Nombre</label>
+              <input type="text" id="f-nombre" placeholder="Juan" autocomplete="given-name" />
+            </div>
+            <div class="form-row required">
+              <label>Apellido</label>
+              <input type="text" id="f-apellido" placeholder="Pérez" autocomplete="family-name" />
+            </div>
+          </div>
+          <div class="form-2col">
+            <div class="form-row required">
+              <label>Email</label>
+              <input type="email" id="f-email" placeholder="juan@ejemplo.com" autocomplete="email" />
+            </div>
+            <div class="form-row required">
+              <label>Teléfono / WhatsApp</label>
+              <input type="tel" id="f-phone" placeholder="11 1234-5678" autocomplete="tel" />
+            </div>
           </div>
           <div class="form-row required">
-            <label>Email</label>
-            <input type="email" id="f-email" placeholder="juan@ejemplo.com" autocomplete="email" />
+            <label>DNI / CUIT</label>
+            <input type="text" id="f-dni" placeholder="12345678" autocomplete="off" inputmode="numeric" />
           </div>
+
+          <div class="form-section-title">Entrega</div>
           <div class="form-row required">
-            <label>Teléfono / WhatsApp</label>
-            <input type="tel" id="f-phone" placeholder="11 1234-5678" autocomplete="tel" />
+            <label>Método de entrega</label>
+            <select id="f-entrega" onchange="toggleAddressFields()">
+              <option value="">— Seleccioná —</option>
+              <option value="retiro">Retiro en persona (CABA)</option>
+              <option value="envio">Envío a domicilio</option>
+            </select>
           </div>
+
+          <div id="address-fields">
+            <div class="form-section-title">Dirección de envío</div>
+            <div class="form-2col">
+              <div class="form-row required" id="addr-provincia-row">
+                <label>Provincia</label>
+                <select id="f-provincia">
+                  <option value="">— Seleccioná —</option>
+                  <option>Buenos Aires</option><option>CABA</option><option>Catamarca</option>
+                  <option>Chaco</option><option>Chubut</option><option>Córdoba</option>
+                  <option>Corrientes</option><option>Entre Ríos</option><option>Formosa</option>
+                  <option>Jujuy</option><option>La Pampa</option><option>La Rioja</option>
+                  <option>Mendoza</option><option>Misiones</option><option>Neuquén</option>
+                  <option>Río Negro</option><option>Salta</option><option>San Juan</option>
+                  <option>San Luis</option><option>Santa Cruz</option><option>Santa Fe</option>
+                  <option>Santiago del Estero</option><option>Tierra del Fuego</option><option>Tucumán</option>
+                </select>
+              </div>
+              <div class="form-row required">
+                <label>Localidad</label>
+                <input type="text" id="f-localidad" placeholder="Ciudad o localidad" autocomplete="address-level2" />
+              </div>
+            </div>
+            <div class="form-2col">
+              <div class="form-row required">
+                <label>Calle</label>
+                <input type="text" id="f-calle" placeholder="Nombre de la calle" autocomplete="street-address" />
+              </div>
+              <div class="form-row required">
+                <label>Número</label>
+                <input type="text" id="f-numero-calle" placeholder="1234" autocomplete="off" />
+              </div>
+            </div>
+            <div class="form-2col">
+              <div class="form-row">
+                <label>Piso / Dpto (opcional)</label>
+                <input type="text" id="f-piso" placeholder="2° B" autocomplete="off" />
+              </div>
+              <div class="form-row required">
+                <label>Código postal</label>
+                <input type="text" id="f-cp" placeholder="1234" autocomplete="postal-code" inputmode="numeric" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section-title">Observaciones</div>
           <div class="form-row">
-            <label>Dirección de envío (opcional)</label>
-            <input type="text" id="f-address" placeholder="Calle, número, ciudad" autocomplete="street-address" />
+            <label>Observaciones (opcional)</label>
+            <textarea id="f-notes" placeholder="Aclaraciones sobre tu pedido, color preferido, etc."></textarea>
           </div>
-          <div class="form-row">
-            <label>Notas adicionales (opcional)</label>
-            <textarea id="f-notes" placeholder="Color preferido, instrucciones de entrega..."></textarea>
-          </div>
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAAAAAAAAAAAAAAAAAA" data-theme="light"></div>
+
           <div class="step-btns">
             <button class="btn-step secondary" onclick="goToStep(1)">← Volver</button>
-            <button class="btn-step primary" onclick="submitOrder()">Confirmar pedido →</button>
+            <button class="btn-step primary" id="btn-submit" onclick="submitOrder()">Confirmar pedido →</button>
           </div>
         </div>
 
@@ -227,6 +298,10 @@
             <div class="bank-row">
               <span class="bank-label">Banco</span>
               <span class="bank-val" id="bank-bank">—</span>
+            </div>
+            <div class="bank-row">
+              <span class="bank-label">CUIT</span>
+              <span class="bank-val" id="bank-cuit">—</span>
             </div>
           </div>
 
@@ -302,8 +377,9 @@
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
 <script>
-const API_BASE = "https://virtualshopbaires.com.ar/api";
-const DISCOUNT_PCT = 30;
+// REEMPLAZÁ esta URL con la de tu Apps Script (Implementar > Nueva implementación > URL del servicio web)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwTq1cVsUQZKVBmS4tkk2deGajEHD9OEQ4uSyNq3JijMWKvyX5lPqYLPg-FTyCjCd3A/exec";
+const DISCOUNT_PCT = 10;
 
 let cartItems = [];
 let currentStep = 1;
@@ -331,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-function fmt(n) { return "$" + n.toLocaleString("es-AR"); }
+function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
 
 function renderItems() {
   document.getElementById("co-items-list").innerHTML = cartItems.map(item => {
@@ -351,10 +427,14 @@ function renderItems() {
   renderPrices("co-price-summary");
 }
 
-function renderPrices(id) {
+function calcPrices() {
   const sub = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
   const disc = Math.round(sub * DISCOUNT_PCT / 100 * 100) / 100;
-  const total = sub - disc;
+  return { sub, disc, total: sub - disc };
+}
+
+function renderPrices(id) {
+  const { sub, disc, total } = calcPrices();
   document.getElementById(id).innerHTML = `
     <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
     <div class="price-row discount"><span>Descuento transferencia <span class="discount-badge">${DISCOUNT_PCT}% OFF</span></span><span>-${fmt(disc)}</span></div>
@@ -362,8 +442,7 @@ function renderPrices(id) {
 }
 
 function renderSidebar() {
-  const sub = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
-  const disc = Math.round(sub * DISCOUNT_PCT / 100 * 100) / 100;
+  const { sub, disc, total } = calcPrices();
   document.getElementById("sidebar-items").innerHTML = cartItems.map(i =>
     `<div style="display:flex;justify-content:space-between;padding:3px 0;gap:8px;">
       <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.nombre} x${i.qty}</span>
@@ -372,7 +451,12 @@ function renderSidebar() {
   document.getElementById("sidebar-prices").innerHTML = `
     <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
     <div class="price-row discount"><span>Descuento (${DISCOUNT_PCT}%)</span><span>-${fmt(disc)}</span></div>
-    <div class="price-row total"><span>Total</span><span>${fmt(sub - disc)}</span></div>`;
+    <div class="price-row total"><span>Total</span><span>${fmt(total)}</span></div>`;
+}
+
+function toggleAddressFields() {
+  const metodo = document.getElementById("f-entrega").value;
+  document.getElementById("address-fields").style.display = (metodo === "envio") ? "block" : "none";
 }
 
 function goToStep(step) {
@@ -386,69 +470,93 @@ function goToStep(step) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+function v(id) { return document.getElementById(id).value.trim(); }
+
 async function submitOrder() {
-  const name = document.getElementById("f-name").value.trim();
-  const email = document.getElementById("f-email").value.trim();
-  const phone = document.getElementById("f-phone").value.trim();
-  const address = document.getElementById("f-address").value.trim();
-  const notes = document.getElementById("f-notes").value.trim();
+  const nombre   = v("f-nombre");
+  const apellido = v("f-apellido");
+  const email    = v("f-email");
+  const telefono = v("f-phone");
+  const dni      = v("f-dni");
+  const entrega  = v("f-entrega");
+  const notes    = v("f-notes");
 
-  if (!name || name.length < 2) return alert("Por favor ingresá tu nombre completo.");
+  if (nombre.length < 2) return alert("Por favor ingresá tu nombre.");
+  if (apellido.length < 2) return alert("Por favor ingresá tu apellido.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert("Por favor ingresá un email válido.");
-  if (!phone || phone.length < 7) return alert("Por favor ingresá tu número de teléfono.");
+  if (telefono.length < 7) return alert("Por favor ingresá tu número de teléfono.");
+  if (dni.length < 7) return alert("Por favor ingresá tu DNI o CUIT.");
+  if (!entrega) return alert("Por favor seleccioná el método de entrega.");
 
-  const turnstileEl = document.querySelector('[name="cf-turnstile-response"]');
-  const turnstileToken = turnstileEl ? turnstileEl.value : "";
-
-  // NO enviamos precios — el backend los valida contra la DB
   const payload = {
-    turnstileToken,
-    customer: { name, email, phone, address, notes },
-    items: cartItems.map(i => ({
+    action: "createOrder",
+    nombre, apellido, email, telefono, dni,
+    metodoEntrega: entrega,
+    observaciones: notes,
+    productos: cartItems.map(i => ({
       nombre: i.nombre,
-      categoria: i.categoria || "",
       color: i.color || "",
       talle: i.talle || "",
       qty: i.qty,
+      precio: i.precio,
     })),
+    subtotal: calcPrices().sub,
+    descuento: calcPrices().disc,
+    total: calcPrices().total,
   };
 
+  if (entrega === "envio") {
+    payload.provincia   = v("f-provincia");
+    payload.localidad   = v("f-localidad");
+    payload.calle       = v("f-calle");
+    payload.numeroCalle = v("f-numero-calle");
+    payload.piso        = v("f-piso");
+    payload.cp          = v("f-cp");
+    if (!payload.provincia) return alert("Seleccioná la provincia.");
+    if (!payload.localidad) return alert("Ingresá la localidad.");
+    if (!payload.calle)     return alert("Ingresá la calle.");
+    if (!payload.numeroCalle) return alert("Ingresá el número de la calle.");
+    if (!payload.cp)        return alert("Ingresá el código postal.");
+  }
+
+  const btn = document.getElementById("btn-submit");
+  btn.disabled = true;
   showLoading("Procesando tu pedido...");
+
   try {
-    const res = await fetch(`${API_BASE}/orders`, {
+    // Sin Content-Type para evitar preflight CORS con Apps Script
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      redirect: "follow",
     });
     const data = await res.json();
     hideLoading();
-    if (!res.ok) { alert("Error: " + (data.error || "No se pudo crear el pedido. Intentá de nuevo.")); return; }
+    btn.disabled = false;
+
+    if (!data.ok) { alert("Error: " + (data.error || "No se pudo crear el pedido.")); return; }
 
     createdOrder = data;
     customerEmail = email;
     Cart.clear();
     fillStep3(data, email);
     goToStep(3);
-  } catch {
+  } catch (err) {
     hideLoading();
+    btn.disabled = false;
     alert("Error de conexión. Verificá tu internet e intentá de nuevo.");
   }
 }
 
 function fillStep3(data, email) {
-  document.getElementById("result-order-number").textContent = data.order_number;
-  document.getElementById("result-total").textContent = fmt(data.total);
-  document.getElementById("bank-alias").textContent = data.bank?.alias || "—";
-  document.getElementById("bank-cbu").textContent = data.bank?.cbu || "—";
-  document.getElementById("bank-holder").textContent = data.bank?.holder || "—";
-  document.getElementById("bank-bank").textContent = data.bank?.bank || "—";
-  if (data.expires_at) {
-    const exp = new Date(data.expires_at);
-    const h = Math.round((exp - Date.now()) / 3600000);
-    document.getElementById("expiry-text").textContent =
-      `Tenés ${h} horas para realizar la transferencia y subir el comprobante (vence: ${exp.toLocaleString("es-AR")}).`;
-  }
-  const trackUrl = `order-status.html?order=${data.order_number}&email=${encodeURIComponent(email)}`;
+  document.getElementById("result-order-number").textContent = data.orderNumber || "—";
+  document.getElementById("result-total").textContent = fmt(data.total || 0);
+  document.getElementById("bank-alias").textContent  = data.bankData?.alias   || "—";
+  document.getElementById("bank-cbu").textContent    = data.bankData?.cbu     || "—";
+  document.getElementById("bank-holder").textContent = data.bankData?.titular || "—";
+  document.getElementById("bank-bank").textContent   = data.bankData?.banco   || "—";
+  document.getElementById("bank-cuit").textContent   = data.bankData?.cuit    || "—";
+  const trackUrl = `order-status.html?order=${data.orderNumber}&email=${encodeURIComponent(email)}`;
   document.getElementById("link-track-order").href = trackUrl;
 }
 
@@ -478,27 +586,46 @@ function previewProof(input) {
   }
 }
 
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function uploadProof() {
   if (!createdOrder) return;
   const fileInput = document.getElementById("proof-file");
   if (!fileInput.files?.length) { alert("Por favor seleccioná el comprobante."); return; }
-  const email = customerEmail || document.getElementById("f-email").value.trim();
+  const email = customerEmail || v("f-email");
   if (!email) { alert("Email requerido."); return; }
+
+  const file = fileInput.files[0];
+  if (file.size > 10 * 1024 * 1024) { alert("El archivo no puede superar 10MB."); return; }
 
   const btn = document.getElementById("btn-upload");
   btn.disabled = true;
   showLoading("Subiendo comprobante...");
 
   try {
-    const fd = new FormData();
-    fd.append("proof", fileInput.files[0]);
-    const res = await fetch(
-      `${API_BASE}/orders/${createdOrder.order_number}/proof?email=${encodeURIComponent(email)}`,
-      { method: "POST", body: fd }
-    );
+    const base64 = await fileToBase64(file);
+    const payload = {
+      action: "uploadProof",
+      orderNumber: createdOrder.orderNumber,
+      email,
+      fileBase64: base64,
+      fileMimeType: file.type,
+    };
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+      redirect: "follow",
+    });
     const data = await res.json();
     hideLoading();
-    if (res.ok) {
+    if (data.ok) {
       document.getElementById("upload-success").style.display = "block";
       document.getElementById("upload-zone").style.display = "none";
       btn.style.display = "none";

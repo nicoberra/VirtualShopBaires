@@ -1,240 +1,362 @@
 // ============================================================
-//  APPS SCRIPT — Virtual Shop Baires
-//
-//  FUNCIONES:
-//  1. doGet()           → devuelve mapa de imágenes desde Drive (imagen manifest)
-//  2. doPost()          → recibe pedidos del Worker y los agrega a Google Sheets
-//  3. syncPricesToSupabase() → sincroniza precios del Sheet al Worker/Supabase
-//
-//  ESTRUCTURA DEL DRIVE:
-//  📁 Carpeta raíz (FOLDER_ID)
-//    📁 Mascotas
-//      📁 Arnes para perros   ← mismo nombre que columna A del Sheet
-//          🖼️ 1.jpg           ← numeradas: 1, 2, 3...
-//      🖼️ Cama.jpg            ← imagen directa si tiene una sola foto
-//
-//  PARA ACTUALIZAR: Implementar → Administrar → lápiz → Nueva versión → Implementar
+// Virtual Shop Baires — Google Apps Script Backend
+// Pegar en: script.google.com → nuevo proyecto
 // ============================================================
 
-const FOLDER_ID      = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
-const SHEET_ID       = "1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw";
-const WORKER_API     = "https://virtualshopbaires.com.ar/api";
-const ADMIN_TOKEN    = PropertiesService.getScriptProperties().getProperty("ADMIN_TOKEN") || "";
-// Configurar en el script: Proyecto → Configuración del proyecto → Propiedades del script
-// Clave: ADMIN_TOKEN  Valor: (mismo token que en el Worker)
+const CONFIG = {
+  ADMIN_EMAIL: 'nicolasthiagoberra@gmail.com',
+  BANK_ALIAS: 'TU.ALIAS.AQUI',
+  BANK_CBU: '0000000000000000000000',
+  BANK_HOLDER: 'Nombre Apellido',
+  BANK_BANK: 'Nombre del Banco',
+  BANK_CUIT: '20-00000000-0',
+  SITE_URL: 'https://virtualshopbaires.com.ar',
+  DISCOUNT_PCT: 10,
+  ORDER_PREFIX: 'VSB',
+  ORDERS_SHEET: 'Pedidos',
+  PROOF_FOLDER_NAME: 'VSB-Comprobantes',
+};
+
+// Columnas de la hoja (índice base 1 para Sheets, base 0 para arrays)
+const COL = {
+  FECHA: 1, HORA: 2, NUMERO: 3, NOMBRE: 4, APELLIDO: 5,
+  EMAIL: 6, TELEFONO: 7, DNI: 8, PROVINCIA: 9, LOCALIDAD: 10,
+  CP: 11, CALLE: 12, NUMERO_CALLE: 13, PISO: 14, METODO_ENTREGA: 15,
+  PRODUCTOS: 16, SUBTOTAL: 17, DESCUENTO: 18, TOTAL: 19,
+  METODO_PAGO: 20, ESTADO_PAGO: 21, ESTADO_PEDIDO: 22,
+  URL_COMPROBANTE: 23, FECHA_TRANSFERENCIA: 24, FECHA_CONFIRMACION: 25,
+  OBSERVACIONES: 26, NUMERO_SEGUIMIENTO: 27, NOTAS_ADMIN: 28,
+};
+
+// Estados válidos que el FRONTEND puede establecer (nunca PAGO CONFIRMADO)
+const ESTADOS_PAGO_FRONTEND = [
+  'PENDIENTE DE PAGO',
+  'TRANSFERENCIA INFORMADA',
+  'PENDIENTE DE VERIFICACIÓN',
+];
 
 // ============================================================
-//  1. doGet — mapa de imágenes (ya existía)
+// PUNTO DE ENTRADA HTTP
 // ============================================================
 
-function getImgUrl(file) {
-  return "https://drive.google.com/thumbnail?id=" + file.getId() + "&sz=w800";
-}
-
-function doGet() {
+function doGet(e) {
   try {
-    const folder = DriveApp.getFolderById(FOLDER_ID);
-    const result = {};
-
-    const catFolders = folder.getFolders();
-    while (catFolders.hasNext()) {
-      const catFolder = catFolders.next();
-      const catName   = catFolder.getName().trim();
-      result[catName] = {};
-
-      const directFiles = catFolder.getFiles();
-      while (directFiles.hasNext()) {
-        const file     = directFiles.next();
-        const fileName = file.getName().replace(/\.[^/.]+$/, "").trim();
-        result[catName][fileName] = getImgUrl(file);
-      }
-
-      const productFolders = catFolder.getFolders();
-      while (productFolders.hasNext()) {
-        const productFolder = productFolders.next();
-        const productName   = productFolder.getName().trim();
-
-        const filesArr = [];
-        const varFiles = productFolder.getFiles();
-        while (varFiles.hasNext()) {
-          const f = varFiles.next();
-          filesArr.push({ name: f.getName(), url: getImgUrl(f) });
-        }
-
-        filesArr.sort((a, b) => {
-          const na = parseInt(a.name) || 0;
-          const nb = parseInt(b.name) || 0;
-          return na !== nb ? na - nb : a.name.localeCompare(b.name);
-        });
-
-        if (filesArr.length === 1) {
-          result[catName][productName] = filesArr[0].url;
-        } else if (filesArr.length > 1) {
-          result[catName][productName] = filesArr.map(f => f.url);
-        }
-      }
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (e) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: e.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    const action = e.parameter.action || '';
+    if (action === 'getOrder') return jsonResponse(getOrder(e.parameter));
+    return jsonResponse({ ok: false, error: 'Acción no reconocida' });
+  } catch (err) {
+    return jsonResponse({ ok: false, error: err.message });
   }
 }
-
-// ============================================================
-//  2. doPost — recibe pedidos desde el Worker y los registra
-//  El Worker llama a este endpoint automáticamente al crear
-//  un pedido o cambiar su estado.
-// ============================================================
 
 function doPost(e) {
   try {
     const body = JSON.parse(e.postData.contents);
-    const action = body.action || "newOrder";
+    const action = body.action || '';
 
-    if (action === "newOrder") {
-      appendOrderToSheet(body.order);
-    } else if (action === "paymentConfirmed") {
-      updateOrderStatus(body.order.order_number, "Pago confirmado", body.order.confirmed_at);
-    } else if (action === "paymentRejected") {
-      updateOrderStatus(body.order.order_number, "Comprobante rechazado", null);
-    }
+    if (action === 'createOrder') return jsonResponse(createOrder(body));
+    if (action === 'uploadProof') return jsonResponse(uploadProof(body));
 
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch (e) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: e.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return jsonResponse({ ok: false, error: 'Acción no reconocida' });
+  } catch (err) {
+    return jsonResponse({ ok: false, error: err.message });
   }
 }
 
-function appendOrderToSheet(order) {
-  const ss    = SpreadsheetApp.openById(SHEET_ID);
-  let sheet   = ss.getSheetByName("Pedidos");
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
-  // Crear la pestaña si no existe
-  if (!sheet) {
-    sheet = ss.insertSheet("Pedidos");
-    const headers = [
-      "Número", "Fecha", "Cliente", "Email", "Teléfono", "Dirección",
-      "Productos", "Subtotal", "Descuento", "Total", "Estado pago", "Estado pedido",
-      "Vence", "Notas del cliente"
-    ];
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.getRange(1, 1, 1, headers.length).setFontWeight("bold");
-    sheet.setFrozenRows(1);
+// ============================================================
+// CREAR PEDIDO
+// ============================================================
+
+function createOrder(body) {
+  // Validar campos requeridos
+  const required = ['nombre', 'apellido', 'email', 'telefono', 'dni',
+                    'metodoEntrega', 'productos', 'subtotal', 'total'];
+  for (const f of required) {
+    if (!body[f]) return { ok: false, error: `Campo requerido: ${f}` };
   }
 
-  const items = Array.isArray(order.items) ? order.items : [];
-  const itemsText = items.map(i =>
-    `${i.nombre}${i.color ? " (" + i.color : ""}${i.talle ? "/" + i.talle : ""}${(i.color || i.talle) ? ")" : ""} x${i.qty} = $${(i.subtotal || i.precio_unit * i.qty).toLocaleString("es-AR")}`
-  ).join("\n");
+  // Si el método de entrega es envío, validar dirección
+  if (body.metodoEntrega === 'envio') {
+    const reqAddr = ['provincia', 'localidad', 'cp', 'calle', 'numeroCalle'];
+    for (const f of reqAddr) {
+      if (!body[f]) return { ok: false, error: `Campo de dirección requerido: ${f}` };
+    }
+  }
 
-  const row = [
-    order.order_number || "",
-    order.created_at ? new Date(order.created_at).toLocaleString("es-AR") : new Date().toLocaleString("es-AR"),
-    order.customer_name || "",
-    order.customer_email || "",
-    order.customer_phone || "",
-    order.customer_address || "",
-    itemsText,
-    order.subtotal || 0,
-    order.discount_amount || 0,
-    order.total || 0,
-    "Esperando transferencia",
-    "Pend. pago",
-    order.expires_at ? new Date(order.expires_at).toLocaleString("es-AR") : "",
-    order.customer_notes || "",
-  ];
+  const sheet = getOrdersSheet();
+  const orderNumber = generateOrderNumber(sheet);
+  const now = new Date();
+
+  const row = new Array(28).fill('');
+  row[COL.FECHA - 1]           = Utilities.formatDate(now, 'America/Argentina/Buenos_Aires', 'dd/MM/yyyy');
+  row[COL.HORA - 1]            = Utilities.formatDate(now, 'America/Argentina/Buenos_Aires', 'HH:mm:ss');
+  row[COL.NUMERO - 1]          = orderNumber;
+  row[COL.NOMBRE - 1]          = body.nombre;
+  row[COL.APELLIDO - 1]        = body.apellido;
+  row[COL.EMAIL - 1]           = body.email;
+  row[COL.TELEFONO - 1]        = body.telefono;
+  row[COL.DNI - 1]             = body.dni;
+  row[COL.PROVINCIA - 1]       = body.provincia || '';
+  row[COL.LOCALIDAD - 1]       = body.localidad || '';
+  row[COL.CP - 1]              = body.cp || '';
+  row[COL.CALLE - 1]           = body.calle || '';
+  row[COL.NUMERO_CALLE - 1]    = body.numeroCalle || '';
+  row[COL.PISO - 1]            = body.piso || '';
+  row[COL.METODO_ENTREGA - 1]  = body.metodoEntrega;
+  row[COL.PRODUCTOS - 1]       = JSON.stringify(body.productos);
+  row[COL.SUBTOTAL - 1]        = body.subtotal;
+  row[COL.DESCUENTO - 1]       = body.descuento || 0;
+  row[COL.TOTAL - 1]           = body.total;
+  row[COL.METODO_PAGO - 1]     = 'Transferencia bancaria';
+  row[COL.ESTADO_PAGO - 1]     = 'PENDIENTE DE PAGO';
+  row[COL.ESTADO_PEDIDO - 1]   = 'PEDIDO CREADO';
+  row[COL.OBSERVACIONES - 1]   = body.observaciones || '';
 
   sheet.appendRow(row);
+
+  sendOrderCreatedEmailToCustomer(body, orderNumber, body.total);
+  sendOrderCreatedEmailToAdmin(body, orderNumber, body.total);
+
+  return {
+    ok: true,
+    orderNumber,
+    bankData: {
+      alias: CONFIG.BANK_ALIAS,
+      cbu: CONFIG.BANK_CBU,
+      titular: CONFIG.BANK_HOLDER,
+      banco: CONFIG.BANK_BANK,
+      cuit: CONFIG.BANK_CUIT,
+    },
+    total: body.total,
+  };
 }
 
-function updateOrderStatus(orderNumber, paymentStatus, confirmedAt) {
-  const ss    = SpreadsheetApp.openById(SHEET_ID);
-  const sheet = ss.getSheetByName("Pedidos");
-  if (!sheet) return;
+// ============================================================
+// SUBIR COMPROBANTE
+// ============================================================
 
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0] === orderNumber) {
-      sheet.getRange(i + 1, 11).setValue(paymentStatus);
-      if (confirmedAt) {
-        sheet.getRange(i + 1, 12).setValue("Preparando pedido");
+function uploadProof(body) {
+  if (!body.orderNumber || !body.email || !body.fileBase64) {
+    return { ok: false, error: 'Faltan datos requeridos' };
+  }
+
+  const sheet = getOrdersSheet();
+  const rowIndex = findOrderRow(sheet, body.orderNumber, body.email);
+  if (!rowIndex) return { ok: false, error: 'Pedido no encontrado' };
+
+  // Verificar que el estado actual NO sea administrativo
+  const currentPayStatus = sheet.getRange(rowIndex, COL.ESTADO_PAGO).getValue();
+  if (currentPayStatus === 'PAGO CONFIRMADO') {
+    return { ok: false, error: 'Este pedido ya fue confirmado' };
+  }
+
+  // Guardar archivo en Google Drive
+  const folder = getProofFolder();
+  const base64Data = body.fileBase64.replace(/^data:[^;]+;base64,/, '');
+  const blob = Utilities.newBlob(
+    Utilities.base64Decode(base64Data),
+    body.fileMimeType || 'application/octet-stream',
+    `${body.orderNumber}-comprobante`
+  );
+  const file = folder.createFile(blob);
+  const fileUrl = file.getUrl();
+
+  // Actualizar fila: estado + URL comprobante + fecha
+  const now = new Date();
+  const fechaStr = Utilities.formatDate(now, 'America/Argentina/Buenos_Aires', 'dd/MM/yyyy HH:mm');
+  sheet.getRange(rowIndex, COL.ESTADO_PAGO).setValue('TRANSFERENCIA INFORMADA');
+  sheet.getRange(rowIndex, COL.ESTADO_PEDIDO).setValue('ESPERANDO PAGO');
+  sheet.getRange(rowIndex, COL.URL_COMPROBANTE).setValue(fileUrl);
+  sheet.getRange(rowIndex, COL.FECHA_TRANSFERENCIA).setValue(fechaStr);
+
+  // Notificar al admin
+  sendProofUploadedEmailToAdmin(body.orderNumber, body.email, fileUrl);
+
+  return { ok: true, message: 'Comprobante recibido. Te avisaremos cuando confirmemos el pago.' };
+}
+
+// ============================================================
+// CONSULTAR PEDIDO
+// ============================================================
+
+function getOrder(params) {
+  if (!params.order || !params.email) {
+    return { ok: false, error: 'Faltan parámetros' };
+  }
+
+  const sheet = getOrdersSheet();
+  const rowIndex = findOrderRow(sheet, params.order, params.email);
+  if (!rowIndex) return { ok: false, error: 'Pedido no encontrado' };
+
+  const data = sheet.getRange(rowIndex, 1, 1, 28).getValues()[0];
+
+  return {
+    ok: true,
+    order: {
+      numero:          data[COL.NUMERO - 1],
+      fecha:           data[COL.FECHA - 1],
+      nombre:          data[COL.NOMBRE - 1],
+      apellido:        data[COL.APELLIDO - 1],
+      email:           data[COL.EMAIL - 1],
+      metodoEntrega:   data[COL.METODO_ENTREGA - 1],
+      total:           data[COL.TOTAL - 1],
+      estadoPago:      data[COL.ESTADO_PAGO - 1],
+      estadoPedido:    data[COL.ESTADO_PEDIDO - 1],
+      urlComprobante:  data[COL.URL_COMPROBANTE - 1],
+      numeroSeguimiento: data[COL.NUMERO_SEGUIMIENTO - 1],
+      productos:       (() => { try { return JSON.parse(data[COL.PRODUCTOS - 1]); } catch(e) { return []; } })(),
+    },
+  };
+}
+
+// ============================================================
+// TRIGGER onEdit — solo el admin puede confirmar pagos
+// ============================================================
+
+function onEdit(e) {
+  const sheet = e.source.getActiveSheet();
+  if (sheet.getName() !== CONFIG.ORDERS_SHEET) return;
+
+  const col = e.range.getColumn();
+  const row = e.range.getRow();
+  if (row < 2) return; // encabezado
+
+  // Si el admin cambió la columna ESTADO_PAGO a PAGO CONFIRMADO
+  if (col === COL.ESTADO_PAGO && e.value === 'PAGO CONFIRMADO') {
+    const data = sheet.getRange(row, 1, 1, 28).getValues()[0];
+    const email   = data[COL.EMAIL - 1];
+    const nombre  = data[COL.NOMBRE - 1];
+    const numero  = data[COL.NUMERO - 1];
+    const total   = data[COL.TOTAL - 1];
+
+    // Registrar fecha de confirmación
+    const fechaStr = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'dd/MM/yyyy HH:mm');
+    sheet.getRange(row, COL.FECHA_CONFIRMACION).setValue(fechaStr);
+    sheet.getRange(row, COL.ESTADO_PEDIDO).setValue('PREPARANDO PEDIDO');
+
+    sendPaymentConfirmedEmailToCustomer(email, nombre, numero, total);
+  }
+}
+
+// ============================================================
+// EMAILS
+// ============================================================
+
+function sendOrderCreatedEmailToCustomer(body, orderNumber, total) {
+  const subject = `Tu pedido ${orderNumber} fue recibido — Virtual Shop Baires`;
+  const htmlBody = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+      <h2 style="color:#CC1212">¡Tu pedido fue recibido!</h2>
+      <p>Hola <strong>${body.nombre}</strong>, gracias por tu compra.</p>
+      <p><strong>N° de pedido:</strong> ${orderNumber}</p>
+      <p><strong>Total a transferir:</strong> $${Number(total).toLocaleString('es-AR')}</p>
+      <hr>
+      <h3>Datos bancarios para transferir</h3>
+      <table style="border-collapse:collapse;width:100%">
+        <tr><td style="padding:6px;font-weight:bold">Alias</td><td style="padding:6px">${CONFIG.BANK_ALIAS}</td></tr>
+        <tr style="background:#f5f5f5"><td style="padding:6px;font-weight:bold">CBU</td><td style="padding:6px">${CONFIG.BANK_CBU}</td></tr>
+        <tr><td style="padding:6px;font-weight:bold">Titular</td><td style="padding:6px">${CONFIG.BANK_HOLDER}</td></tr>
+        <tr style="background:#f5f5f5"><td style="padding:6px;font-weight:bold">Banco</td><td style="padding:6px">${CONFIG.BANK_BANK}</td></tr>
+        <tr><td style="padding:6px;font-weight:bold">CUIT</td><td style="padding:6px">${CONFIG.BANK_CUIT}</td></tr>
+      </table>
+      <p style="margin-top:20px">Una vez realizada la transferencia, subí el comprobante en:</p>
+      <p><a href="${CONFIG.SITE_URL}/order-status.html" style="color:#CC1212">${CONFIG.SITE_URL}/order-status.html</a></p>
+      <p>Usá tu N° de pedido <strong>${orderNumber}</strong> y tu email <strong>${body.email}</strong>.</p>
+      <hr>
+      <p style="color:#888;font-size:12px">Virtual Shop Baires · ${CONFIG.SITE_URL}</p>
+    </div>`;
+  GmailApp.sendEmail(body.email, subject, '', { htmlBody, name: 'Virtual Shop Baires' });
+}
+
+function sendOrderCreatedEmailToAdmin(body, orderNumber, total) {
+  const subject = `[VSB] Nuevo pedido: ${orderNumber}`;
+  const text = `Nuevo pedido recibido.\n\nN°: ${orderNumber}\nCliente: ${body.nombre} ${body.apellido}\nEmail: ${body.email}\nTeléfono: ${body.telefono}\nTotal: $${total}\nEntrega: ${body.metodoEntrega}\n\nVer en Google Sheets.`;
+  GmailApp.sendEmail(CONFIG.ADMIN_EMAIL, subject, text, { name: 'Virtual Shop Baires' });
+}
+
+function sendProofUploadedEmailToAdmin(orderNumber, customerEmail, fileUrl) {
+  const subject = `[VSB] Comprobante subido: ${orderNumber}`;
+  const text = `El cliente (${customerEmail}) subió un comprobante para el pedido ${orderNumber}.\n\nComprobante: ${fileUrl}\n\nVerificá la transferencia y confirmá en Google Sheets cambiando el estado de pago a PAGO CONFIRMADO.`;
+  GmailApp.sendEmail(CONFIG.ADMIN_EMAIL, subject, text, { name: 'Virtual Shop Baires' });
+}
+
+function sendPaymentConfirmedEmailToCustomer(email, nombre, orderNumber, total) {
+  const subject = `¡Pago confirmado! Pedido ${orderNumber} — Virtual Shop Baires`;
+  const htmlBody = `
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
+      <h2 style="color:#25a244">¡Tu pago fue confirmado!</h2>
+      <p>Hola <strong>${nombre}</strong>, recibimos y verificamos tu transferencia.</p>
+      <p><strong>Pedido N°:</strong> ${orderNumber}</p>
+      <p><strong>Total:</strong> $${Number(total).toLocaleString('es-AR')}</p>
+      <p>Tu pedido está siendo preparado. Te avisaremos cuando sea despachado.</p>
+      <p>Podés hacer seguimiento en: <a href="${CONFIG.SITE_URL}/order-status.html" style="color:#CC1212">${CONFIG.SITE_URL}/order-status.html</a></p>
+      <hr>
+      <p style="color:#888;font-size:12px">Virtual Shop Baires · ${CONFIG.SITE_URL}</p>
+    </div>`;
+  GmailApp.sendEmail(email, subject, '', { htmlBody, name: 'Virtual Shop Baires' });
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function getOrdersSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(CONFIG.ORDERS_SHEET);
+  if (!sheet) {
+    sheet = ss.insertSheet(CONFIG.ORDERS_SHEET);
+    const headers = [
+      'Fecha','Hora','N° Pedido','Nombre','Apellido','Email','Teléfono','DNI/CUIT',
+      'Provincia','Localidad','CP','Calle','Número','Piso/Dpto','Método entrega',
+      'Productos','Subtotal','Descuento','Total','Método pago','Estado pago',
+      'Estado pedido','URL Comprobante','Fecha transferencia informada',
+      'Fecha confirmación','Observaciones','N° seguimiento','Notas admin',
+    ];
+    sheet.appendRow(headers);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 28).setFontWeight('bold').setBackground('#1B2B4B').setFontColor('#ffffff');
+  }
+  return sheet;
+}
+
+function generateOrderNumber(sheet) {
+  const today = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'yyyyMMdd');
+  const prefix = `${CONFIG.ORDER_PREFIX}-${today}-`;
+  const lastRow = sheet.getLastRow();
+  let maxSeq = 0;
+  if (lastRow > 1) {
+    const numbers = sheet.getRange(2, COL.NUMERO, lastRow - 1, 1).getValues();
+    for (const [num] of numbers) {
+      if (String(num).startsWith(prefix)) {
+        const seq = parseInt(String(num).slice(prefix.length), 10) || 0;
+        if (seq > maxSeq) maxSeq = seq;
       }
-      break;
     }
   }
+  return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
 }
 
-// ============================================================
-//  3. syncPricesToSupabase — llamar manualmente desde el editor
-//  Lee los precios del Sheet y los sincroniza al Worker (que
-//  los guarda en Supabase products_cache).
-// ============================================================
-
-function syncPricesToSupabase() {
-  const ss      = SpreadsheetApp.openById(SHEET_ID);
-  const catSheet = ss.getSheetByName("Categorias");
-  if (!catSheet) { Logger.log("No se encontró la pestaña 'Categorias'"); return; }
-
-  const catRows = catSheet.getDataRange().getValues().slice(1).map(r => String(r[0]).trim()).filter(Boolean);
-  const products = [];
-
-  for (const categoria of catRows) {
-    const hoja = ss.getSheetByName(categoria);
-    if (!hoja) continue;
-
-    const rows = hoja.getDataRange().getValues().slice(1); // saltar encabezado
-    for (const row of rows) {
-      const nombre = String(row[0] || "").trim();
-      if (!nombre || nombre.toLowerCase() === categoria.toLowerCase()) continue;
-
-      const precioBase  = parseFloat(String(row[1] || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || 0;
-      const stockVal    = row[2];
-      const color       = String(row[3] || "").trim();
-      const talle       = String(row[4] || "").trim();
-      const descuento   = row[7] ? parseFloat(String(row[7]).replace(/[^\d.,]/g, "").replace(",", ".")) : null;
-
-      const precio      = descuento !== null ? descuento : precioBase;
-      const stock       = stockVal !== false && String(stockVal).toLowerCase() !== "false";
-
-      if (precio <= 0) continue;
-
-      products.push({
-        nombre,
-        categoria,
-        precio,
-        precio_original: descuento !== null ? precioBase : null,
-        color,
-        talle,
-        stock,
-      });
+function findOrderRow(sheet, orderNumber, email) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return null;
+  const data = sheet.getRange(2, 1, lastRow - 1, 28).getValues();
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][COL.NUMERO - 1] === orderNumber &&
+        data[i][COL.EMAIL - 1].toLowerCase() === email.toLowerCase()) {
+      return i + 2; // +2 porque la fila 1 es encabezado y los arrays son base 0
     }
   }
+  return null;
+}
 
-  if (!ADMIN_TOKEN) {
-    Logger.log("ERROR: ADMIN_TOKEN no configurado. Ir a Proyecto → Propiedades del script → Agregar ADMIN_TOKEN.");
-    return;
-  }
-
-  const res = UrlFetchApp.fetch(`${WORKER_API}/admin/sync-products`, {
-    method: "post",
-    contentType: "application/json",
-    headers: { "Authorization": `Bearer ${ADMIN_TOKEN}` },
-    payload: JSON.stringify({ products }),
-    muteHttpExceptions: true,
-  });
-
-  const result = JSON.parse(res.getContentText());
-  Logger.log(`Sincronización completada: ${result.synced}/${result.total} productos. Errores: ${result.errors?.length || 0}`);
-  if (result.errors?.length) Logger.log("Errores: " + JSON.stringify(result.errors.slice(0, 5)));
+function getProofFolder() {
+  const folders = DriveApp.getFoldersByName(CONFIG.PROOF_FOLDER_NAME);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(CONFIG.PROOF_FOLDER_NAME);
 }

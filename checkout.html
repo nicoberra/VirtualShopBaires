@@ -38,7 +38,9 @@
     .co-item-img { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; background: var(--black-2); flex-shrink: 0; }
     .co-item-info { flex: 1; min-width: 0; }
     .co-item-name { font-size: 0.8rem; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .co-item-var { font-size: 0.7rem; color: var(--gray); }
+    .co-item-var { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
+    .co-item-ver-mas { font-size: 0.68rem; color: var(--red); cursor: pointer; text-decoration: underline; display: inline-block; margin-top: 1px; background: none; border: none; padding: 0; }
+    .co-item-ver-mas:hover { opacity: 0.75; }
     .co-item-qty { font-size: 0.7rem; color: var(--gray); }
     .co-item-price { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 0.85rem; }
     .co-item-remove { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 0.8rem; padding: 4px 6px; border-radius: 4px; transition: color 0.2s; flex-shrink: 0; line-height: 1; }
@@ -423,6 +425,12 @@ function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
 function renderItems() {
   document.getElementById("co-items-list").innerHTML = cartItems.map(item => {
     const varInfo = [item.color, item.talle].filter(Boolean).join(" / ");
+    const varId = `var-${item.cartKey.replace(/[^a-z0-9]/gi, "_")}`;
+    const varHTML = varInfo
+      ? (varInfo.length > 25
+          ? `<div class="co-item-var" id="${varId}" style="display:none;">${varInfo}</div><button class="co-item-ver-mas" onclick="toggleVar('${varId}',this)">Ver más</button>`
+          : `<div class="co-item-var">${varInfo}</div>`)
+      : "";
     const img = item.imagen
       ? `<img class="co-item-img" src="${item.imagen}" alt="" onerror="this.style.display='none'">`
       : `<div class="co-item-img" style="display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="color:var(--gray-light);font-size:1.1rem;"></i></div>`;
@@ -432,7 +440,7 @@ function renderItems() {
     return `<div class="co-item">${img}
       <div class="co-item-info">
         <div class="co-item-name">${item.nombre}</div>
-        ${varInfo ? `<div class="co-item-var">${varInfo}</div>` : ""}
+        ${varHTML}
         <div class="co-item-qty">Cantidad: ${item.qty}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
@@ -470,6 +478,13 @@ function renderSidebar() {
     <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
     <div class="price-row discount"><span>Descuento (${DISCOUNT_PCT}%)</span><span>-${fmt(disc)}</span></div>
     <div class="price-row total"><span>Total</span><span>${fmt(total)}</span></div>`;
+}
+
+function toggleVar(id, btn) {
+  const el = document.getElementById(id);
+  const hidden = el.style.display === "none";
+  el.style.display = hidden ? "block" : "none";
+  btn.textContent = hidden ? "Ver menos" : "Ver más";
 }
 
 function removeFromOrder(cartKey) {

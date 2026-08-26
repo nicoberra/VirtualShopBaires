@@ -217,9 +217,13 @@
             <label>Método de entrega</label>
             <select id="f-entrega" onchange="toggleAddressFields()">
               <option value="">— Seleccioná —</option>
-              <option value="retiro">Retiro en persona (CABA)</option>
+              <option value="retiro">Retiro en persona (CABA - Versalles)</option>
               <option value="envio">Envío a domicilio</option>
             </select>
+          </div>
+          <div id="retiro-info" style="display:none; background:rgba(27,43,75,0.07); border-radius:8px; padding:10px 14px; font-size:0.85rem; color:var(--white); margin-top:-10px; margin-bottom:18px;">
+            <i class="fa-solid fa-location-dot" style="color:var(--red);margin-right:6px;"></i>
+            <strong>Dirección de retiro:</strong> Marcelo Gamboa 6306, Versalles, CABA
           </div>
 
           <div id="address-fields">
@@ -501,6 +505,7 @@ function removeFromOrder(cartKey) {
 function toggleAddressFields() {
   const metodo = document.getElementById("f-entrega").value;
   document.getElementById("address-fields").style.display = (metodo === "envio") ? "block" : "none";
+  document.getElementById("retiro-info").style.display = (metodo === "retiro") ? "block" : "none";
 }
 
 function goToStep(step) {

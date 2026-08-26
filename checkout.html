@@ -28,14 +28,21 @@
     .checkout-card h2 { font-size: 1rem; font-weight: 700; color: var(--white); margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
     .checkout-card h2 i { color: var(--red); }
 
-    .co-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--black-2); }
+    .co-items-scroll { max-height: 300px; overflow-y: auto; padding-right: 4px; margin-bottom: 4px; }
+    .co-items-scroll::-webkit-scrollbar { width: 5px; }
+    .co-items-scroll::-webkit-scrollbar-track { background: var(--black-2); border-radius: 4px; }
+    .co-items-scroll::-webkit-scrollbar-thumb { background: var(--gray); border-radius: 4px; }
+    .co-items-scroll::-webkit-scrollbar-thumb:hover { background: var(--red); }
+    .co-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--black-2); }
     .co-item:last-child { border-bottom: none; }
-    .co-item-img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--black-2); flex-shrink: 0; }
+    .co-item-img { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; background: var(--black-2); flex-shrink: 0; }
     .co-item-info { flex: 1; min-width: 0; }
-    .co-item-name { font-size: 0.82rem; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .co-item-var { font-size: 0.72rem; color: var(--gray); }
-    .co-item-qty { font-size: 0.72rem; color: var(--gray); }
-    .co-item-price { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 0.88rem; }
+    .co-item-name { font-size: 0.8rem; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .co-item-var { font-size: 0.7rem; color: var(--gray); }
+    .co-item-qty { font-size: 0.7rem; color: var(--gray); }
+    .co-item-price { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 0.85rem; }
+    .co-item-remove { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 0.8rem; padding: 4px 6px; border-radius: 4px; transition: color 0.2s; flex-shrink: 0; line-height: 1; }
+    .co-item-remove:hover { color: var(--red); }
 
     .price-summary { margin-top: 20px; }
     .price-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.9rem; color: var(--gray); }
@@ -166,7 +173,7 @@
         <!-- Paso 1: Resumen -->
         <div class="checkout-card step-panel active" id="panel-1">
           <h2><i class="fa-solid fa-cart-shopping"></i> Tu pedido</h2>
-          <div id="co-items-list"></div>
+          <div class="co-items-scroll"><div id="co-items-list"></div></div>
           <div class="price-summary" id="co-price-summary"></div>
           <div class="step-btns">
             <button class="btn-step primary" onclick="goToStep(2)">Continuar con mis datos →</button>
@@ -340,7 +347,7 @@
       <!-- Sidebar -->
       <div class="checkout-sidebar">
         <div class="checkout-card">
-          <h2><i class="fa-solid fa-receipt"></i> Resumen</h2>
+          <h2><i class="fa-solid fa-receipt"></i> Resumen de compra</h2>
           <div id="sidebar-items" style="font-size:0.85rem;color:var(--gray);"></div>
           <div id="sidebar-prices" class="price-summary" style="margin-top:12px;"></div>
         </div>
@@ -418,9 +425,10 @@ function renderItems() {
     const varInfo = [item.color, item.talle].filter(Boolean).join(" / ");
     const img = item.imagen
       ? `<img class="co-item-img" src="${item.imagen}" alt="" onerror="this.style.display='none'">`
-      : `<div class="co-item-img" style="display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="color:var(--gray-light);font-size:1.2rem;"></i></div>`;
+      : `<div class="co-item-img" style="display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="color:var(--gray-light);font-size:1.1rem;"></i></div>`;
     const precioOriginal = item.precio * item.qty;
     const precioConDesc  = Math.round(precioOriginal * (1 - DISCOUNT_PCT / 100) * 100) / 100;
+    const cartKeyEsc = item.cartKey.replace(/'/g, "\\'");
     return `<div class="co-item">${img}
       <div class="co-item-info">
         <div class="co-item-name">${item.nombre}</div>
@@ -428,9 +436,10 @@ function renderItems() {
         <div class="co-item-qty">Cantidad: ${item.qty}</div>
       </div>
       <div style="text-align:right;flex-shrink:0;">
-        <div style="font-size:0.75rem;color:var(--gray);text-decoration:line-through;">${fmt(precioOriginal)}</div>
+        <div style="font-size:0.72rem;color:var(--gray);text-decoration:line-through;">${fmt(precioOriginal)}</div>
         <div class="co-item-price">${fmt(precioConDesc)}</div>
       </div>
+      <button class="co-item-remove" onclick="removeFromOrder('${cartKeyEsc}')" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
     </div>`;
   }).join("");
   renderPrices("co-price-summary");
@@ -461,6 +470,18 @@ function renderSidebar() {
     <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
     <div class="price-row discount"><span>Descuento (${DISCOUNT_PCT}%)</span><span>-${fmt(disc)}</span></div>
     <div class="price-row total"><span>Total</span><span>${fmt(total)}</span></div>`;
+}
+
+function removeFromOrder(cartKey) {
+  Cart.remove(cartKey);
+  cartItems = Cart.getItems();
+  if (!cartItems.length) {
+    document.getElementById("checkout-main").style.display = "none";
+    document.getElementById("empty-state").style.display = "block";
+    return;
+  }
+  renderItems();
+  renderSidebar();
 }
 
 function toggleAddressFields() {

@@ -402,8 +402,23 @@ let currentStep = 1;
 let createdOrder = null;
 let customerEmail = "";
 
+const ACCESS_KEY = "vsb2025";
+const hasAccess = new URLSearchParams(window.location.search).get("test") === ACCESS_KEY;
+
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
+
+  if (!hasAccess) {
+    document.querySelector(".checkout-page").innerHTML = `
+      <div class="container" style="text-align:center;padding:80px 20px;">
+        <i class="fa-solid fa-wrench" style="font-size:3rem;color:var(--red);"></i>
+        <h2 style="margin:20px 0 10px;color:var(--white);">Pagos por transferencia próximamente</h2>
+        <p style="color:var(--gray);max-width:420px;margin:0 auto 24px;">Estamos terminando de configurar el sistema de pagos. ¡Volvé en breve!</p>
+        <a href="productos.html" style="display:inline-block;background:var(--red);color:#fff;padding:12px 28px;border-radius:50px;font-weight:700;text-decoration:none;">← Seguir viendo productos</a>
+      </div>`;
+    return;
+  }
+
   cartItems = Cart.getItems();
   if (!cartItems.length) {
     document.getElementById("empty-state").style.display = "block";

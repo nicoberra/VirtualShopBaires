@@ -188,7 +188,19 @@ async function buscarPedidos() {
 
     resEl.innerHTML = data.orders.map(o => {
       const trackUrl = `order-status.html?order=${encodeURIComponent(o.numero)}&email=${encodeURIComponent(email)}`;
-      const productosText = o.productos ? String(o.productos).substring(0, 120) + (String(o.productos).length > 120 ? "…" : "") : "—";
+      let productosText = "—";
+      try {
+        const prods = typeof o.productos === "string" ? JSON.parse(o.productos) : o.productos;
+        if (Array.isArray(prods) && prods.length) {
+          productosText = prods.map(p => {
+            let partes = p.nombre || "";
+            if (p.color) partes += " · " + p.color;
+            if (p.talle) partes += " · " + p.talle;
+            partes += " x" + (p.qty || 1);
+            return partes;
+          }).join(" &nbsp;|&nbsp; ");
+        }
+      } catch(e) { productosText = "—"; }
       return `
         <div class="mc-order">
           <div class="mc-order-header">

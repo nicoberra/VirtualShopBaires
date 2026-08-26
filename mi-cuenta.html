@@ -11,37 +11,37 @@
   <style>
     html, body { overflow-x: hidden; }
     .mc-page { min-height: 80vh; padding: 40px 0 80px; background: var(--black); }
-    .mc-wrap { max-width: 560px; margin: 0 auto; }
+    .mc-wrap { max-width: 520px; margin: 0 auto; }
 
     .mc-card { background: var(--black-3); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 18px; }
-    .mc-card h2 { font-size: 1rem; font-weight: 700; color: var(--white); margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
+    .mc-card h2 { font-size: 1rem; font-weight: 700; color: var(--white); margin: 0 0 18px; display: flex; align-items: center; gap: 10px; }
     .mc-card h2 i { color: var(--red); }
 
-    .mc-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; color: #fff; margin: 0 auto 16px; }
-    .mc-nombre { font-size: 1.3rem; font-weight: 800; color: var(--white); text-align: center; }
-    .mc-email  { font-size: 0.85rem; color: var(--gray); text-align: center; margin-top: 4px; }
+    .mc-avatar { width: 64px; height: 64px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-size: 1.7rem; color: #fff; margin: 0 auto 14px; }
+    .mc-nombre { font-size: 1.25rem; font-weight: 800; color: var(--white); text-align: center; }
+    .mc-email-lbl { font-size: 0.85rem; color: var(--gray); text-align: center; margin-top: 4px; }
 
-    .mc-edit-btn { display: block; width: 100%; margin-top: 18px; padding: 11px; background: transparent; border: 1.5px solid var(--black-2); border-radius: 8px; color: var(--gray); font-size: 0.88rem; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
-    .mc-edit-btn:hover { border-color: var(--red); color: var(--white); }
+    .mc-field-row { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+    .mc-field-row input { padding: 11px 14px; border: 1.5px solid var(--black-2); border-radius: 8px; font-size: 0.92rem; background: var(--black); color: var(--white); box-sizing: border-box; }
+    .mc-field-row input:focus { outline: none; border-color: var(--red); }
+    .mc-btn-red { width: 100%; padding: 12px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.92rem; margin-top: 4px; }
+    .mc-btn-red:disabled { opacity: 0.6; cursor: not-allowed; }
+    .mc-btn-ghost { width: 100%; padding: 11px; background: transparent; border: 1.5px solid var(--black-2); border-radius: 8px; color: var(--gray); font-size: 0.88rem; cursor: pointer; margin-top: 8px; transition: border-color 0.2s, color 0.2s; }
+    .mc-btn-ghost:hover { border-color: var(--red); color: var(--white); }
+    .mc-btn-logout { width: 100%; padding: 11px; background: transparent; border: 1.5px solid var(--black-2); border-radius: 8px; color: var(--gray); font-size: 0.88rem; cursor: pointer; margin-top: 8px; transition: border-color 0.2s, color 0.2s; }
+    .mc-btn-logout:hover { border-color: #cc3333; color: #cc3333; }
 
-    .mc-edit-form { display: none; margin-top: 18px; }
-    .mc-edit-form input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--black-2); border-radius: 8px; font-size: 0.92rem; background: var(--black); color: var(--white); margin-bottom: 10px; box-sizing: border-box; }
-    .mc-edit-form input:focus { outline: none; border-color: var(--red); }
-    .mc-edit-form button { width: 100%; padding: 12px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.92rem; }
+    .mc-msg { font-size: 0.83rem; margin-top: 10px; text-align: center; }
+    .mc-msg.error { color: var(--red); }
+    .mc-msg.ok { color: #4caf88; }
 
-    .mc-links { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mc-links { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
     .mc-link-card { background: var(--black-3); border-radius: var(--radius); padding: 20px 16px; text-align: center; text-decoration: none; color: var(--white); box-shadow: var(--shadow); transition: background 0.2s; }
     .mc-link-card:hover { background: var(--black-2); }
-    .mc-link-card i { font-size: 1.6rem; color: var(--red); display: block; margin-bottom: 8px; }
+    .mc-link-card i { font-size: 1.5rem; color: var(--red); display: block; margin-bottom: 8px; }
     .mc-link-card span { font-size: 0.88rem; font-weight: 600; }
 
-    .mc-logout { display: block; width: 100%; padding: 12px; background: transparent; border: 1.5px solid var(--black-2); border-radius: 8px; color: var(--gray); font-size: 0.88rem; cursor: pointer; margin-top: 8px; transition: border-color 0.2s, color 0.2s; }
-    .mc-logout:hover { border-color: #cc3333; color: #cc3333; }
-
-    .mc-no-user { text-align: center; padding: 60px 20px; }
-    .mc-no-user i { font-size: 3rem; color: var(--gray-light); }
-    .mc-no-user p { color: var(--gray); margin: 16px 0 24px; font-size: 0.92rem; }
-    .mc-no-user a { display: inline-block; background: var(--red); color: #fff; padding: 12px 28px; border-radius: 50px; font-weight: 700; text-decoration: none; }
+    .mc-section-toggle { display: none; margin-top: 14px; }
   </style>
 </head>
 <body>
@@ -75,6 +75,7 @@
       <a href="productos.html">Productos</a>
       <a href="favoritos.html">Favoritos</a>
       <a href="mis-compras.html">Mis compras</a>
+      <a href="mi-cuenta.html">Mi cuenta</a>
       <a href="nosotros.html">Nosotros</a>
       <a href="contacto.html">Contacto</a>
     </div>
@@ -115,68 +116,124 @@
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
 <script>
+const APPS_URL = "https://script.google.com/macros/s/AKfycby_xYydK11_avPhLpaaeK4Q4PSOkR4FhueeUr5EEQmCXxsRP75BRfooZdQP2pUljTLL/exec";
+
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
-
   const user = JSON.parse(localStorage.getItem('vsb_user') || 'null');
-  const wrap = document.getElementById('mc-wrap');
+  user && user.nombre ? renderLoggedIn(user) : renderLogin();
+});
 
-  if (!user || !user.nombre) {
-    wrap.innerHTML = `
-      <div class="mc-no-user">
-        <i class="fa-regular fa-circle-user"></i>
-        <p>No tenés una cuenta guardada en este dispositivo.</p>
-        <a href="index.html">Ir al inicio para registrarte →</a>
-      </div>`;
-    return;
-  }
+async function hashPass(password, email) {
+  const enc  = new TextEncoder();
+  const data = enc.encode(email.toLowerCase().trim() + ':' + password);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
-  const inicial = user.nombre.charAt(0).toUpperCase();
-
-  wrap.innerHTML = `
-    <div class="mc-card" style="text-align:center;">
-      <div class="mc-avatar">${inicial}</div>
-      <div class="mc-nombre">${user.nombre}</div>
-      <div class="mc-email">${user.email || 'Sin email guardado'}</div>
-      <button class="mc-edit-btn" onclick="toggleEdit()"><i class="fa-solid fa-pen" style="margin-right:6px;"></i>Editar mis datos</button>
-      <div class="mc-edit-form" id="edit-form">
-        <input type="text" id="edit-nombre" placeholder="Nombre" value="${user.nombre}" maxlength="40" />
-        <input type="email" id="edit-email" placeholder="Email" value="${user.email || ''}" />
-        <button onclick="guardarCambios()">Guardar cambios</button>
+// ── LOGIN ───────────────────────────────────────────────────
+function renderLogin() {
+  document.getElementById('mc-wrap').innerHTML = `
+    <div class="mc-card">
+      <h2><i class="fa-solid fa-right-to-bracket"></i>Iniciá sesión</h2>
+      <div class="mc-field-row">
+        <input type="email" id="l-email" placeholder="Tu email" autocomplete="email" />
+        <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" />
+        <button class="mc-btn-red" id="l-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar</button>
       </div>
+      <div class="mc-msg error" id="l-err" style="display:none;"></div>
+      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">¿No tenés cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis →</a></p>
+    </div>`;
+  document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+}
+
+async function doLogin() {
+  const email = document.getElementById('l-email').value.trim();
+  const pass  = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('l-err');
+  const btn   = document.getElementById('l-btn');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = 'Completá email y contraseña.'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
+  try {
+    const hash = await hashPass(pass, email);
+    const res  = await fetch(`${APPS_URL}?action=loginUser&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: 'follow' });
+    const data = await res.json();
+    if (data.ok) {
+      localStorage.setItem('vsb_user', JSON.stringify({ nombre: data.nombre, email: data.email }));
+      renderLoggedIn({ nombre: data.nombre, email: data.email });
+    } else {
+      errEl.textContent = data.error === 'Usuario no encontrado' ? 'No encontramos esa cuenta.' : data.error || 'Error al ingresar.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar';
+    }
+  } catch {
+    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar';
+  }
+}
+
+// ── CUENTA ──────────────────────────────────────────────────
+function renderLoggedIn(user) {
+  const hBtn = document.getElementById('header-user-btn');
+  if (hBtn) { hBtn.style.display = 'flex'; hBtn.title = 'Hola, ' + user.nombre; }
+
+  document.getElementById('mc-wrap').innerHTML = `
+    <div class="mc-card" style="text-align:center;">
+      <div class="mc-avatar">${user.nombre.charAt(0).toUpperCase()}</div>
+      <div class="mc-nombre">${user.nombre}</div>
+      <div class="mc-email-lbl">${user.email}</div>
     </div>
 
     <div class="mc-links">
       <a href="mis-compras.html" class="mc-link-card">
-        <i class="fa-solid fa-box-open"></i>
-        <span>Mis compras</span>
+        <i class="fa-solid fa-box-open"></i><span>Mis compras</span>
       </a>
       <a href="favoritos.html" class="mc-link-card">
-        <i class="fa-solid fa-heart"></i>
-        <span>Mis favoritos</span>
+        <i class="fa-solid fa-heart"></i><span>Mis favoritos</span>
       </a>
     </div>
 
-    <div class="mc-card" style="margin-top:18px;">
-      <h2><i class="fa-solid fa-shield-halved"></i>Sesión</h2>
-      <p style="font-size:0.85rem;color:var(--gray);margin:0 0 12px;">Tu cuenta está guardada en este dispositivo. Si cerrás sesión, vas a tener que registrarte de nuevo.</p>
-      <button class="mc-logout" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>Cerrar sesión</button>
-    </div>`;
-});
+    <div class="mc-card">
+      <h2><i class="fa-solid fa-lock"></i>Cambiar contraseña</h2>
+      <div class="mc-field-row">
+        <input type="password" id="cp-old" placeholder="Contraseña actual" />
+        <input type="password" id="cp-new" placeholder="Nueva contraseña (mín. 6 caracteres)" />
+        <input type="password" id="cp-new2" placeholder="Repetir nueva contraseña" />
+        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar contraseña</button>
+      </div>
+      <div class="mc-msg" id="cp-msg" style="display:none;"></div>
+    </div>
 
-function toggleEdit() {
-  const form = document.getElementById('edit-form');
-  form.style.display = form.style.display === 'block' ? 'none' : 'block';
+    <div class="mc-card">
+      <h2><i class="fa-solid fa-shield-halved"></i>Sesión</h2>
+      <p style="font-size:0.85rem;color:var(--gray);margin:0 0 4px;">Sesión activa en este dispositivo.</p>
+      <button class="mc-btn-logout" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>Cerrar sesión</button>
+    </div>`;
 }
 
-function guardarCambios() {
-  const nombre = document.getElementById('edit-nombre').value.trim();
-  const email  = document.getElementById('edit-email').value.trim();
-  if (!nombre) return;
-  localStorage.setItem('vsb_user', JSON.stringify({ nombre, email }));
-  const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_xYydK11_avPhLpaaeK4Q4PSOkR4FhueeUr5EEQmCXxsRP75BRfooZdQP2pUljTLL/exec";
-  try { fetch(`${APPS_SCRIPT_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}`, { redirect: 'follow' }); } catch(_) {}
-  location.reload();
+async function doChangePass(email) {
+  const oldPass = document.getElementById('cp-old').value;
+  const newPass = document.getElementById('cp-new').value;
+  const newPass2= document.getElementById('cp-new2').value;
+  const msg     = document.getElementById('cp-msg');
+  const btn     = document.getElementById('cp-btn');
+  msg.style.display = 'none'; msg.className = 'mc-msg';
+  if (!oldPass || !newPass) { msg.textContent = 'Completá todos los campos.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (newPass !== newPass2) { msg.textContent = 'Las contraseñas nuevas no coinciden.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (newPass.length < 6)  { msg.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const oldHash = await hashPass(oldPass, email);
+    const newHash = await hashPass(newPass, email);
+    const res  = await fetch(`${APPS_URL}?action=changePassword&email=${encodeURIComponent(email)}&oldHash=${oldHash}&newHash=${newHash}`, { redirect: 'follow' });
+    const data = await res.json();
+    if (data.ok) { msg.textContent = '✓ Contraseña actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
+    else { msg.textContent = data.error || 'Error al cambiar contraseña.'; msg.className = 'mc-msg error'; }
+  } catch { msg.textContent = 'Error de conexión.'; msg.className = 'mc-msg error'; }
+  msg.style.display = 'block';
+  btn.disabled = false; btn.textContent = 'Cambiar contraseña';
 }
 
 function cerrarSesion() {

@@ -45,7 +45,9 @@ function doGet(e) {
     if (action === 'getOrder') return jsonResponse(getOrder(e.parameter));
     if (action === 'getMyOrders') return jsonResponse(getMyOrders(e.parameter));
     if (action === 'subscribe')    return jsonResponse(subscribe(e.parameter));
-    if (action === 'registerUser') return jsonResponse(registerUser(e.parameter));
+    if (action === 'registerUser')  return jsonResponse(registerUser(e.parameter));
+    if (action === 'loginUser')     return jsonResponse(loginUser(e.parameter));
+    if (action === 'changePassword') return jsonResponse(changePassword(e.parameter));
     return jsonResponse({ ok: false, error: 'Acción no reconocida' });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message });
@@ -395,25 +397,65 @@ function getMyOrders(params) {
 function registerUser(params) {
   const email  = (params.email  || '').toLowerCase().trim();
   const nombre = (params.nombre || '').trim();
-  if (!nombre) return { ok: false, error: 'Nombre requerido' };
+  const hash   = (params.hash   || '').trim();
+  if (!nombre || !email) return { ok: false, error: 'Nombre y email requeridos' };
 
   const sheet = getUsuariosSheet();
   const lastRow = sheet.getLastRow();
 
-  // Si el email ya existe, actualizar nombre
-  if (email && lastRow > 1) {
-    const data = sheet.getRange(2, 2, lastRow - 1, 2).getValues();
+  if (lastRow > 1) {
+    const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
     for (let i = 0; i < data.length; i++) {
       if ((data[i][0] || '').toLowerCase() === email) {
-        sheet.getRange(i + 2, 3).setValue(nombre);
-        return { ok: true, updated: true };
+        return { ok: false, error: 'email_taken' };
       }
     }
   }
 
   const fecha = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'dd/MM/yyyy HH:mm');
-  sheet.appendRow([fecha, email, nombre]);
+  sheet.appendRow([fecha, email, nombre, hash]);
   return { ok: true };
+}
+
+function loginUser(params) {
+  const email = (params.email || '').toLowerCase().trim();
+  const hash  = (params.hash  || '').trim();
+  if (!email || !hash) return { ok: false, error: 'Faltan datos' };
+
+  const sheet = getUsuariosSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { ok: false, error: 'Usuario no encontrado' };
+
+  const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
+  for (let i = 0; i < data.length; i++) {
+    if ((data[i][0] || '').toLowerCase() === email) {
+      const storedHash = data[i][2] || '';
+      if (storedHash === hash) return { ok: true, nombre: data[i][1], email: data[i][0] };
+      return { ok: false, error: 'Contraseña incorrecta' };
+    }
+  }
+  return { ok: false, error: 'Usuario no encontrado' };
+}
+
+function changePassword(params) {
+  const email    = (params.email    || '').toLowerCase().trim();
+  const oldHash  = (params.oldHash  || '').trim();
+  const newHash  = (params.newHash  || '').trim();
+  if (!email || !oldHash || !newHash) return { ok: false, error: 'Faltan datos' };
+
+  const sheet = getUsuariosSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { ok: false, error: 'Usuario no encontrado' };
+
+  const data = sheet.getRange(2, 2, lastRow - 1, 3).getValues();
+  for (let i = 0; i < data.length; i++) {
+    if ((data[i][0] || '').toLowerCase() === email) {
+      if ((data[i][2] || '') !== oldHash) return { ok: false, error: 'Contraseña actual incorrecta' };
+      sheet.getRange(i + 2, 4).setValue(newHash);
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: 'Usuario no encontrado' };
 }
 
 function getUsuariosSheet() {
@@ -421,9 +463,9 @@ function getUsuariosSheet() {
   let sheet = ss.getSheetByName('Usuarios');
   if (!sheet) {
     sheet = ss.insertSheet('Usuarios');
-    sheet.appendRow(['Fecha registro', 'Email', 'Nombre']);
+    sheet.appendRow(['Fecha registro', 'Email', 'Nombre', 'Hash contraseña']);
     sheet.setFrozenRows(1);
-    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#1B2B4B').setFontColor('#ffffff');
+    sheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#1B2B4B').setFontColor('#ffffff');
   }
   return sheet;
 }

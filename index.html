@@ -542,18 +542,28 @@
   <button class="reg-modal-close" onclick="closeRegModal()" aria-label="Cerrar">&times;</button>
   <img src="logo.png" alt="VSB" class="reg-logo" />
   <h2 class="reg-title">Creá tu cuenta</h2>
-  <p class="reg-desc">Ingresá tu nombre y te saludaremos cada vez que entrés a la tienda.</p>
+  <p class="reg-desc">Con tu cuenta podés ver tus pedidos, guardar favoritos y más.</p>
   <form id="reg-form" onsubmit="registrarUsuario(event)">
     <div class="form-group">
       <label for="reg-nombre">Tu nombre *</label>
       <input type="text" id="reg-nombre" placeholder="Ej: Nicolás" required maxlength="40" autocomplete="given-name" />
     </div>
     <div class="form-group">
-      <label for="reg-email">Email (opcional)</label>
-      <input type="email" id="reg-email" placeholder="tu@email.com" autocomplete="email" />
+      <label for="reg-email">Email *</label>
+      <input type="email" id="reg-email" placeholder="tu@email.com" required autocomplete="email" />
     </div>
-    <button type="submit" class="btn btn-primary" style="width:100%;margin-top:4px;padding:14px;">Registrarme</button>
+    <div class="form-group">
+      <label for="reg-pass">Contraseña *</label>
+      <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" />
+    </div>
+    <div class="form-group">
+      <label for="reg-pass2">Repetir contraseña *</label>
+      <input type="password" id="reg-pass2" placeholder="Igual que la anterior" required minlength="6" autocomplete="new-password" />
+    </div>
+    <div id="reg-error" style="display:none;color:var(--red);font-size:0.83rem;margin-bottom:8px;"></div>
+    <button type="submit" id="reg-submit" class="btn btn-primary" style="width:100%;margin-top:4px;padding:14px;">Registrarme</button>
   </form>
+  <p style="text-align:center;margin-top:16px;font-size:0.83rem;color:var(--gray);">¿Ya tenés cuenta? <a href="mi-cuenta.html" style="color:var(--red);font-weight:600;">Iniciá sesión</a></p>
 </div>
 
 <!-- VOLVER ARRIBA -->
@@ -688,22 +698,46 @@
     document.getElementById('reg-overlay').classList.remove('visible');
     document.getElementById('reg-modal').classList.remove('visible');
   }
-  function registrarUsuario(e) {
+  async function registrarUsuario(e) {
     e.preventDefault();
     const nombre = document.getElementById('reg-nombre').value.trim();
     const email  = document.getElementById('reg-email').value.trim();
-    if (!nombre) return;
-    localStorage.setItem('vsb_user', JSON.stringify({ nombre: nombre, email: email }));
-    // Mostrar botón de cuenta en header
+    const pass   = document.getElementById('reg-pass').value;
+    const pass2  = document.getElementById('reg-pass2').value;
+    const errEl  = document.getElementById('reg-error');
+    const btn    = document.getElementById('reg-submit');
+
+    errEl.style.display = 'none';
+    if (pass !== pass2) { errEl.textContent = 'Las contraseñas no coinciden.'; errEl.style.display = 'block'; return; }
+    if (pass.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = 'Registrando...';
+
+    try {
+      const hash = await hashPass(pass, email);
+      const res  = await fetch(`${APPS_SCRIPT_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: 'follow' });
+      const data = await res.json();
+      if (!data.ok) {
+        if (data.error === 'email_taken') errEl.textContent = 'Ese email ya está registrado. ¿Querés iniciar sesión?';
+        else errEl.textContent = data.error || 'Error al registrar.';
+        errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = 'Registrarme';
+        return;
+      }
+    } catch(_) {}
+
+    localStorage.setItem('vsb_user', JSON.stringify({ nombre, email }));
     const hBtn = document.getElementById('header-user-btn');
     if (hBtn) { hBtn.style.display = 'flex'; hBtn.title = 'Hola, ' + nombre + ' — Mi cuenta'; }
     closeRegModal();
     mostrarToast(nombre);
-    // Guardar en Google Sheets
-    try {
-      const url = APPS_SCRIPT_URL + '?action=registerUser&nombre=' + encodeURIComponent(nombre) + '&email=' + encodeURIComponent(email || '');
-      fetch(url, { redirect: 'follow' });
-    } catch(_) {}
+  }
+
+  async function hashPass(password, email) {
+    const enc  = new TextEncoder();
+    const data = enc.encode(email.toLowerCase().trim() + ':' + password);
+    const buf  = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
   // WELCOME TOAST

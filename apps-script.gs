@@ -527,7 +527,7 @@ function addProductLinks(sheet, rowIndex, productos) {
     const qty  = p.qty || 1;
     const prec = Number(p.precio || 0) * qty;
     const line = `${name} x${qty}  —  $${prec.toLocaleString('es-AR')}`;
-    const url  = `${CONFIG.SITE_URL}/productos.html?q=${encodeURIComponent(name)}`;
+    const url  = p.id ? `${CONFIG.SITE_URL}/productos.html?id=${p.id}` : `${CONFIG.SITE_URL}/productos.html?q=${encodeURIComponent(name)}`;
     links.push({ start: fullText.length, end: fullText.length + name.length, url });
     fullText += line;
     if (i < products.length - 1) fullText += '\n';

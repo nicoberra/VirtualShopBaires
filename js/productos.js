@@ -182,9 +182,8 @@ function buyWithWA(pid) {
   const card  = document.querySelector(`.product-card[data-id="${pid}"]`);
   const waBtn = card?.querySelector('.btn-wa-product');
   if (!waBtn || waBtn.dataset.ready !== 'true') return false;
-  const precio = waBtn.dataset.precio ? Number(waBtn.dataset.precio) : p.precio;
-  const text = getWAText(p.nombre, waBtn.dataset.color || null, waBtn.dataset.talle || null, precio, pid);
-  window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
+  addToCartWithVariant(pid);
+  window.location.href = 'checkout.html';
   return false;
 }
 
@@ -301,13 +300,11 @@ function renderProductCard(p) {
                data-color="${sel.color || ''}"
                data-talle="${sel.talle || ''}"
                data-precio="${displayPrice || ''}">
-         <i class="fa-brands fa-whatsapp"></i> Comprar
+         <i class="fa-solid fa-bolt"></i> Comprar ahora
        </button>`
-    : `<a class="btn-wa-product"
-          href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre, null, null, p.precio, p.id)}"
-          target="_blank">
-         <i class="fa-brands fa-whatsapp"></i> Comprar
-       </a>`;
+    : `<button class="btn-wa-product" onclick="Cart.add(${p.id}); window.location.href='checkout.html';">
+         <i class="fa-solid fa-bolt"></i> Comprar ahora
+       </button>`;
 
   return `
     <div class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})">
@@ -425,11 +422,11 @@ function openProductModal(pid) {
                data-ready="${!btnDisabled ? 'true' : 'false'}"
                data-color="${sel.color || ''}" data-talle="${sel.talle || ''}"
                data-precio="${displayPrice || ''}">
-         <i class="fa-brands fa-whatsapp"></i> Comprar
+         <i class="fa-solid fa-bolt"></i> Comprar ahora
        </button>`
-    : `<a class="btn-wa-product" href="https://wa.me/${WA_NUMBER}?text=${getWAText(p.nombre,null,null,p.precio,pid)}" target="_blank">
-         <i class="fa-brands fa-whatsapp"></i> Comprar
-       </a>`;
+    : `<button class="btn-wa-product" onclick="Cart.add(${pid}); window.location.href='checkout.html';">
+         <i class="fa-solid fa-bolt"></i> Comprar ahora
+       </button>`;
 
   const modal = document.getElementById('product-modal');
   modal.innerHTML = `
@@ -533,16 +530,8 @@ function addToCartFromModal(pid) {
 function buyWithWAModal(pid) {
   const waBtn = document.getElementById('modal-btn-wa');
   if (!waBtn || waBtn.dataset.ready !== 'true') return false;
-  const p2    = PRODUCTOS.find(x => x.id === pid);
-  const precio = waBtn.dataset.precio ? Number(waBtn.dataset.precio) : p2?.precio;
-  const text = getWAText(
-    p2?.nombre || '',
-    waBtn.dataset.color || null,
-    waBtn.dataset.talle || null,
-    precio,
-    pid
-  );
-  window.open(`https://wa.me/${WA_NUMBER}?text=${text}`, '_blank');
+  addToCartWithVariant(pid);
+  window.location.href = 'checkout.html';
   return false;
 }
 

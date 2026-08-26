@@ -4,7 +4,7 @@
 // ============================================================
 
 const CONFIG = {
-  ADMIN_EMAIL: 'nicolasthiagoberra@gmail.com',
+  ADMIN_EMAIL: 'virtualshopbaires@gmail.com',
   BANK_ALIAS: 'TU.ALIAS.AQUI',
   BANK_CBU: '0000000000000000000000',
   BANK_HOLDER: 'Nombre Apellido',

@@ -722,6 +722,18 @@
     }
     t.classList.add('visible');
     setTimeout(function() { t.classList.remove('visible'); }, 7000);
+
+    // Swipe up para cerrar en móvil
+    let touchStartY = null;
+    t.addEventListener('touchstart', function(e) {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    t.addEventListener('touchend', function(e) {
+      if (touchStartY === null) return;
+      const diff = touchStartY - e.changedTouches[0].clientY;
+      if (diff > 40) t.classList.remove('visible');
+      touchStartY = null;
+    }, { passive: true });
   }
 
   setTimeout(function() {
@@ -740,7 +752,7 @@
   });
 </script>
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAUv9JA9BlqZgbku8q3cD7Lcdas9ZL_H5cg8FzoeIHDkK_3OvHcTtDuWRLg2wRO8_7/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby_xYydK11_avPhLpaaeK4Q4PSOkR4FhueeUr5EEQmCXxsRP75BRfooZdQP2pUljTLL/exec";
 
 async function suscribirse(e) {
   e.preventDefault();

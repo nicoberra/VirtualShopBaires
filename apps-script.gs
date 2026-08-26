@@ -121,6 +121,7 @@ function createOrder(body) {
   row[COL.OBSERVACIONES - 1]   = body.observaciones || '';
 
   sheet.appendRow(row);
+  addProductLinks(sheet, sheet.getLastRow(), body.productos);
 
   sendOrderCreatedEmailToCustomer(body, orderNumber, body.total);
   sendOrderCreatedEmailToAdmin(body, orderNumber, body.total);
@@ -420,6 +421,42 @@ function getSuscriptoresSheet() {
     sheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#1B2B4B').setFontColor('#ffffff');
   }
   return sheet;
+}
+
+function addProductLinks(sheet, rowIndex, productos) {
+  const products = Array.isArray(productos) ? productos : [];
+  if (!products.length) return;
+
+  // Agrega encabezado en col 29 si no existe
+  if (!sheet.getRange(1, 29).getValue()) {
+    sheet.getRange(1, 29)
+      .setValue('Links productos')
+      .setFontWeight('bold')
+      .setBackground('#1B2B4B')
+      .setFontColor('#ffffff');
+  }
+
+  let fullText = '';
+  const links = [];
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    const name = String(p.nombre || '');
+    const qty  = p.qty || 1;
+    const prec = Number(p.precio || 0) * qty;
+    const line = `${name} x${qty}  —  $${prec.toLocaleString('es-AR')}`;
+    const url  = `${CONFIG.SITE_URL}/productos.html?q=${encodeURIComponent(name)}`;
+    links.push({ start: fullText.length, end: fullText.length + name.length, url });
+    fullText += line;
+    if (i < products.length - 1) fullText += '\n';
+  }
+
+  const builder = SpreadsheetApp.newRichTextValue().setText(fullText);
+  for (const lk of links) {
+    builder.setLinkUrl(lk.start, lk.end, lk.url);
+  }
+  const cell = sheet.getRange(rowIndex, 29);
+  cell.setRichTextValue(builder.build());
+  cell.setWrap(true);
 }
 
 function getProofFolder() {

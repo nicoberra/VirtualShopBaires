@@ -723,7 +723,7 @@
     t.classList.add('visible');
     setTimeout(function() { t.classList.remove('visible'); }, 7000);
 
-    // Swipe up para cerrar en móvil
+    // Swipe up para cerrar en móvil (sin abrir el modal)
     let touchStartY = null;
     t.addEventListener('touchstart', function(e) {
       touchStartY = e.touches[0].clientY;
@@ -731,9 +731,12 @@
     t.addEventListener('touchend', function(e) {
       if (touchStartY === null) return;
       const diff = touchStartY - e.changedTouches[0].clientY;
-      if (diff > 40) t.classList.remove('visible');
+      if (diff > 40) {
+        t.classList.remove('visible');
+        e.preventDefault(); // evita que el swipe dispare el click del botón
+      }
       touchStartY = null;
-    }, { passive: true });
+    }, { passive: false });
   }
 
   setTimeout(function() {

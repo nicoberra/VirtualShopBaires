@@ -132,6 +132,7 @@
         <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="social-icon-btn si-wa" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
         <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-ig" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
         <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-fb" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+        <a href="mi-cuenta.html" class="user-action-btn" id="header-user-btn" style="display:none" aria-label="Mi cuenta"><i class="fa-solid fa-circle-user" aria-hidden="true"></i></a>
         <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
       </div>
     </div>
@@ -687,20 +688,21 @@
     document.getElementById('reg-overlay').classList.remove('visible');
     document.getElementById('reg-modal').classList.remove('visible');
   }
-  const REGISTRO_URL = "https://script.google.com/macros/s/AKfycbw1ZTxQPxPqW1IOqY53ItbdrO2qMAIO6z7RZ6oaNDythi4YbvN3vQY1fR_9hKsV466nxA/exec";
-
   function registrarUsuario(e) {
     e.preventDefault();
     const nombre = document.getElementById('reg-nombre').value.trim();
     const email  = document.getElementById('reg-email').value.trim();
     if (!nombre) return;
     localStorage.setItem('vsb_user', JSON.stringify({ nombre: nombre, email: email }));
+    // Mostrar botón de cuenta en header
+    const hBtn = document.getElementById('header-user-btn');
+    if (hBtn) { hBtn.style.display = 'flex'; hBtn.title = 'Hola, ' + nombre + ' — Mi cuenta'; }
     closeRegModal();
     mostrarToast(nombre);
     // Guardar en Google Sheets
     try {
-      const params = new URLSearchParams({ nombre: nombre, email: email });
-      fetch(REGISTRO_URL + '?' + params, { mode: 'no-cors' });
+      const url = APPS_SCRIPT_URL + '?action=registerUser&nombre=' + encodeURIComponent(nombre) + '&email=' + encodeURIComponent(email || '');
+      fetch(url, { redirect: 'follow' });
     } catch(_) {}
   }
 

@@ -2885,6 +2885,28 @@ footer {
 }
 
 /* ============================================================
+   BOTÓN USUARIO EN HEADER
+   ============================================================ */
+.user-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(204,18,18,0.12);
+  color: var(--red);
+  font-size: 1.15rem;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+  position: relative;
+}
+.user-action-btn:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+/* ============================================================
    NEWSLETTER / SUSCRIPCIÓN
    ============================================================ */
 .newsletter-section {

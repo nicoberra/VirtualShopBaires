@@ -44,7 +44,8 @@ function doGet(e) {
     const action = e.parameter.action || '';
     if (action === 'getOrder') return jsonResponse(getOrder(e.parameter));
     if (action === 'getMyOrders') return jsonResponse(getMyOrders(e.parameter));
-    if (action === 'subscribe') return jsonResponse(subscribe(e.parameter));
+    if (action === 'subscribe')    return jsonResponse(subscribe(e.parameter));
+    if (action === 'registerUser') return jsonResponse(registerUser(e.parameter));
     return jsonResponse({ ok: false, error: 'Acción no reconocida' });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message });
@@ -385,6 +386,46 @@ function getMyOrders(params) {
   }
   orders.sort((a, b) => (b.fecha > a.fecha ? 1 : -1));
   return { ok: true, orders };
+}
+
+// ============================================================
+// USUARIOS
+// ============================================================
+
+function registerUser(params) {
+  const email  = (params.email  || '').toLowerCase().trim();
+  const nombre = (params.nombre || '').trim();
+  if (!nombre) return { ok: false, error: 'Nombre requerido' };
+
+  const sheet = getUsuariosSheet();
+  const lastRow = sheet.getLastRow();
+
+  // Si el email ya existe, actualizar nombre
+  if (email && lastRow > 1) {
+    const data = sheet.getRange(2, 2, lastRow - 1, 2).getValues();
+    for (let i = 0; i < data.length; i++) {
+      if ((data[i][0] || '').toLowerCase() === email) {
+        sheet.getRange(i + 2, 3).setValue(nombre);
+        return { ok: true, updated: true };
+      }
+    }
+  }
+
+  const fecha = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'dd/MM/yyyy HH:mm');
+  sheet.appendRow([fecha, email, nombre]);
+  return { ok: true };
+}
+
+function getUsuariosSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Usuarios');
+  if (!sheet) {
+    sheet = ss.insertSheet('Usuarios');
+    sheet.appendRow(['Fecha registro', 'Email', 'Nombre']);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 3).setFontWeight('bold').setBackground('#1B2B4B').setFontColor('#ffffff');
+  }
+  return sheet;
 }
 
 // ============================================================

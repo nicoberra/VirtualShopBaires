@@ -270,3 +270,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })();
 });
+
+// Mostrar botón de cuenta en el header si el usuario está registrado
+(function() {
+  const user = JSON.parse(localStorage.getItem('vsb_user') || 'null');
+  const btn = document.getElementById('header-user-btn');
+  if (!btn) return;
+  if (user && user.nombre) {
+    btn.style.display = 'flex';
+    btn.title = 'Hola, ' + user.nombre + ' — Mi cuenta';
+  }
+})();

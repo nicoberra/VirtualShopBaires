@@ -10,7 +10,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
-    .checkout-page { min-height: 80vh; padding: 40px 0 80px; background: var(--black); }
+    html, body { overflow-x: hidden; }
+    .checkout-page { min-height: 80vh; padding: 40px 0 80px; background: var(--black); width: 100%; }
     .checkout-steps { display: flex; margin-bottom: 36px; }
     .checkout-step { flex: 1; text-align: center; position: relative; font-size: 0.78rem; font-weight: 600; color: var(--gray); padding-top: 36px; }
     .checkout-step::before { content: counter(step); counter-increment: step; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--black-2); color: var(--gray); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; z-index: 1; }
@@ -21,8 +22,8 @@
     .checkout-step.done::before { content: "✓"; background: var(--accent); color: #fff; }
     .checkout-step.active { color: var(--white); }
 
-    .checkout-grid { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; max-width: 860px; margin: 0 auto; }
-    @media (max-width: 820px) { .checkout-grid { grid-template-columns: 1fr; max-width: 560px; } }
+    .checkout-grid { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; max-width: 860px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    @media (max-width: 820px) { .checkout-grid { grid-template-columns: 1fr; max-width: 100%; } }
 
     .checkout-card { background: var(--black-3); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
     .checkout-card h2 { font-size: 1rem; font-weight: 700; color: var(--white); margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }

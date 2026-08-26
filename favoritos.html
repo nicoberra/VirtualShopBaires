@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Favoritos | Virtual Shop Baires</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="logo.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    html, body { overflow-x: hidden; }
+    .fav-page { min-height: 80vh; padding: 40px 0 80px; background: var(--black); }
+    .fav-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; margin-top: 24px; }
+    .fav-empty { text-align: center; padding: 60px 20px; color: var(--gray); }
+    .fav-empty i { font-size: 3rem; color: var(--gray-light); }
+    .fav-empty h2 { margin: 16px 0 8px; color: var(--white); font-size: 1.1rem; }
+    .fav-empty p { font-size: 0.88rem; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>🔒 Compra 100% segura</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+      </div>
+      <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
+      <div class="header-actions">
+        <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
+      </div>
+    </div>
+  </div>
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
+    <div class="container">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html">Productos</a>
+      <a href="favoritos.html">Favoritos</a>
+      <a href="mis-compras.html">Mis compras</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </nav>
+</header>
+
+<div class="page-hero" style="padding:24px 0;">
+  <div class="container">
+    <h1 style="font-size:1.6rem;text-align:center;">Mis <span style="color:var(--red);">favoritos</span></h1>
+  </div>
+</div>
+
+<div class="fav-page">
+  <div class="container">
+    <div id="fav-container"></div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-bottom" style="padding:20px 0;text-align:center;">
+      <span>© <span class="copyright-year"></span> Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header"><h2>🛒 Tu carrito</h2><button class="cart-close" onclick="closeCart()">✕</button></div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+  </div>
+</div>
+
+<script src="js/productos.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/main.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
+
+  const favIds = JSON.parse(localStorage.getItem("vsb_favoritos") || "[]");
+  const container = document.getElementById("fav-container");
+
+  if (!favIds.length) {
+    container.innerHTML = `
+      <div class="fav-empty">
+        <i class="fa-regular fa-heart"></i>
+        <h2>Todavía no tenés favoritos</h2>
+        <p>Tocá el corazón en cualquier producto para guardarlo acá.</p>
+        <a href="productos.html" style="display:inline-block;margin-top:16px;background:var(--red);color:#fff;padding:10px 24px;border-radius:50px;font-weight:700;text-decoration:none;">Ver productos →</a>
+      </div>`;
+    return;
+  }
+
+  const favProducts = PRODUCTOS.filter(p => favIds.includes(p.id));
+
+  if (!favProducts.length) {
+    container.innerHTML = `<div class="fav-empty"><i class="fa-regular fa-heart"></i><h2>No se encontraron productos guardados</h2><a href="productos.html" style="display:inline-block;margin-top:16px;background:var(--red);color:#fff;padding:10px 24px;border-radius:50px;font-weight:700;text-decoration:none;">Ver productos →</a></div>`;
+    return;
+  }
+
+  container.innerHTML = `<div class="fav-grid">${favProducts.map(p => renderFavCard(p)).join("")}</div>`;
+});
+
+function renderFavCard(p) {
+  const img = p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0;" />` : `<div style="height:160px;background:var(--black-2);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="font-size:2rem;color:var(--gray-light);"></i></div>`;
+  return `
+    <div style="background:var(--black-3);border-radius:12px;box-shadow:var(--shadow);overflow:hidden;position:relative;">
+      <button onclick="removeFav(${p.id}, this)" title="Quitar de favoritos" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;color:#e53935;font-size:1rem;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-heart"></i></button>
+      ${img}
+      <div style="padding:12px;">
+        <div style="font-size:0.85rem;font-weight:700;color:var(--white);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
+        <div style="font-size:1rem;font-weight:800;color:var(--red);">${formatPrecio(p.precio)}</div>
+        <button onclick="Cart.add(${p.id}); showToast('✓ Agregado al carrito')" style="width:100%;margin-top:10px;padding:8px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">Agregar al carrito</button>
+      </div>
+    </div>`;
+}
+
+function removeFav(id, btn) {
+  let favs = JSON.parse(localStorage.getItem("vsb_favoritos") || "[]");
+  favs = favs.filter(f => f !== id);
+  localStorage.setItem("vsb_favoritos", JSON.stringify(favs));
+  btn.closest("div[style]").remove();
+  const grid = document.querySelector(".fav-grid");
+  if (grid && !grid.children.length) location.reload();
+}
+</script>
+</body>
+</html>

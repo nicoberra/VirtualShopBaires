@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mis compras | Virtual Shop Baires</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="logo.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    html, body { overflow-x: hidden; }
+    .mc-page { min-height: 80vh; padding: 40px 0 80px; background: var(--black); }
+    .mc-wrap { max-width: 680px; margin: 0 auto; }
+
+    .mc-search { background: var(--black-3); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 28px; text-align: center; }
+    .mc-search h2 { font-size: 1.1rem; font-weight: 700; color: var(--white); margin: 0 0 6px; }
+    .mc-search p { font-size: 0.85rem; color: var(--gray); margin: 0 0 20px; }
+    .mc-input-row { display: flex; gap: 10px; }
+    .mc-input-row input { flex: 1; padding: 11px 14px; border: 1.5px solid var(--black-2); border-radius: 8px; font-size: 0.92rem; background: var(--black); color: var(--white); }
+    .mc-input-row input:focus { outline: none; border-color: var(--red); }
+    .mc-input-row button { padding: 11px 20px; background: var(--red); color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.9rem; white-space: nowrap; }
+    .mc-input-row button:hover { background: var(--red-dark); }
+
+    .mc-order { background: var(--black-3); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px; box-shadow: var(--shadow); }
+    .mc-order-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .mc-order-num { font-size: 0.95rem; font-weight: 800; color: var(--white); }
+    .mc-order-date { font-size: 0.78rem; color: var(--gray); margin-top: 2px; }
+    .mc-badge { display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; }
+    .badge-pendiente { background: rgba(255,180,0,0.15); color: #FFB400; }
+    .badge-informada { background: rgba(27,43,75,0.2); color: var(--accent); }
+    .badge-confirmado { background: rgba(0,180,80,0.12); color: #00B450; }
+    .badge-rechazado { background: rgba(204,18,18,0.12); color: var(--red); }
+    .badge-efectivo { background: rgba(27,43,75,0.15); color: var(--accent); }
+    .mc-order-products { font-size: 0.82rem; color: var(--gray); margin-bottom: 10px; border-top: 1px solid var(--black-2); padding-top: 10px; }
+    .mc-order-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .mc-total { font-size: 1rem; font-weight: 800; color: var(--white); }
+    .mc-link { font-size: 0.8rem; color: var(--red); text-decoration: none; font-weight: 600; }
+    .mc-link:hover { opacity: 0.75; }
+
+    .mc-empty { text-align: center; padding: 48px 20px; color: var(--gray); }
+    .mc-empty i { font-size: 2.5rem; color: var(--gray-light); }
+    .mc-empty p { margin-top: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>🔒 Compra 100% segura</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+      </div>
+      <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
+      <div class="header-actions">
+        <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
+      </div>
+    </div>
+  </div>
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
+    <div class="container">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html">Productos</a>
+      <a href="favoritos.html">Favoritos</a>
+      <a href="mis-compras.html">Mis compras</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </nav>
+</header>
+
+<div class="page-hero" style="padding:24px 0;">
+  <div class="container">
+    <h1 style="font-size:1.6rem;text-align:center;">Mis <span style="color:var(--red);">compras</span></h1>
+  </div>
+</div>
+
+<div class="mc-page">
+  <div class="container">
+    <div class="mc-wrap">
+
+      <div class="mc-search">
+        <h2><i class="fa-solid fa-box-open" style="color:var(--red);margin-right:8px;"></i>Buscá tus pedidos</h2>
+        <p>Ingresá el email con el que hiciste la compra</p>
+        <div class="mc-input-row">
+          <input type="email" id="mc-email" placeholder="tumail@ejemplo.com" autocomplete="email" onkeydown="if(event.key==='Enter')buscarPedidos()" />
+          <button onclick="buscarPedidos()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
+        </div>
+        <div id="mc-error" style="display:none;margin-top:12px;color:var(--red);font-size:0.85rem;"></div>
+      </div>
+
+      <div id="mc-results" style="display:none;"></div>
+
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-bottom" style="padding:20px 0;text-align:center;">
+      <span>© <span class="copyright-year"></span> Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header"><h2>🛒 Tu carrito</h2><button class="cart-close" onclick="closeCart()">✕</button></div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+  </div>
+</div>
+
+<script src="js/cart.js"></script>
+<script src="js/main.js"></script>
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAUv9JA9BlqZgbku8q3cD7Lcdas9ZL_H5cg8FzoeIHDkK_3OvHcTtDuWRLg2wRO8_7/exec";
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
+  const saved = localStorage.getItem("vsb_mc_email");
+  if (saved) document.getElementById("mc-email").value = saved;
+});
+
+function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
+
+function badgeHtml(estadoPago, metodoPago) {
+  if (metodoPago && metodoPago.toLowerCase().includes("efectivo")) {
+    return `<span class="mc-badge badge-efectivo"><i class="fa-solid fa-money-bill-wave" style="margin-right:4px;"></i>Pago en efectivo</span>`;
+  }
+  const map = {
+    "PENDIENTE DE PAGO":       ["badge-pendiente", "fa-clock", "Pendiente de pago"],
+    "TRANSFERENCIA INFORMADA": ["badge-informada",  "fa-paper-plane", "Transferencia informada"],
+    "PENDIENTE DE VERIFICACIÓN":["badge-informada", "fa-hourglass-half", "En verificación"],
+    "PAGO CONFIRMADO":         ["badge-confirmado", "fa-circle-check", "Pago confirmado"],
+    "PAGO RECHAZADO":          ["badge-rechazado",  "fa-circle-xmark", "Pago rechazado"],
+  };
+  const [cls, icon, label] = map[estadoPago] || ["badge-pendiente", "fa-clock", estadoPago || "—"];
+  return `<span class="mc-badge ${cls}"><i class="fa-solid ${icon}" style="margin-right:4px;"></i>${label}</span>`;
+}
+
+async function buscarPedidos() {
+  const email = document.getElementById("mc-email").value.trim();
+  const errEl = document.getElementById("mc-error");
+  const resEl = document.getElementById("mc-results");
+  errEl.style.display = "none";
+  resEl.style.display = "none";
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errEl.textContent = "Por favor ingresá un email válido.";
+    errEl.style.display = "block";
+    return;
+  }
+
+  localStorage.setItem("vsb_mc_email", email);
+
+  const btn = document.querySelector(".mc-input-row button");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
+
+  try {
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=getMyOrders&email=${encodeURIComponent(email)}`, { redirect: "follow" });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
+
+    if (!data.ok) { errEl.textContent = data.error || "Error al buscar."; errEl.style.display = "block"; return; }
+
+    resEl.style.display = "block";
+    if (!data.orders.length) {
+      resEl.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-box-open"></i><p>No encontramos pedidos con ese email.</p></div>`;
+      return;
+    }
+
+    resEl.innerHTML = data.orders.map(o => {
+      const trackUrl = `order-status.html?order=${encodeURIComponent(o.numero)}&email=${encodeURIComponent(email)}`;
+      const productosText = o.productos ? String(o.productos).substring(0, 120) + (String(o.productos).length > 120 ? "…" : "") : "—";
+      return `
+        <div class="mc-order">
+          <div class="mc-order-header">
+            <div>
+              <div class="mc-order-num"><i class="fa-solid fa-hashtag" style="color:var(--red);margin-right:4px;font-size:0.85rem;"></i>${o.numero}</div>
+              <div class="mc-order-date">${o.fecha || ""}</div>
+            </div>
+            ${badgeHtml(o.estadoPago, o.metodoPago)}
+          </div>
+          <div class="mc-order-products">${productosText}</div>
+          <div class="mc-order-footer">
+            <div class="mc-total">${fmt(o.total)}</div>
+            <a href="${trackUrl}" class="mc-link"><i class="fa-solid fa-eye" style="margin-right:4px;"></i>Ver detalle</a>
+          </div>
+        </div>`;
+    }).join("");
+  } catch {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
+    errEl.textContent = "Error de conexión. Verificá tu internet e intentá de nuevo.";
+    errEl.style.display = "block";
+  }
+}
+</script>
+</body>
+</html>

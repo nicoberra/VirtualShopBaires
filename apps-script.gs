@@ -43,6 +43,8 @@ function doGet(e) {
   try {
     const action = e.parameter.action || '';
     if (action === 'getOrder') return jsonResponse(getOrder(e.parameter));
+    if (action === 'getMyOrders') return jsonResponse(getMyOrders(e.parameter));
+    if (action === 'subscribe') return jsonResponse(subscribe(e.parameter));
     return jsonResponse({ ok: false, error: 'Acción no reconocida' });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.message });
@@ -353,6 +355,71 @@ function findOrderRow(sheet, orderNumber, email) {
     }
   }
   return null;
+}
+
+function getMyOrders(params) {
+  const email = (params.email || '').toLowerCase().trim();
+  if (!email) return { ok: false, error: 'Email requerido' };
+
+  const sheet = getOrdersSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return { ok: true, orders: [] };
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 28).getValues();
+  const orders = [];
+  for (const row of data) {
+    if ((row[COL.EMAIL - 1] || '').toLowerCase() !== email) continue;
+    orders.push({
+      numero:       row[COL.NUMERO - 1],
+      fecha:        row[COL.FECHA - 1],
+      nombre:       row[COL.NOMBRE - 1],
+      apellido:     row[COL.APELLIDO - 1],
+      productos:    row[COL.PRODUCTOS - 1],
+      total:        row[COL.TOTAL - 1],
+      estadoPago:   row[COL.ESTADO_PAGO - 1],
+      estadoPedido: row[COL.ESTADO_PEDIDO - 1],
+      metodoPago:   row[COL.METODO_PAGO - 1],
+      metodoEntrega:row[COL.METODO_ENTREGA - 1],
+    });
+  }
+  orders.sort((a, b) => (b.fecha > a.fecha ? 1 : -1));
+  return { ok: true, orders };
+}
+
+// ============================================================
+// SUSCRIPTORES
+// ============================================================
+
+function subscribe(params) {
+  const email = (params.email || '').toLowerCase().trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, error: 'Email inválido' };
+  }
+
+  const sheet = getSuscriptoresSheet();
+  const lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    const emails = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    for (const [e] of emails) {
+      if ((e || '').toLowerCase() === email) return { ok: true, already: true };
+    }
+  }
+
+  const fecha = Utilities.formatDate(new Date(), 'America/Argentina/Buenos_Aires', 'dd/MM/yyyy HH:mm');
+  sheet.appendRow([fecha, email, params.nombre || '', 'Web']);
+  return { ok: true };
+}
+
+function getSuscriptoresSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Suscriptores');
+  if (!sheet) {
+    sheet = ss.insertSheet('Suscriptores');
+    sheet.appendRow(['Fecha', 'Email', 'Nombre', 'Fuente']);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 4).setFontWeight('bold').setBackground('#1B2B4B').setFontColor('#ffffff');
+  }
+  return sheet;
 }
 
 function getProofFolder() {

@@ -140,6 +140,8 @@
     <div class="container">
       <a href="index.html" class="active">Inicio</a>
       <a href="productos.html">Productos</a>
+      <a href="favoritos.html">Favoritos</a>
+      <a href="mis-compras.html">Mis compras</a>
       <a href="nosotros.html">Nosotros</a>
       <a href="contacto.html">Contacto</a>
     </div>
@@ -443,6 +445,24 @@
   </div>
 </section>
 
+<!-- SUSCRIPCIÓN -->
+<section class="newsletter-section">
+  <div class="container">
+    <div class="newsletter-inner">
+      <div class="newsletter-text">
+        <h2><i class="fa-solid fa-envelope-open-text" style="color:var(--red);margin-right:10px;"></i>Suscribite a nuestras novedades</h2>
+        <p>Enterate primero de los nuevos productos, ofertas y descuentos exclusivos.</p>
+      </div>
+      <form class="newsletter-form" onsubmit="suscribirse(event)">
+        <input type="text" id="ns-nombre" placeholder="Tu nombre (opcional)" autocomplete="given-name" />
+        <input type="email" id="ns-email" placeholder="Tu email" required autocomplete="email" />
+        <button type="submit" id="ns-btn"><i class="fa-solid fa-paper-plane"></i> Suscribirme</button>
+      </form>
+      <div id="ns-msg" style="display:none;margin-top:14px;font-size:0.9rem;text-align:center;"></div>
+    </div>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer>
   <div class="container">
@@ -718,6 +738,47 @@
            <p>No hay productos destacados todavía.</p>
          </div>`;
   });
+</script>
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyAUv9JA9BlqZgbku8q3cD7Lcdas9ZL_H5cg8FzoeIHDkK_3OvHcTtDuWRLg2wRO8_7/exec";
+
+async function suscribirse(e) {
+  e.preventDefault();
+  const email  = document.getElementById("ns-email").value.trim();
+  const nombre = document.getElementById("ns-nombre").value.trim();
+  const btn    = document.getElementById("ns-btn");
+  const msg    = document.getElementById("ns-msg");
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+  msg.style.display = "none";
+
+  try {
+    const res  = await fetch(`${APPS_SCRIPT_URL}?action=subscribe&email=${encodeURIComponent(email)}&nombre=${encodeURIComponent(nombre)}`, { redirect: "follow" });
+    const data = await res.json();
+    if (data.ok) {
+      if (data.already) {
+        msg.style.color = "rgba(255,255,255,0.8)";
+        msg.textContent = "✓ Ya estás suscripto con ese email.";
+      } else {
+        msg.style.color = "#7effa7";
+        msg.textContent = "✓ ¡Gracias! Te avisaremos de todas las novedades.";
+        document.getElementById("ns-email").value = "";
+        document.getElementById("ns-nombre").value = "";
+      }
+    } else {
+      msg.style.color = "#ff9090";
+      msg.textContent = data.error || "Hubo un error. Intentá de nuevo.";
+    }
+  } catch {
+    msg.style.color = "#ff9090";
+    msg.textContent = "Error de conexión. Verificá tu internet e intentá de nuevo.";
+  }
+
+  msg.style.display = "block";
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Suscribirme';
+}
 </script>
 </body>
 </html>

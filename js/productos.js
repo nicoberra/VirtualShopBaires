@@ -1,6 +1,27 @@
 const selectedVariants = {};
 const WA_NUMBER = "5491149457266";
 
+function getFavoritos() { return JSON.parse(localStorage.getItem("vsb_favoritos") || "[]"); }
+function isFavorito(id) { return getFavoritos().includes(id); }
+function toggleFavorito(id, btn) {
+  let favs = getFavoritos();
+  const idx = favs.indexOf(id);
+  if (idx === -1) {
+    favs.push(id);
+    btn.classList.add("fav-active");
+    btn.innerHTML = '<i class="fa-solid fa-heart"></i>';
+    btn.title = "Quitar de favoritos";
+    showToast("❤️ Guardado en favoritos");
+  } else {
+    favs.splice(idx, 1);
+    btn.classList.remove("fav-active");
+    btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
+    btn.title = "Guardar en favoritos";
+    showToast("Quitado de favoritos");
+  }
+  localStorage.setItem("vsb_favoritos", JSON.stringify(favs));
+}
+
 function formatPrecio(n) {
   return "$" + n.toLocaleString("es-AR");
 }
@@ -306,9 +327,12 @@ function renderProductCard(p) {
          <i class="fa-solid fa-bolt"></i> Comprar ahora
        </button>`;
 
+  const isFav = isFavorito(p.id);
+  const favBtn = `<button class="fav-btn${isFav ? ' fav-active' : ''}" onclick="event.stopPropagation();toggleFavorito(${p.id},this)" title="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}"><i class="fa-${isFav ? 'solid' : 'regular'} fa-heart"></i></button>`;
+
   return `
     <div class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})">
-      <div class="product-img">${imgHTML}${carouselHTML}${badgeHTML}</div>
+      <div class="product-img">${imgHTML}${carouselHTML}${badgeHTML}${favBtn}</div>
       <div class="product-info">
         <div class="product-info-top">
           <div class="category">${p.categoria}</div>

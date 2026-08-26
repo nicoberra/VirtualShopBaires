@@ -1,4 +1,8 @@
 // Carrito de compras con soporte de variantes
+function formatPrecio(n) {
+  return "$" + Number(n).toLocaleString("es-AR");
+}
+
 const Cart = (() => {
   let items = JSON.parse(localStorage.getItem("vsb_cart") || "[]");
 

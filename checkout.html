@@ -24,18 +24,18 @@
     .checkout-grid { display: grid; grid-template-columns: 1fr 360px; gap: 32px; align-items: start; }
     @media (max-width: 820px) { .checkout-grid { grid-template-columns: 1fr; } }
 
-    .checkout-card { background: var(--black-3); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); }
-    .checkout-card h2 { font-size: 1.15rem; font-weight: 700; color: var(--white); margin: 0 0 20px; display: flex; align-items: center; gap: 10px; }
+    .checkout-card { background: var(--black-3); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+    .checkout-card h2 { font-size: 1rem; font-weight: 700; color: var(--white); margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
     .checkout-card h2 i { color: var(--red); }
 
-    .co-item { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--black-2); }
+    .co-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--black-2); }
     .co-item:last-child { border-bottom: none; }
-    .co-item-img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; background: var(--black-2); flex-shrink: 0; }
+    .co-item-img { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; background: var(--black-2); flex-shrink: 0; }
     .co-item-info { flex: 1; min-width: 0; }
-    .co-item-name { font-size: 0.88rem; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .co-item-var { font-size: 0.75rem; color: var(--gray); }
-    .co-item-qty { font-size: 0.78rem; color: var(--gray); }
-    .co-item-price { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 0.95rem; }
+    .co-item-name { font-size: 0.82rem; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .co-item-var { font-size: 0.72rem; color: var(--gray); }
+    .co-item-qty { font-size: 0.72rem; color: var(--gray); }
+    .co-item-price { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 0.88rem; }
 
     .price-summary { margin-top: 20px; }
     .price-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.9rem; color: var(--gray); }
@@ -415,13 +415,18 @@ function renderItems() {
     const img = item.imagen
       ? `<img class="co-item-img" src="${item.imagen}" alt="" onerror="this.style.display='none'">`
       : `<div class="co-item-img" style="display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="color:var(--gray-light);font-size:1.2rem;"></i></div>`;
+    const precioOriginal = item.precio * item.qty;
+    const precioConDesc  = Math.round(precioOriginal * (1 - DISCOUNT_PCT / 100) * 100) / 100;
     return `<div class="co-item">${img}
       <div class="co-item-info">
         <div class="co-item-name">${item.nombre}</div>
         ${varInfo ? `<div class="co-item-var">${varInfo}</div>` : ""}
         <div class="co-item-qty">Cantidad: ${item.qty}</div>
       </div>
-      <div class="co-item-price">${fmt(item.precio * item.qty)}</div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:0.75rem;color:var(--gray);text-decoration:line-through;">${fmt(precioOriginal)}</div>
+        <div class="co-item-price">${fmt(precioConDesc)}</div>
+      </div>
     </div>`;
   }).join("");
   renderPrices("co-price-summary");

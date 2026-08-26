@@ -52,7 +52,7 @@
     <span>|</span>
     <span>ðŸ“¦ Importador directo</span>
     <span>|</span>
-    <span>âš¡ Respuesta rÃ¡pida</span>
+    <span>âš¡ Respuesta rápida</span>
   </div>
 </div>
 
@@ -60,7 +60,7 @@
   <div class="container">
     <div class="header-inner">
       <div class="header-left">
-        <button class="hamburger" id="hamburger" aria-label="MenÃº" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">
@@ -69,7 +69,7 @@
       </div>
     </div>
   </div>
-  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="MenÃº principal" aria-hidden="true">
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
     <div class="container">
       <a href="index.html">Inicio</a>
       <a href="productos.html">Productos</a>
@@ -135,14 +135,14 @@ async function hashPass(password, email) {
 function renderLogin() {
   document.getElementById('mc-wrap').innerHTML = `
     <div class="mc-card">
-      <h2><i class="fa-solid fa-right-to-bracket"></i>IniciÃ¡ sesiÃ³n</h2>
+      <h2><i class="fa-solid fa-right-to-bracket"></i>Iniciá Sesión</h2>
       <div class="mc-field-row">
         <input type="email" id="l-email" placeholder="Tu email" autocomplete="email" />
-        <input type="password" id="l-pass" placeholder="ContraseÃ±a" autocomplete="current-password" />
+        <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" />
         <button class="mc-btn-red" id="l-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar</button>
       </div>
       <div class="mc-msg error" id="l-err" style="display:none;"></div>
-      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">Â¿No tenÃ©s cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis â†’</a></p>
+      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">¿No tenés cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis â†’</a></p>
     </div>`;
   document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 }
@@ -153,7 +153,7 @@ async function doLogin() {
   const errEl = document.getElementById('l-err');
   const btn   = document.getElementById('l-btn');
   errEl.style.display = 'none';
-  if (!email || !pass) { errEl.textContent = 'CompletÃ¡ email y contraseÃ±a.'; errEl.style.display = 'block'; return; }
+  if (!email || !pass) { errEl.textContent = 'Completá email y Contraseña.'; errEl.style.display = 'block'; return; }
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
   try {
     const hash = await hashPass(pass, email);
@@ -168,7 +168,7 @@ async function doLogin() {
       btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar';
     }
   } catch {
-    errEl.textContent = 'Error de conexiÃ³n. IntentÃ¡ de nuevo.';
+    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
     errEl.style.display = 'block';
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar';
   }
@@ -196,20 +196,20 @@ function renderLoggedIn(user) {
     </div>
 
     <div class="mc-card">
-      <h2><i class="fa-solid fa-lock"></i>Cambiar contraseÃ±a</h2>
+      <h2><i class="fa-solid fa-lock"></i>Cambiar Contraseña</h2>
       <div class="mc-field-row">
-        <input type="password" id="cp-old" placeholder="ContraseÃ±a actual" />
-        <input type="password" id="cp-new" placeholder="Nueva contraseÃ±a (mÃ­n. 6 caracteres)" />
-        <input type="password" id="cp-new2" placeholder="Repetir nueva contraseÃ±a" />
-        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar contraseÃ±a</button>
+        <input type="password" id="cp-old" placeholder="Contraseña actual" />
+        <input type="password" id="cp-new" placeholder="Nueva Contraseña (mín. 6 caracteres)" />
+        <input type="password" id="cp-new2" placeholder="Repetir nueva Contraseña" />
+        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar Contraseña</button>
       </div>
       <div class="mc-msg" id="cp-msg" style="display:none;"></div>
     </div>
 
     <div class="mc-card">
-      <h2><i class="fa-solid fa-shield-halved"></i>SesiÃ³n</h2>
-      <p style="font-size:0.85rem;color:var(--gray);margin:0 0 4px;">SesiÃ³n activa en este dispositivo.</p>
-      <button class="mc-btn-logout" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>Cerrar sesiÃ³n</button>
+      <h2><i class="fa-solid fa-shield-halved"></i>Sesión</h2>
+      <p style="font-size:0.85rem;color:var(--gray);margin:0 0 4px;">Sesión activa en este dispositivo.</p>
+      <button class="mc-btn-logout" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>Cerrar Sesión</button>
     </div>`;
 }
 
@@ -220,24 +220,24 @@ async function doChangePass(email) {
   const msg     = document.getElementById('cp-msg');
   const btn     = document.getElementById('cp-btn');
   msg.style.display = 'none'; msg.className = 'mc-msg';
-  if (!oldPass || !newPass) { msg.textContent = 'CompletÃ¡ todos los campos.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
-  if (newPass !== newPass2) { msg.textContent = 'Las contraseÃ±as nuevas no coinciden.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
-  if (newPass.length < 6)  { msg.textContent = 'La nueva contraseÃ±a debe tener al menos 6 caracteres.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (!oldPass || !newPass) { msg.textContent = 'Completá todos los campos.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (newPass !== newPass2) { msg.textContent = 'Las Contraseñas nuevas no coinciden.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (newPass.length < 6)  { msg.textContent = 'La nueva Contraseña debe tener al menos 6 caracteres.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     const oldHash = await hashPass(oldPass, email);
     const newHash = await hashPass(newPass, email);
     const res  = await fetch(`${APPS_URL}?action=changePassword&email=${encodeURIComponent(email)}&oldHash=${oldHash}&newHash=${newHash}`, { redirect: 'follow' });
     const data = await res.json();
-    if (data.ok) { msg.textContent = 'âœ“ ContraseÃ±a actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
-    else { msg.textContent = data.error || 'Error al cambiar contraseÃ±a.'; msg.className = 'mc-msg error'; }
-  } catch { msg.textContent = 'Error de conexiÃ³n.'; msg.className = 'mc-msg error'; }
+    if (data.ok) { msg.textContent = 'âœ“ Contraseña actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
+    else { msg.textContent = data.error || 'Error al cambiar Contraseña.'; msg.className = 'mc-msg error'; }
+  } catch { msg.textContent = 'Error de conexión.'; msg.className = 'mc-msg error'; }
   msg.style.display = 'block';
-  btn.disabled = false; btn.textContent = 'Cambiar contraseÃ±a';
+  btn.disabled = false; btn.textContent = 'Cambiar Contraseña';
 }
 
 function cerrarSesion() {
-  if (!confirm('Â¿Seguro que querÃ©s cerrar sesiÃ³n?')) return;
+  if (!confirm('¿Seguro que querés cerrar Sesión?')) return;
   localStorage.removeItem('vsb_user');
   window.location.href = 'index.html';
 }

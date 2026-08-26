@@ -136,7 +136,18 @@ document.addEventListener("DOMContentLoaded", () => {
   if (saved) document.getElementById("mc-email").value = saved;
 });
 
-function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
+function fmt(n) {
+  return "$" + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function fmtFecha(f) {
+  if (!f) return "";
+  // Si es formato ISO (2026-08-26T...) lo convertimos a dd/mm/yyyy
+  if (String(f).includes("T")) {
+    const d = new Date(f);
+    return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+  return f;
+}
 
 function badgeHtml(estadoPago, metodoPago) {
   if (metodoPago && metodoPago.toLowerCase().includes("efectivo")) {
@@ -206,7 +217,7 @@ async function buscarPedidos() {
           <div class="mc-order-header">
             <div>
               <div class="mc-order-num"><i class="fa-solid fa-hashtag" style="color:var(--red);margin-right:4px;font-size:0.85rem;"></i>${o.numero}</div>
-              <div class="mc-order-date">${o.fecha || ""}</div>
+              <div class="mc-order-date">${fmtFecha(o.fecha)}</div>
             </div>
             ${badgeHtml(o.estadoPago, o.metodoPago)}
           </div>

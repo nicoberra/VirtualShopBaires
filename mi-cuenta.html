@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -48,11 +48,11 @@
 
 <div class="topbar">
   <div class="container">
-    <span>🔒 Compra 100% segura</span>
+    <span>ðŸ”’ Compra 100% segura</span>
     <span>|</span>
-    <span>📦 Importador directo</span>
+    <span>ðŸ“¦ Importador directo</span>
     <span>|</span>
-    <span>⚡ Respuesta rápida</span>
+    <span>âš¡ Respuesta rÃ¡pida</span>
   </div>
 </div>
 
@@ -60,7 +60,7 @@
   <div class="container">
     <div class="header-inner">
       <div class="header-left">
-        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <button class="hamburger" id="hamburger" aria-label="MenÃº" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">
@@ -69,7 +69,7 @@
       </div>
     </div>
   </div>
-  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="MenÃº principal" aria-hidden="true">
     <div class="container">
       <a href="index.html">Inicio</a>
       <a href="productos.html">Productos</a>
@@ -97,26 +97,26 @@
 <footer>
   <div class="container">
     <div class="footer-bottom" style="padding:20px 0;text-align:center;">
-      <span>© <span class="copyright-year"></span> Virtual Shop Baires. Todos los derechos reservados.</span>
+      <span>Â© <span class="copyright-year"></span> Virtual Shop Baires. Todos los derechos reservados.</span>
     </div>
   </div>
 </footer>
 
 <div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
 <div class="cart-panel" id="cart-panel">
-  <div class="cart-header"><h2>🛒 Tu carrito</h2><button class="cart-close" onclick="closeCart()">✕</button></div>
+  <div class="cart-header"><h2>ðŸ›’ Tu carrito</h2><button class="cart-close" onclick="closeCart()">âœ•</button></div>
   <div class="cart-items" id="cart-items"></div>
   <div class="cart-footer">
     <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
-    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
-    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra â†’</button>
+    <div class="mp-logo">ðŸ”’ Pago seguro Â· transferencia bancaria</div>
   </div>
 </div>
 
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
 <script>
-const APPS_URL = "https://script.google.com/macros/s/AKfycby_xYydK11_avPhLpaaeK4Q4PSOkR4FhueeUr5EEQmCXxsRP75BRfooZdQP2pUljTLL/exec";
+const APPS_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
@@ -131,18 +131,18 @@ async function hashPass(password, email) {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-// ── LOGIN ───────────────────────────────────────────────────
+// â”€â”€ LOGIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderLogin() {
   document.getElementById('mc-wrap').innerHTML = `
     <div class="mc-card">
-      <h2><i class="fa-solid fa-right-to-bracket"></i>Iniciá sesión</h2>
+      <h2><i class="fa-solid fa-right-to-bracket"></i>IniciÃ¡ sesiÃ³n</h2>
       <div class="mc-field-row">
         <input type="email" id="l-email" placeholder="Tu email" autocomplete="email" />
-        <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" />
+        <input type="password" id="l-pass" placeholder="ContraseÃ±a" autocomplete="current-password" />
         <button class="mc-btn-red" id="l-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar</button>
       </div>
       <div class="mc-msg error" id="l-err" style="display:none;"></div>
-      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">¿No tenés cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis →</a></p>
+      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">Â¿No tenÃ©s cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis â†’</a></p>
     </div>`;
   document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 }
@@ -153,7 +153,7 @@ async function doLogin() {
   const errEl = document.getElementById('l-err');
   const btn   = document.getElementById('l-btn');
   errEl.style.display = 'none';
-  if (!email || !pass) { errEl.textContent = 'Completá email y contraseña.'; errEl.style.display = 'block'; return; }
+  if (!email || !pass) { errEl.textContent = 'CompletÃ¡ email y contraseÃ±a.'; errEl.style.display = 'block'; return; }
   btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
   try {
     const hash = await hashPass(pass, email);
@@ -168,13 +168,13 @@ async function doLogin() {
       btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar';
     }
   } catch {
-    errEl.textContent = 'Error de conexión. Intentá de nuevo.';
+    errEl.textContent = 'Error de conexiÃ³n. IntentÃ¡ de nuevo.';
     errEl.style.display = 'block';
     btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar';
   }
 }
 
-// ── CUENTA ──────────────────────────────────────────────────
+// â”€â”€ CUENTA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderLoggedIn(user) {
   const hBtn = document.getElementById('header-user-btn');
   if (hBtn) { hBtn.style.display = 'flex'; hBtn.title = 'Hola, ' + user.nombre; }
@@ -196,20 +196,20 @@ function renderLoggedIn(user) {
     </div>
 
     <div class="mc-card">
-      <h2><i class="fa-solid fa-lock"></i>Cambiar contraseña</h2>
+      <h2><i class="fa-solid fa-lock"></i>Cambiar contraseÃ±a</h2>
       <div class="mc-field-row">
-        <input type="password" id="cp-old" placeholder="Contraseña actual" />
-        <input type="password" id="cp-new" placeholder="Nueva contraseña (mín. 6 caracteres)" />
-        <input type="password" id="cp-new2" placeholder="Repetir nueva contraseña" />
-        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar contraseña</button>
+        <input type="password" id="cp-old" placeholder="ContraseÃ±a actual" />
+        <input type="password" id="cp-new" placeholder="Nueva contraseÃ±a (mÃ­n. 6 caracteres)" />
+        <input type="password" id="cp-new2" placeholder="Repetir nueva contraseÃ±a" />
+        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar contraseÃ±a</button>
       </div>
       <div class="mc-msg" id="cp-msg" style="display:none;"></div>
     </div>
 
     <div class="mc-card">
-      <h2><i class="fa-solid fa-shield-halved"></i>Sesión</h2>
-      <p style="font-size:0.85rem;color:var(--gray);margin:0 0 4px;">Sesión activa en este dispositivo.</p>
-      <button class="mc-btn-logout" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>Cerrar sesión</button>
+      <h2><i class="fa-solid fa-shield-halved"></i>SesiÃ³n</h2>
+      <p style="font-size:0.85rem;color:var(--gray);margin:0 0 4px;">SesiÃ³n activa en este dispositivo.</p>
+      <button class="mc-btn-logout" onclick="cerrarSesion()"><i class="fa-solid fa-right-from-bracket" style="margin-right:6px;"></i>Cerrar sesiÃ³n</button>
     </div>`;
 }
 
@@ -220,27 +220,28 @@ async function doChangePass(email) {
   const msg     = document.getElementById('cp-msg');
   const btn     = document.getElementById('cp-btn');
   msg.style.display = 'none'; msg.className = 'mc-msg';
-  if (!oldPass || !newPass) { msg.textContent = 'Completá todos los campos.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
-  if (newPass !== newPass2) { msg.textContent = 'Las contraseñas nuevas no coinciden.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
-  if (newPass.length < 6)  { msg.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (!oldPass || !newPass) { msg.textContent = 'CompletÃ¡ todos los campos.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (newPass !== newPass2) { msg.textContent = 'Las contraseÃ±as nuevas no coinciden.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
+  if (newPass.length < 6)  { msg.textContent = 'La nueva contraseÃ±a debe tener al menos 6 caracteres.'; msg.className = 'mc-msg error'; msg.style.display = 'block'; return; }
   btn.disabled = true; btn.textContent = 'Guardando...';
   try {
     const oldHash = await hashPass(oldPass, email);
     const newHash = await hashPass(newPass, email);
     const res  = await fetch(`${APPS_URL}?action=changePassword&email=${encodeURIComponent(email)}&oldHash=${oldHash}&newHash=${newHash}`, { redirect: 'follow' });
     const data = await res.json();
-    if (data.ok) { msg.textContent = '✓ Contraseña actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
-    else { msg.textContent = data.error || 'Error al cambiar contraseña.'; msg.className = 'mc-msg error'; }
-  } catch { msg.textContent = 'Error de conexión.'; msg.className = 'mc-msg error'; }
+    if (data.ok) { msg.textContent = 'âœ“ ContraseÃ±a actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
+    else { msg.textContent = data.error || 'Error al cambiar contraseÃ±a.'; msg.className = 'mc-msg error'; }
+  } catch { msg.textContent = 'Error de conexiÃ³n.'; msg.className = 'mc-msg error'; }
   msg.style.display = 'block';
-  btn.disabled = false; btn.textContent = 'Cambiar contraseña';
+  btn.disabled = false; btn.textContent = 'Cambiar contraseÃ±a';
 }
 
 function cerrarSesion() {
-  if (!confirm('¿Seguro que querés cerrar sesión?')) return;
+  if (!confirm('Â¿Seguro que querÃ©s cerrar sesiÃ³n?')) return;
   localStorage.removeItem('vsb_user');
   window.location.href = 'index.html';
 }
 </script>
 </body>
 </html>
+

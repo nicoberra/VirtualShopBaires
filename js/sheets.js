@@ -172,7 +172,7 @@ async function fetchHoja(nombreHoja) {
         // Ignorar filas donde el nombre es igual al nombre de la hoja (encabezado/título)
         if (nombre === nombreHoja.toLowerCase()) return false;
         // Ignorar filas donde el precio (col B) es 0 o vacío y no hay descripción (son encabezados)
-        const tieneContenido = row.c[1]?.v || row.c[5]?.v;
+        const tieneContenido = row.c[1]?.v || row.c[5]?.v || row.c[4]?.v;
         if (!tieneContenido) return false;
         return true;
       })
@@ -181,9 +181,20 @@ async function fetchHoja(nombreHoja) {
         const get = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;
         const stockVal   = get(2);
         const precioBase = Number(String(get(1) || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || 0;
-        const descuentoRaw = get(8);
-        const descuento  = descuentoRaw !== null && !isNaN(parseFloat(String(descuentoRaw).replace(",", ".")))
-          ? Number(String(descuentoRaw).replace(/[^\d.,]/g, "").replace(",", ".")) : null;
+
+        // Detectar layout compacto: si F(5) es boolean (checkbox), la hoja no tiene columna talle
+        // Layout estándar: D=color E=talle F=descripcion G=destacado H=subcategoria I=descuento
+        // Layout compacto: D=marca/color E=descripcion F=destacado G=descuento H=subcategoria
+        const layoutCompacto = typeof get(5) === "boolean";
+        const descripcionRaw = layoutCompacto ? get(4) : get(5);
+        const destacadoVal   = layoutCompacto ? get(5) : get(6);
+        const descuentoRaw   = layoutCompacto ? get(6) : get(8);
+        const subcatRaw      = get(7);
+
+        const _parseNum = v => v !== null && !isNaN(parseFloat(String(v).replace(",", ".")))
+          ? Number(String(v).replace(/[^\d.,]/g, "").replace(",", ".")) : null;
+        const descuento = _parseNum(descuentoRaw);
+
         return {
           nombre:         String(get(0) || "").trim(),
           precio:         descuento !== null ? descuento : precioBase,
@@ -191,10 +202,10 @@ async function fetchHoja(nombreHoja) {
           badge:          descuento !== null ? "oferta" : null,
           stock:          stockVal !== false && String(stockVal).toLowerCase() !== "false",
           color:          get(3) ? String(get(3)).trim() : null,
-          talle:          get(4) ? String(get(4)).trim() : null,
-          descripcion:    typeof get(5) === "string" ? get(5).trim() : "",
-          destacado:      get(6) === true,
-          subcategoria:   get(7) ? String(get(7)).trim() : null,
+          talle:          layoutCompacto ? null : (get(4) ? String(get(4)).trim() : null),
+          descripcion:    typeof descripcionRaw === "string" ? descripcionRaw.trim() : "",
+          destacado:      destacadoVal === true,
+          subcategoria:   subcatRaw ? String(subcatRaw).trim() : null,
         };
       });
 

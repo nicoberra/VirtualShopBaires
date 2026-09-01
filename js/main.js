@@ -4,7 +4,7 @@ window.addEventListener("scroll", () => {
   if (btn) btn.classList.toggle("visible", window.scrollY > 300);
 }, { passive: true });
 
-// Mobile: celular único que desliza de derecha a izquierda
+// Mobile: celular único que desliza de derecha a izquierda + swipe manual
 (function () {
   if (window.innerWidth > 480) return;
   const frames = Array.from(document.querySelectorAll('.hero-phone-frame'));
@@ -20,15 +20,14 @@ window.addEventListener("scroll", () => {
     vid.play().catch(() => {});
   }
 
-  function advance() {
+  function goTo(newIdx) {
     if (busy) return;
     busy = true;
-    // Marca que JS tomó el control (desactiva el fallback CSS del primer frame)
     if (heroGrid) heroGrid.classList.add('mobile-init-done');
     const oldIdx = idx;
-    idx = (idx + 1) % frames.length;
+    idx = (newIdx + frames.length) % frames.length;
     const outFrame = frames[oldIdx];
-    const inFrame = frames[idx];
+    const inFrame  = frames[idx];
     playVideo(inFrame.querySelector('video'));
     outFrame.classList.remove('mobile-active');
     outFrame.classList.add('mobile-exit');
@@ -39,14 +38,38 @@ window.addEventListener("scroll", () => {
     }, 560);
   }
 
+  function advance() { goTo(idx + 1); }
+
   // El primer frame ya está visible por CSS (:not(.mobile-init-done) :first-child)
-  // Solo arrancamos el video
   playVideo(frames[0].querySelector('video'));
 
-  // Respetar prefers-reduced-motion: no rotar si el usuario lo prefiere
-  if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    setInterval(advance, 4500);
+  // Auto-avance
+  let autoTimer = null;
+  function resetAuto() {
+    clearInterval(autoTimer);
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      autoTimer = setInterval(advance, 4500);
+    }
   }
+  resetAuto();
+
+  // Swipe horizontal para cambiar el celular manualmente
+  let swipeStartX = null;
+  const swipeTarget = heroGrid || document.querySelector('.hero-video-grid') || frames[0].parentElement;
+
+  swipeTarget.addEventListener('touchstart', function(e) {
+    swipeStartX = e.touches[0].clientX;
+  }, { passive: true });
+
+  swipeTarget.addEventListener('touchend', function(e) {
+    if (swipeStartX === null) return;
+    const diff = swipeStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 40) {
+      goTo(diff > 0 ? idx + 1 : idx - 1);
+      resetAuto();
+    }
+    swipeStartX = null;
+  }, { passive: true });
 })();
 
 // Header: se oculta al bajar, reaparece al subir

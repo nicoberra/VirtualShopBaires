@@ -194,10 +194,10 @@
   </div>
 </div>
 
-<script src="js/sheets.js?v=2"></script>
-<script src="js/productos.js?v=2"></script>
-<script src="js/cart.js?v=2"></script>
-<script src="js/main.js?v=2"></script>
+<script src="js/sheets.js?v=3"></script>
+<script src="js/productos.js?v=3"></script>
+<script src="js/cart.js?v=3"></script>
+<script src="js/main.js?v=3"></script>
 <script>
   let selectedCat = "Todos";
   let selectedSubcat = null;
@@ -266,9 +266,20 @@
 
   function buildSubcatFilters() { /* subcategorías integradas en buildCatFilters */ }
 
+  function updatePageTitle(cat) {
+    const el = document.getElementById("page-title");
+    if (!el) return;
+    if (!cat || cat === "Todos") {
+      el.innerHTML = 'Todos los <span style="color:var(--red);">Productos</span>';
+    } else {
+      el.innerHTML = `<span style="color:var(--red);">${cat}</span>`;
+    }
+  }
+
   function selectCategory(cat) {
     selectedCat = cat;
     selectedSubcat = null;
+    updatePageTitle(cat);
     buildCatFilters();
     buildSubcatFilters();
     applyFilters();
@@ -336,6 +347,7 @@
     document.getElementById("filter-offer").checked = false;
     document.getElementById("sort-select").value = "default";
     document.getElementById("search-input").value = "";
+    updatePageTitle("Todos");
     buildCatFilters();
     buildSubcatFilters();
     applyFilters();
@@ -358,6 +370,7 @@
     document.getElementById("price-display").textContent = `Hasta $${maxP.toLocaleString("es-AR")} (máx)`;
     document.getElementById("price-max-label").textContent = `$${maxP.toLocaleString("es-AR")}`;
     document.getElementById("price-filter-group").style.opacity = "1";
+    updatePageTitle(selectedCat);
     buildCatFilters();
     buildSubcatFilters();
     buildMobileChips();

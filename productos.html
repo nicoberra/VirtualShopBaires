@@ -83,11 +83,6 @@
         <h3>Categoría</h3>
         <div class="filter-group" id="cat-filters"></div>
 
-        <div id="subcat-filter-wrap" style="display:none;">
-          <h3 style="margin-top:20px;">Subcategoría</h3>
-          <div class="filter-group" id="subcat-filters"></div>
-        </div>
-
         <h3 style="margin-top:20px;">Precio máximo</h3>
         <div class="filter-group" id="price-filter-group" style="opacity:0;transition:opacity 0.3s;">
           <input type="range" id="price-range" min="0" max="999999" step="500" value="999999" oninput="updatePriceDisplay(this.value)" />
@@ -235,11 +230,26 @@
           ${cat}
         </label>`;
       }
+      const isSelected = cat === selectedCat;
+      const subcats = isSelected
+        ? [...new Set(PRODUCTOS.filter(p => p.categoria === cat && p.subcategoria).map(p => p.subcategoria))]
+        : [];
+      const subcatHtml = subcats.length ? `
+        <div style="padding-left:14px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
+          <label style="font-size:0.85rem;">
+            <input type="radio" name="subcat" value="" ${!selectedSubcat ? "checked" : ""}
+              onchange="selectedSubcat=null; applyFilters();"> Todas
+          </label>
+          ${subcats.map(sc => `<label style="font-size:0.85rem;">
+            <input type="radio" name="subcat" value="${sc}" ${selectedSubcat === sc ? "checked" : ""}
+              onchange="selectedSubcat=this.value; applyFilters();"> ${sc}
+          </label>`).join("")}
+        </div>` : "";
       return `<label>
-        <input type="radio" name="cat" value="${cat}" ${cat === selectedCat ? "checked" : ""}
+        <input type="radio" name="cat" value="${cat}" ${isSelected ? "checked" : ""}
           onchange="selectCategory(this.value)">
         ${cat}
-      </label>`;
+      </label>${subcatHtml}`;
     }).join("");
   }
 
@@ -254,20 +264,7 @@
     applyFilters();
   }
 
-  function buildSubcatFilters() {
-    const wrap = document.getElementById("subcat-filter-wrap");
-    const container = document.getElementById("subcat-filters");
-    if (selectedCat === "Todos") { wrap.style.display = "none"; selectedSubcat = null; return; }
-    const subcats = [...new Set(PRODUCTOS.filter(p => p.categoria === selectedCat && p.subcategoria).map(p => p.subcategoria))];
-    if (!subcats.length) { wrap.style.display = "none"; selectedSubcat = null; return; }
-    wrap.style.display = "block";
-    container.innerHTML = [null, ...subcats].map(sc => `
-      <label>
-        <input type="radio" name="subcat" value="${sc || ''}" ${selectedSubcat === sc ? "checked" : ""}
-          onchange="selectedSubcat = this.value === '' ? null : this.value; applyFilters();">
-        ${sc || "Todas"}
-      </label>`).join("");
-  }
+  function buildSubcatFilters() { /* subcategorías integradas en buildCatFilters */ }
 
   function selectCategory(cat) {
     selectedCat = cat;

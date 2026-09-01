@@ -201,6 +201,7 @@
 <script>
   let selectedCat = "Todos";
   let selectedSubcat = null;
+  let subcatVisible = true;
   let maxPrice = 999999;
 
   const params = new URLSearchParams(window.location.search);
@@ -221,6 +222,11 @@
     }).join("");
   }
 
+  function toggleSubcats() {
+    subcatVisible = !subcatVisible;
+    buildCatFilters();
+  }
+
   function buildCatFilters() {
     document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => {
       const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
@@ -231,16 +237,19 @@
         </label>`;
       }
       const isSelected = cat === selectedCat;
-      const subcats = isSelected
-        ? [...new Set(PRODUCTOS.filter(p => p.categoria === cat && p.subcategoria).map(p => p.subcategoria))]
-        : [];
-      const subcatHtml = subcats.length ? `
+      const allSubcats = [...new Set(PRODUCTOS.filter(p => p.categoria === cat && p.subcategoria).map(p => p.subcategoria))];
+      const hasSubcats = allSubcats.length > 0;
+      const arrow = hasSubcats
+        ? `<span onclick="event.preventDefault(); event.stopPropagation(); toggleSubcats();"
+            style="cursor:pointer; font-size:0.75rem; margin-left:4px; display:inline-block; transform:rotate(${isSelected && subcatVisible ? '0' : '-90'}deg); transition:transform 0.2s;">▼</span>`
+        : "";
+      const subcatHtml = (isSelected && hasSubcats && subcatVisible) ? `
         <div style="padding-left:14px; margin-top:4px; display:flex; flex-direction:column; gap:4px;">
           <label style="font-size:0.85rem;">
             <input type="radio" name="subcat" value="" ${!selectedSubcat ? "checked" : ""}
               onchange="selectedSubcat=null; applyFilters();"> Todas
           </label>
-          ${subcats.map(sc => `<label style="font-size:0.85rem;">
+          ${allSubcats.map(sc => `<label style="font-size:0.85rem;">
             <input type="radio" name="subcat" value="${sc}" ${selectedSubcat === sc ? "checked" : ""}
               onchange="selectedSubcat=this.value; applyFilters();"> ${sc}
           </label>`).join("")}
@@ -248,7 +257,7 @@
       return `<label>
         <input type="radio" name="cat" value="${cat}" ${isSelected ? "checked" : ""}
           onchange="selectCategory(this.value)">
-        ${cat}
+        ${cat}${arrow}
       </label>${subcatHtml}`;
     }).join("");
   }
@@ -279,6 +288,7 @@
   function selectCategory(cat) {
     selectedCat = cat;
     selectedSubcat = null;
+    subcatVisible = true;
     updatePageTitle(cat);
     buildCatFilters();
     buildSubcatFilters();

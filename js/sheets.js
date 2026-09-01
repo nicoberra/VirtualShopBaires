@@ -181,18 +181,20 @@ async function fetchHoja(nombreHoja) {
         const get = (idx) => (c[idx] && c[idx].v !== null && c[idx].v !== undefined) ? c[idx].v : null;
         const stockVal   = get(2);
         const precioBase = Number(String(get(1) || "0").replace(/[^\d.,]/g, "").replace(",", ".")) || 0;
-        const descuento  = get(7) ? Number(String(get(7)).replace(/[^\d.,]/g, "").replace(",", ".")) : null;
+        const descuentoRaw = get(8);
+        const descuento  = descuentoRaw !== null && !isNaN(parseFloat(String(descuentoRaw).replace(",", ".")))
+          ? Number(String(descuentoRaw).replace(/[^\d.,]/g, "").replace(",", ".")) : null;
         return {
           nombre:         String(get(0) || "").trim(),
-          precio:         descuento !== null ? descuento : precioBase,  // precio real de venta
-          precioOriginal: descuento !== null ? precioBase : null,       // tachado si hay descuento
+          precio:         descuento !== null ? descuento : precioBase,
+          precioOriginal: descuento !== null ? precioBase : null,
           badge:          descuento !== null ? "oferta" : null,
           stock:          stockVal !== false && String(stockVal).toLowerCase() !== "false",
           color:          get(3) ? String(get(3)).trim() : null,
           talle:          get(4) ? String(get(4)).trim() : null,
           descripcion:    typeof get(5) === "string" ? get(5).trim() : "",
           destacado:      get(6) === true,
-          subcategoria:   get(8) ? String(get(8)).trim() : null,
+          subcategoria:   get(7) ? String(get(7)).trim() : null,
         };
       });
 

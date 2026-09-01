@@ -192,6 +192,7 @@ async function fetchHoja(nombreHoja) {
           talle:          get(4) ? String(get(4)).trim() : null,
           descripcion:    typeof get(5) === "string" ? get(5).trim() : "",
           destacado:      get(6) === true,
+          subcategoria:   get(8) ? String(get(8)).trim() : null,
         };
       });
 
@@ -209,6 +210,7 @@ async function fetchHoja(nombreHoja) {
           imagen:         getImagenDrive(nombreHoja, row.nombre),
           imagenes:       getImagenesDrive(nombreHoja, row.nombre),
           categoria:      nombreHoja,
+          subcategoria:   row.subcategoria || null,
           disponible:     true,
           tieneVariantes: false,
           variantes:      [],

@@ -83,6 +83,11 @@
         <h3>Categoría</h3>
         <div class="filter-group" id="cat-filters"></div>
 
+        <div id="subcat-filter-wrap" style="display:none;">
+          <h3 style="margin-top:20px;">Subcategoría</h3>
+          <div class="filter-group" id="subcat-filters"></div>
+        </div>
+
         <h3 style="margin-top:20px;">Precio máximo</h3>
         <div class="filter-group" id="price-filter-group" style="opacity:0;transition:opacity 0.3s;">
           <input type="range" id="price-range" min="0" max="999999" step="500" value="999999" oninput="updatePriceDisplay(this.value)" />
@@ -203,6 +208,7 @@
 <script src="js/main.js"></script>
 <script>
   let selectedCat = "Todos";
+  let selectedSubcat = null;
   let maxPrice = 999999;
 
   const params = new URLSearchParams(window.location.search);
@@ -251,9 +257,26 @@
     applyFilters();
   }
 
+  function buildSubcatFilters() {
+    const wrap = document.getElementById("subcat-filter-wrap");
+    const container = document.getElementById("subcat-filters");
+    if (selectedCat === "Todos") { wrap.style.display = "none"; selectedSubcat = null; return; }
+    const subcats = [...new Set(PRODUCTOS.filter(p => p.categoria === selectedCat && p.subcategoria).map(p => p.subcategoria))];
+    if (!subcats.length) { wrap.style.display = "none"; selectedSubcat = null; return; }
+    wrap.style.display = "block";
+    container.innerHTML = [null, ...subcats].map(sc => `
+      <label>
+        <input type="radio" name="subcat" value="${sc || ''}" ${selectedSubcat === sc ? "checked" : ""}
+          onchange="selectedSubcat = this.value === '' ? null : this.value; applyFilters();">
+        ${sc || "Todas"}
+      </label>`).join("");
+  }
+
   function selectCategory(cat) {
     selectedCat = cat;
+    selectedSubcat = null;
     buildCatFilters();
+    buildSubcatFilters();
     applyFilters();
     const grid = document.getElementById("products-container");
     if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -267,6 +290,7 @@
 
     let results = PRODUCTOS.filter(p => {
       if (selectedCat !== "Todos" && p.categoria !== selectedCat) return false;
+      if (selectedSubcat && p.subcategoria !== selectedSubcat) return false;
       if (p.precio > maxPrice) return false;
       if (onlyNew && p.badge !== "new" && p.badge !== "nuevo") return false;
       if (onlyOffer && p.badge !== "offer" && p.badge !== "oferta") return false;
@@ -309,6 +333,7 @@
 
   function resetFilters() {
     selectedCat = "Todos";
+    selectedSubcat = null;
     const rangeEl2 = document.getElementById("price-range");
     maxPrice = parseInt(rangeEl2.max);
     rangeEl2.value = rangeEl2.max;
@@ -318,6 +343,7 @@
     document.getElementById("sort-select").value = "default";
     document.getElementById("search-input").value = "";
     buildCatFilters();
+    buildSubcatFilters();
     applyFilters();
   }
 
@@ -339,6 +365,7 @@
     document.getElementById("price-max-label").textContent = `$${maxP.toLocaleString("es-AR")}`;
     document.getElementById("price-filter-group").style.opacity = "1";
     buildCatFilters();
+    buildSubcatFilters();
     buildMobileChips();
     applyFilters();
   });

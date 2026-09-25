@@ -238,8 +238,15 @@
                 <span><i class="fa-solid fa-building-columns" style="color:var(--red);margin-right:6px;"></i>Transferencia bancaria <span style="background:rgba(204,18,18,0.12);color:var(--red);font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:4px;">10% OFF</span></span>
               </label>
               <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
+                <input type="radio" name="metodoPago" value="mercadopago" onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
+                <span style="display:flex;align-items:center;gap:6px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><circle cx="12" cy="12" r="12" fill="#009EE3"/><path d="M5 12.8c0-3.7 3.1-6.7 7-6.7 2.5 0 4.6 1.2 5.8 3l-2.1 1.2c-.8-1.2-2.1-1.9-3.7-1.9-2.5 0-4.5 1.9-4.5 4.4s2 4.4 4.5 4.4c1.6 0 3-.8 3.8-2l2.1 1.2C16.7 18 14.5 19.2 12 19.2 8.1 19.2 5 16.5 5 12.8z" fill="#fff"/></svg>
+                  MercadoPago <span style="font-size:0.72rem;color:var(--gray);font-weight:400;margin-left:4px;">tarjeta · débito · MP</span>
+                </span>
+              </label>
+              <label id="efectivo-option" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
                 <input type="radio" name="metodoPago" value="efectivo" onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
-                <span><i class="fa-solid fa-money-bill-wave" style="color:var(--gray);margin-right:6px;"></i>Efectivo en el depósito <span style="font-size:0.75rem;color:var(--gray);font-weight:400;margin-left:4px;">(precio de lista)</span></span>
+                <span><i class="fa-solid fa-money-bill-wave" style="color:var(--gray);margin-right:6px;"></i>Efectivo en el depósito <span style="font-size:0.75rem;color:var(--gray);font-weight:400;margin-left:4px;">(precio de lista · solo retiro)</span></span>
               </label>
             </div>
           </div>
@@ -425,6 +432,7 @@
 <script>
 // REEMPLAZÁ esta URL con la de tu Apps Script (Implementar > Nueva implementación > URL del servicio web)
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec";
+const CRM_URL = "https://script.google.com/macros/s/AKfycbwmPAvB8_p0muyXl3Q-qt0XWaE_mk76HTImcPt3vdFzVpO8vwQUjOoDCpu_BZWlezyh/exec";
 const DISCOUNT_PCT = 10;
 
 let cartItems = [];
@@ -566,8 +574,13 @@ function toggleAddressFields() {
   const metodo = document.getElementById("f-entrega").value;
   document.getElementById("address-fields").style.display = (metodo === "envio") ? "block" : "none";
   document.getElementById("retiro-info").style.display = (metodo === "retiro") ? "block" : "none";
-  document.getElementById("payment-method-section").style.display = (metodo === "retiro") ? "block" : "none";
-  if (metodo !== "retiro") {
+  // Mostrar sección de pago en cuanto se elija un método de entrega
+  document.getElementById("payment-method-section").style.display = metodo ? "block" : "none";
+  // Efectivo solo disponible para retiro
+  const efectivoOpt = document.getElementById("efectivo-option");
+  if (efectivoOpt) efectivoOpt.style.display = (metodo === "retiro") ? "flex" : "none";
+  // Si eligió envio con efectivo seleccionado, cambiar a transferencia
+  if (metodo !== "retiro" && getPaymentMethod() === "efectivo") {
     document.querySelector('input[name="metodoPago"][value="transferencia"]').checked = true;
   }
   onPaymentChange();
@@ -576,6 +589,13 @@ function toggleAddressFields() {
 function onPaymentChange() {
   renderItems();
   renderPrices("co-price-summary");
+  const btn = document.getElementById("btn-submit");
+  if (!btn) return;
+  if (getPaymentMethod() === "mercadopago") {
+    btn.innerHTML = '<i class="fa-solid fa-credit-card"></i> Ir a pagar con MercadoPago →';
+  } else {
+    btn.textContent = 'Confirmar pedido →';
+  }
 }
 
 function goToStep(step) {
@@ -643,6 +663,41 @@ async function submitOrder() {
 
   const btn = document.getElementById("btn-submit");
   btn.disabled = true;
+
+  // ── MercadoPago: crear preferencia y redirigir ───────────
+  if (metodoPago === "mercadopago") {
+    showLoading("Redirigiendo a MercadoPago...");
+    const mpItems = cartItems.map(i => ({
+      nombre:   i.nombre + (i.color ? ' · ' + i.color : '') + (i.talle ? ' / ' + i.talle : ''),
+      cantidad: i.qty,
+      precio:   i.precio
+    }));
+    try {
+      const data = await mpJSONP({
+        action:   'mp_preferencia',
+        items:    JSON.stringify(mpItems),
+        nombre:   nombre + ' ' + apellido,
+        email,
+        telefono,
+        ref:      'vsb-' + Date.now()
+      });
+      hideLoading();
+      if (data.ok && data.url) {
+        Cart.clear();
+        window.location.href = data.url;
+      } else {
+        btn.disabled = false;
+        alert('Error al generar el pago: ' + (data.error || 'Intentá de nuevo.'));
+      }
+    } catch(err) {
+      hideLoading();
+      btn.disabled = false;
+      alert('Error de conexión. Verificá tu internet e intentá de nuevo.');
+    }
+    return;
+  }
+  // ────────────────────────────────────────────────────────
+
   showLoading("Procesando tu pedido...");
 
   try {
@@ -782,6 +837,33 @@ function showLoading(msg) {
   document.getElementById("loading-overlay").classList.add("show");
 }
 function hideLoading() { document.getElementById("loading-overlay").classList.remove("show"); }
+
+// JSONP helper para llamar al CRM y leer la respuesta (evita CORS)
+function mpJSONP(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_mpCb' + Date.now();
+    params.callback = cbName;
+    const qs = new URLSearchParams(params);
+    const s  = document.createElement('script');
+    s.src = CRM_URL + '?' + qs.toString();
+    window[cbName] = function(data) {
+      delete window[cbName];
+      try { s.parentNode.removeChild(s); } catch(e) {}
+      resolve(data);
+    };
+    s.onerror = () => {
+      delete window[cbName];
+      try { s.parentNode.removeChild(s); } catch(e) {}
+      reject(new Error('Error de red'));
+    };
+    setTimeout(() => {
+      delete window[cbName];
+      try { s.parentNode.removeChild(s); } catch(e) {}
+      reject(new Error('Tiempo de espera agotado'));
+    }, 25000);
+    document.head.appendChild(s);
+  });
+}
 </script>
 </body>
 </html>

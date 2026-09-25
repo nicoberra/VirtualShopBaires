@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>¡Gracias por tu compra! | Virtual Shop Baires</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="logo.png" type="image/png" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    .gracias-page { min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 60px 20px; }
+    .gracias-card { background: var(--black-3); border-radius: 16px; padding: 48px 36px; max-width: 500px; width: 100%; text-align: center; box-shadow: var(--shadow); }
+    .gracias-icon { font-size: 3.5rem; margin-bottom: 20px; }
+    .gracias-icon.ok     { color: #22c55e; }
+    .gracias-icon.pend   { color: #f59e0b; }
+    .gracias-title { font-size: 1.6rem; font-weight: 800; color: var(--white); margin-bottom: 12px; }
+    .gracias-sub   { font-size: 0.95rem; color: var(--gray); line-height: 1.6; margin-bottom: 28px; }
+    .ref-box { background: var(--black-2); border-radius: 10px; padding: 14px 20px; margin-bottom: 28px; }
+    .ref-label { font-size: 0.75rem; color: var(--gray); text-transform: uppercase; letter-spacing: 0.05em; }
+    .ref-val   { font-size: 1.1rem; font-weight: 700; color: var(--white); margin-top: 4px; word-break: break-all; }
+    .gracias-btns { display: flex; flex-direction: column; gap: 12px; }
+    .btn-gracias-primary { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--red); color: #fff; padding: 14px 24px; border-radius: 50px; font-weight: 700; font-size: 0.95rem; text-decoration: none; transition: background 0.2s; }
+    .btn-gracias-primary:hover { background: var(--red-dark); }
+    .btn-gracias-sec { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--black-2); color: var(--white); padding: 13px 24px; border-radius: 50px; font-weight: 600; font-size: 0.9rem; text-decoration: none; transition: background 0.2s; }
+    .btn-gracias-sec:hover { background: var(--black-4); }
+    .wa-btn { background: #25D366; }
+    .wa-btn:hover { background: #1da851; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="container">
+    <span>🔒 Compra 100% segura</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="header-left"></div>
+      <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
+      <div class="header-actions"></div>
+    </div>
+  </div>
+</header>
+
+<div class="gracias-page">
+  <div class="gracias-card">
+
+    <!-- Ícono y título dinámico -->
+    <div class="gracias-icon ok" id="gracias-icon"><i class="fa-solid fa-circle-check"></i></div>
+    <h1 class="gracias-title" id="gracias-title">¡Gracias por tu compra!</h1>
+    <p class="gracias-sub" id="gracias-sub">
+      Tu pago fue procesado correctamente.<br>
+      En breve nos ponemos en contacto para coordinar el envío.
+    </p>
+
+    <!-- Referencia del pedido -->
+    <div class="ref-box" id="ref-box" style="display:none">
+      <div class="ref-label">Referencia del pedido</div>
+      <div class="ref-val" id="ref-val">—</div>
+    </div>
+
+    <div class="gracias-btns">
+      <a href="productos.html" class="btn-gracias-primary">
+        <i class="fa-solid fa-bag-shopping"></i> Seguir comprando
+      </a>
+      <a href="https://wa.me/5491149457266?text=Hola%21+Acabo+de+pagar+por+MercadoPago.+Mi+referencia+es+%23" id="wa-link"
+         target="_blank" class="btn-gracias-sec wa-btn">
+        <i class="fa-brands fa-whatsapp"></i> Consultá por WhatsApp
+      </a>
+      <a href="index.html" class="btn-gracias-sec">
+        <i class="fa-solid fa-house"></i> Volver al inicio
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-bottom" style="padding:20px 0;text-align:center;">
+      <span>© <span class="copyright-year"></span> Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
+
+const params = new URLSearchParams(window.location.search);
+const ref    = params.get('ref') || '';
+const estado = params.get('estado') || 'aprobado';
+
+// Mostrar referencia
+if (ref) {
+  document.getElementById('ref-box').style.display = 'block';
+  document.getElementById('ref-val').textContent = ref;
+  const waLink = document.getElementById('wa-link');
+  waLink.href = 'https://wa.me/5491149457266?text=' +
+    encodeURIComponent('Hola! Acabo de pagar por MercadoPago. Mi referencia es ' + ref);
+}
+
+// Estado pendiente (MP lo usa para transferencias bancarias dentro de MP)
+if (estado === 'pendiente') {
+  document.getElementById('gracias-icon').innerHTML = '<i class="fa-solid fa-clock"></i>';
+  document.getElementById('gracias-icon').className = 'gracias-icon pend';
+  document.getElementById('gracias-title').textContent = 'Pago en proceso';
+  document.getElementById('gracias-sub').innerHTML =
+    'Tu pago está siendo procesado por MercadoPago.<br>' +
+    'Cuando se acredite te avisamos y preparamos tu pedido.';
+}
+</script>
+</body>
+</html>

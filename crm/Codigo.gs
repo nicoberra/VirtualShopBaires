@@ -21,6 +21,10 @@ var GH_BRANCH = 'main';
 // Creá una carpeta en Drive → copiá el ID de la URL
 var COMPROB_FOLDER_ID = '';   // ← PEGAR ID DE CARPETA DRIVE AQUÍ (opcional)
 
+// Mercado Pago Checkout Pro
+// Obtené el Access Token en: mercadopago.com.ar/developers → Tu aplicación → Credenciales
+var MP_ACCESS_TOKEN = '';     // ← APP_USR-... de PRODUCCIÓN
+
 // Avisos por Telegram cuando entra un pedido (opcional)
 var TG_TOKEN = '';
 var TG_CHAT  = '';
@@ -94,6 +98,7 @@ function manejar(e) {
     else if (accion === 'foto_borrar')     out = { ok:true, borrada: fotoBorrar(p) };
     else if (accion === 'fotos_orden')     out = { ok:true, ordenado: fotosOrdenar(p) };
     else if (accion === 'comprobante_subir') out = { ok:true, url: comprobanteSubir(p) };
+    else if (accion === 'mp_preferencia')  out = crearPreferencia(p);
     else if (accion === 'version')         out = { ok:true, version: 'v2' };
     else throw 'Acción desconocida: ' + accion;
 
@@ -678,6 +683,68 @@ function manifestGuardarKey(man, key, names) {
   var payload = { message:'Fotos: '+key, content:Utilities.base64Encode(JSON.stringify(man.manifest)), branch:GH_BRANCH };
   if (man.sha) payload.sha = man.sha;
   ghApi('put','contents/fotos.json',payload);
+}
+
+// ─── MERCADO PAGO ────────────────────────────────────────────
+
+function crearPreferencia(p) {
+  if (!MP_ACCESS_TOKEN) return { ok:false, error:'MP_ACCESS_TOKEN no configurado en Codigo.gs' };
+
+  var items = [];
+  try { items = JSON.parse(p.items || '[]'); } catch(e) { return { ok:false, error:'items inválidos' }; }
+  if (!items.length) return { ok:false, error:'Carrito vacío' };
+
+  var itemsMP = items.map(function(i) {
+    return {
+      title:       String(i.nombre || i.title || 'Producto').slice(0, 256),
+      quantity:    Math.max(1, parseInt(i.cantidad || i.quantity || 1, 10)),
+      unit_price:  parseFloat((String(i.precio || i.unit_price || 0)).replace(',','.')),
+      currency_id: 'ARS'
+    };
+  });
+
+  var ref = String(p.ref || ('vsb-' + Date.now()));
+
+  var payload = {
+    items: itemsMP,
+    back_urls: {
+      success: 'https://virtualshopbaires.com.ar/gracias.html?ref=' + ref,
+      failure: 'https://virtualshopbaires.com.ar/checkout.html?mp=error',
+      pending: 'https://virtualshopbaires.com.ar/gracias.html?ref=' + ref + '&estado=pendiente'
+    },
+    auto_return: 'approved',
+    statement_descriptor: 'Virtual Shop Baires',
+    external_reference: ref
+  };
+  if (p.email) payload.payer = { email: String(p.email) };
+
+  var res = UrlFetchApp.fetch('https://api.mercadopago.com/checkout/preferences', {
+    method: 'post',
+    muteHttpExceptions: true,
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + MP_ACCESS_TOKEN },
+    payload: JSON.stringify(payload)
+  });
+
+  var json = null;
+  try { json = JSON.parse(res.getContentText()); } catch(e) {}
+  if (res.getResponseCode() !== 201 || !json || !json.init_point)
+    return { ok:false, error: (json && json.message) || 'Error MP (' + res.getResponseCode() + ')' };
+
+  // Guardar pedido como Pendiente en Sheets
+  var total   = itemsMP.reduce(function(s,i){ return s + i.unit_price * i.quantity; }, 0);
+  var detalle = itemsMP.map(function(i){ return i.quantity + 'x ' + i.title; }).join(', ');
+  agregar('Pedidos', {
+    cliente:  String(p.nombre  || ''),
+    telefono: String(p.telefono || ''),
+    detalle:  detalle,
+    monto:    total,
+    estado:   'Pendiente',
+    notas:    'MercadoPago · ref: ' + ref
+  });
+
+  avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref);
+  return { ok:true, url: json.init_point, ref: ref };
 }
 
 // ─── COMPROBANTES DE PAGO (Google Drive) ─────────────────────

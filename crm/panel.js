@@ -5,7 +5,7 @@
 
 // ─── CONFIG — CAMBIÁ ESTOS DOS VALORES ───────────────────────
 const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwmPAvB8_p0muyXl3Q-qt0XWaE_mk76HTImcPt3vdFzVpO8vwQUjOoDCpu_BZWlezyh/exec';
-const PANEL_PASS = 'vsb2025';                      // Contraseña del panel (cambiá esto)
+const PANEL_PASS = '2208';
 // ─────────────────────────────────────────────────────────────
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────

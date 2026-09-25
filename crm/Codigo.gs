@@ -11,6 +11,17 @@
 // Ya está puesto el ID de tu planilla — no lo toques
 var SHEET_ID = '1sufFbmZQzjG8i8FP-XybYReqeQgsHFjhSV2KEMaNTnA';
 
+// Planilla de Productos (la que tiene tabs por categoría)
+var PRODUCTOS_SHEET_ID = '1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw';
+
+// Planilla de Pedidos externos
+var PEDIDOS_SHEET_ID = '1TrrCEZvlQUcNTvPkBv9Ot57I5vebbySwWG2kagq42E0';
+
+// Tabs de categorías en el Sheet de Productos (en orden)
+var CAT_TABS = ['Juguetes','Belleza','Piletas ','Inflables','Bazar, baño y cocina',
+                'Muebles para el hogar','Camping','Playa','Mascotas',
+                'Pilates y Yoga','Fitness y musculacion'];
+
 // Para fotos de productos (GitHub repo de la tienda)
 // Creá un token en: github.com/settings/tokens → Fine-grained → Contents: Read and write
 var GH_TOKEN  = '';   // ← PEGAR TU TOKEN AQUÍ
@@ -98,8 +109,11 @@ function manejar(e) {
     else if (accion === 'foto_borrar')     out = { ok:true, borrada: fotoBorrar(p) };
     else if (accion === 'fotos_orden')     out = { ok:true, ordenado: fotosOrdenar(p) };
     else if (accion === 'comprobante_subir') out = { ok:true, url: comprobanteSubir(p) };
-    else if (accion === 'mp_preferencia')  out = crearPreferencia(p);
-    else if (accion === 'version')         out = { ok:true, version: 'v2' };
+    else if (accion === 'mp_preferencia')       out = crearPreferencia(p);
+    else if (accion === 'ext_productos_list')   out = { ok:true, rows: extProductosListar(p) };
+    else if (accion === 'ext_producto_update')  out = extProductoActualizar(p);
+    else if (accion === 'ext_pedidos_list')     out = { ok:true, rows: extPedidosListar(p) };
+    else if (accion === 'version')              out = { ok:true, version: 'v2' };
     else throw 'Acción desconocida: ' + accion;
 
   } catch(err) {
@@ -745,6 +759,135 @@ function crearPreferencia(p) {
 
   avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref);
   return { ok:true, url: json.init_point, ref: ref };
+}
+
+// ─── COMPROBANTES DE PAGO (Google Drive) ─────────────────────
+
+// ─── PRODUCTOS EXTERNOS (Sheet separado por categorías) ──────
+
+function _headerIdx(headers) {
+  var idx = {};
+  headers.forEach(function(h, i) { idx[String(h||'').trim().toLowerCase()] = i; });
+  return idx;
+}
+
+function extProductosListar(p) {
+  var filtCat = String(p.categoria||'').trim();
+  var ssP = SpreadsheetApp.openById(PRODUCTOS_SHEET_ID);
+  var result = [];
+
+  CAT_TABS.forEach(function(tabName) {
+    var catKey = tabName.trim();
+    if (filtCat && filtCat !== catKey) return;
+    var sh = ssP.getSheetByName(tabName);
+    if (!sh || sh.getLastRow() < 2) return;
+    var data = sh.getDataRange().getValues();
+    var idx  = _headerIdx(data[0]);
+
+    for (var r = 1; r < data.length; r++) {
+      var nombre = String(data[r][0]||'').trim();
+      if (!nombre) continue;
+
+      var precio    = data[r][1];
+      var stockRaw  = data[r][2];
+      var colD      = String(data[r][3]||'').trim();
+      var colE      = String(data[r][4]||'').trim();
+
+      // Detectar si col D es Color o Marca
+      var hD = String(data[0][3]||'').trim().toLowerCase();
+      var color = (hD === 'color') ? colD : '';
+      var marca = (hD === 'marca') ? colD : '';
+
+      // Talle (col E si hay talle/medida, sino es descripcion)
+      var hE = String(data[0][4]||'').trim().toLowerCase();
+      var talle       = (hE.indexOf('talle') >= 0) ? colE : '';
+      var colDescIdx  = (hE.indexOf('talle') >= 0) ? 5 : 4;
+      var descripcion = String(data[r][colDescIdx]||'').trim();
+
+      // Destacado y descuento: buscar por header
+      var destacado = false, descuento = '';
+      if (idx['destacado'] !== undefined) destacado = esVerdadero(data[r][idx['destacado']]);
+      if (idx['descuento'] !== undefined) descuento = data[r][idx['descuento']];
+
+      // Subcategorías
+      var subcategoria = '';
+      if (idx['subcategorias'] !== undefined) subcategoria = String(data[r][idx['subcategorias']]||'').trim();
+
+      result.push({
+        _sheet:      tabName,
+        _row:        r + 1,
+        categoria:   catKey,
+        nombre:      nombre,
+        precio:      precio,
+        stock:       esVerdadero(stockRaw),
+        color:       color,
+        marca:       marca,
+        talle:       talle,
+        descripcion: descripcion.slice(0, 200),
+        destacado:   destacado,
+        descuento:   descuento,
+        subcategoria:subcategoria
+      });
+    }
+  });
+  return result;
+}
+
+function extProductoActualizar(p) {
+  var sheetName = String(p.sheet||'').trim();
+  var row       = parseInt(p.row, 10);
+  var campo     = String(p.campo||'').trim().toLowerCase();
+  var valor     = p.valor;
+
+  if (!sheetName || !row || !campo)
+    return { ok:false, error:'Faltan parámetros (sheet, row, campo)' };
+
+  var ssP = SpreadsheetApp.openById(PRODUCTOS_SHEET_ID);
+  var sh  = ssP.getSheetByName(sheetName);
+  if (!sh) return { ok:false, error:'Hoja no encontrada: ' + sheetName };
+
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var colIdx  = -1;
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i]||'').trim().toLowerCase() === campo) { colIdx = i + 1; break; }
+  }
+  if (colIdx < 0) return { ok:false, error:'Campo no encontrado: ' + campo };
+
+  if (campo === 'precio' || campo === 'descuento') {
+    valor = Number(String(valor).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+  } else if (campo === 'stock' || campo === 'destacado') {
+    valor = (valor === true || valor === 'true');
+  }
+
+  sh.getRange(row, colIdx).setValue(valor);
+  return { ok:true };
+}
+
+function extPedidosListar(p) {
+  try {
+    var ssO  = SpreadsheetApp.openById(PEDIDOS_SHEET_ID);
+    var tabs = ssO.getSheets();
+    if (!tabs.length) return [];
+    var sh   = ssO.getSheetByName('Pedidos') || ssO.getSheetByName('pedidos') || tabs[0];
+    var data = sh.getDataRange().getValues();
+    if (data.length < 2) return [];
+
+    var headers = data[0].map(function(h) { return String(h||'').trim(); });
+    var result  = [];
+    for (var r = 1; r < data.length; r++) {
+      if (!data[r][0]) continue;
+      var obj = { _row: r + 1 };
+      headers.forEach(function(h, i) {
+        var v = data[r][i];
+        obj[h] = (v instanceof Date)
+          ? Utilities.formatDate(v, 'GMT-3', 'yyyy-MM-dd HH:mm') : v;
+      });
+      result.push(obj);
+    }
+    return result.reverse().slice(0, 300);
+  } catch(ex) {
+    return [];
+  }
 }
 
 // ─── COMPROBANTES DE PAGO (Google Drive) ─────────────────────

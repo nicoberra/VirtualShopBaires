@@ -439,19 +439,22 @@ function borrarCliente(id, nombre) {
   });
 }
 
-// ─── PRODUCTOS ───────────────────────────────────────────────
+// ─── PRODUCTOS (Sheet externo por categorías) ────────────────
 
 let _productos = [], _prodCatFil = 'Todos';
 
 async function loadProductos(force=false) {
-  $('prod-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  $('prod-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos…</div>';
   try {
-    const r = await crm({ action:'productos_list' });
-    _productos = (r.rows||[]);
+    const key = 'ext_productos_list';
+    if (force) delete _cache[key];
+    const r = _cache[key] ? { rows: _cache[key] } : await crm({ action:'ext_productos_list' });
+    _productos = r.rows || [];
+    _cache[key] = _productos;
     buildProdCats();
     filtrarProductos();
   } catch(e) {
-    $('prod-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
+    $('prod-table').innerHTML = `<p class="text-muted" style="padding:20px">Error al cargar: ${e.message}</p>`;
   }
 }
 
@@ -471,44 +474,104 @@ function filtrarProductos() {
   const q = val('prod-search').toLowerCase();
   let list = _productos;
   if (_prodCatFil !== 'Todos') list = list.filter(p => p.categoria === _prodCatFil);
-  if (q) list = list.filter(p => p.nombre.toLowerCase().includes(q));
+  if (q) list = list.filter(p =>
+    p.nombre.toLowerCase().includes(q) ||
+    (p.color||'').toLowerCase().includes(q) ||
+    (p.marca||'').toLowerCase().includes(q));
   renderProductos(list);
+}
+
+function fmtPrecioSheet(v) {
+  if (!v && v !== 0) return '—';
+  const n = Number(String(v).replace(/[^\d.,]/g,'').replace(',','.'));
+  return isNaN(n) || n === 0 ? '—' : '$' + n.toLocaleString('es-AR', {minimumFractionDigits:0});
 }
 
 function renderProductos(list) {
   const el = $('prod-table');
-  if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i>Sin productos</div>'; return; }
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i>Sin productos</div>';
+    return;
+  }
+
+  // Detectar si hay columna talle o color en este set
+  const hayColor = list.some(p => p.color || p.marca);
+  const hayTalle = list.some(p => p.talle);
+
   el.innerHTML = `
     <table>
-      <thead><tr><th>Nombre</th><th>Categoría</th><th>Precio</th><th>Costo</th><th>Stock</th><th>Dest.</th><th></th></tr></thead>
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          ${hayColor ? '<th>Color / Marca</th>' : ''}
+          ${hayTalle ? '<th>Talle</th>' : ''}
+          <th>Precio</th>
+          <th>P. Original</th>
+          <th>Stock</th>
+          <th>⭐</th>
+          <th></th>
+        </tr>
+      </thead>
       <tbody>
-        ${list.map(p => `
+        ${list.map(p => {
+          const colorMarca = (p.color || p.marca || '').trim();
+          const safe = encodeURIComponent(JSON.stringify({
+            _sheet: p._sheet, _row: p._row,
+            nombre: p.nombre, categoria: p.categoria,
+            color: p.color, marca: p.marca, talle: p.talle,
+            precio: p.precio, descuento: p.descuento,
+            stock: p.stock, destacado: p.destacado,
+            descripcion: p.descripcion, subcategoria: p.subcategoria
+          }));
+          return `
           <tr>
-            <td><strong>${p.nombre}</strong></td>
-            <td>${p.categoria||'—'}</td>
-            <td>${fmtMoney(p.precio)}</td>
-            <td>${fmtMoney(p.costo)}</td>
-            <td>${p.stock ? '<span class="text-green">✓</span>' : '<span style="color:var(--text2)">—</span>'}</td>
-            <td>${p.destacado ? '<span class="text-yellow">★</span>' : '—'}</td>
-            <td><button class="btn-icon" onclick="editarProducto(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="fa-solid fa-pen"></i></button></td>
-          </tr>`).join('')}
+            <td><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
+            ${hayColor ? `<td>${colorMarca ? `<span class="badge-color">${colorMarca}</span>` : '—'}</td>` : ''}
+            ${hayTalle ? `<td>${p.talle||'—'}</td>` : ''}
+            <td><strong>${fmtPrecioSheet(p.precio)}</strong></td>
+            <td class="text-muted">${fmtPrecioSheet(p.descuento)}</td>
+            <td class="td-center">${p.stock
+              ? '<span class="badge badge-conf">✓</span>'
+              : '<span class="badge badge-cancel">✗</span>'}</td>
+            <td class="td-center">${p.destacado ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
+            <td>
+              <button class="btn-icon" onclick="editarProducto(decodeURIComponent('${safe}'))">
+                <i class="fa-solid fa-pen"></i>
+              </button>
+            </td>
+          </tr>`;
+        }).join('')}
       </tbody>
     </table>`;
 }
 
 let _prodActual = null;
 
-function editarProducto(p) {
+function editarProducto(raw) {
+  const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
   _prodActual = p;
-  $('mprod-title').textContent = 'Editar producto';
-  $('mprod-nombre-orig').value = p.nombre;
-  $('mprod-nombre').value      = p.nombre;
-  $('mprod-categoria').value   = p.categoria||'';
-  $('mprod-precio').value      = p.precio||0;
-  $('mprod-costo').value       = p.costo||0;
-  $('mprod-stock').checked     = !!p.stock;
-  $('mprod-destacado').checked = !!p.destacado;
-  $('fotos-grid').innerHTML    = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+
+  $('mprod-title').textContent  = p.categoria;
+  $('mprod-nombre').value       = p.nombre;
+  $('mprod-categoria-info').textContent = p.categoria || '';
+  $('mprod-color-info').textContent     = (p.color || p.marca || p.talle)
+    ? [p.color||p.marca, p.talle].filter(Boolean).join(' · ') : '—';
+
+  const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+  const descN   = Number(String(p.descuento||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+  $('mprod-precio').value     = precioN;
+  $('mprod-descuento').value  = descN;
+  $('mprod-stock').checked    = !!p.stock;
+  $('mprod-destacado').checked= !!p.destacado;
+
+  if (p.descripcion) {
+    $('mprod-desc-wrap').style.display = 'block';
+    $('mprod-desc').textContent = p.descripcion;
+  } else {
+    $('mprod-desc-wrap').style.display = 'none';
+  }
+
+  $('fotos-grid').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i></div>';
   show('modal-producto', 'flex');
   cargarFotos(p);
 }
@@ -517,8 +580,7 @@ async function cargarFotos(p) {
   const carpeta = `Productos/${p.categoria||'Sin Categoria'}/${p.nombre}`;
   try {
     const r = await crm({ action:'fotos_list', carpeta });
-    const fotos = r.fotos||[];
-    renderFotos(fotos, carpeta);
+    renderFotos(r.fotos||[], carpeta);
   } catch(e) {
     $('fotos-grid').innerHTML = '<p class="text-muted">No se pudieron cargar las fotos</p>';
   }
@@ -568,22 +630,38 @@ async function borrarFoto(carpeta, filename) {
 }
 
 async function guardarProducto() {
-  const nombre = $('mprod-nombre-orig').value;
-  const params = {
-    action:'productos_save', nombre,
-    categoria:  val('mprod-categoria'),
-    precio:     $('mprod-precio').value,
-    costo:      $('mprod-costo').value,
-    stock:      $('mprod-stock').checked ? 'true':'false',
-    destacado:  $('mprod-destacado').checked ? 'true':'false',
-  };
+  if (!_prodActual) return;
+  const p = _prodActual;
+  const precio    = Number($('mprod-precio').value) || 0;
+  const descuento = Number($('mprod-descuento').value) || 0;
+  const stock     = $('mprod-stock').checked;
+  const destacado = $('mprod-destacado').checked;
+
+  const updates = [
+    { campo:'precio',    valor: precio    },
+    { campo:'descuento', valor: descuento },
+    { campo:'stock',     valor: stock     },
+    { campo:'destacado', valor: destacado },
+  ];
+
   try {
-    const r = await crm(params);
-    if (!r.ok) throw new Error(r.error||'error');
-    toast('Producto guardado');
+    for (const u of updates) {
+      await crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo: u.campo, valor: u.valor });
+    }
+    // Actualizar cache local
+    const idx = _productos.findIndex(x => x._sheet === p._sheet && x._row === p._row);
+    if (idx >= 0) {
+      _productos[idx].precio    = precio;
+      _productos[idx].descuento = descuento;
+      _productos[idx].stock     = stock;
+      _productos[idx].destacado = destacado;
+    }
+    toast('Producto guardado en Sheets ✓');
     hide('modal-producto');
-    loadProductos(true);
-  } catch(e) { toast('Error: '+e.message,'err'); }
+    filtrarProductos();
+  } catch(e) {
+    toast('Error al guardar: ' + e.message, 'err');
+  }
 }
 
 // ─── PEDIDOS ─────────────────────────────────────────────────

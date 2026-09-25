@@ -306,6 +306,22 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .badge-entre   { background: rgba(34,197,94,0.2);   color: #4ade80; }
 .badge-cancel  { background: rgba(107,114,128,0.15);color: #9ca3af; }
 
+/* ─── PRODUCTOS ─────────────────────────────────────────── */
+.badge-color {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  background: var(--bg3); border: 1px solid var(--border);
+  font-size: 0.78rem; color: var(--text);
+}
+.prod-sub { font-size: 0.75rem; color: var(--text2); margin-top: 2px; }
+.td-center { text-align: center; }
+.info-chip {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 10px; font-size: 0.85rem;
+  color: var(--text2); margin-top: 4px; min-height: 30px;
+}
+.form-label-sm { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; }
+.readonly-field { background: var(--bg3); color: var(--text2); cursor: default; }
+
 /* ─── FOTOS ──────────────────────────────────────────────── */
 .fotos-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .foto-item {

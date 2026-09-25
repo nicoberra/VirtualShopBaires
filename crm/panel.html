@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM · Virtual Shop Baires</title>
+  <link rel="stylesheet" href="panel.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="login-wrap">
+  <div id="login-box">
+    <div class="login-logo"><span class="logo-red">VSB</span> CRM</div>
+    <h2>Acceso al panel</h2>
+    <div class="form-group">
+      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn-primary btn-full" onclick="doLogin()">Entrar <i class="fa-solid fa-arrow-right"></i></button>
+    <p id="login-err" class="err-msg"></p>
+  </div>
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app" style="display:none">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div class="sidebar-logo"><span class="logo-red">VSB</span> CRM</div>
+    <div class="nav-links">
+      <a class="nav-link" data-sec="panel"         onclick="goTo('panel')">        <i class="fa-solid fa-gauge-high"></i>    Panel</a>
+      <a class="nav-link" data-sec="facturacion"   onclick="goTo('facturacion')">  <i class="fa-solid fa-dollar-sign"></i>   Facturación</a>
+      <a class="nav-link" data-sec="clientes"      onclick="goTo('clientes')">     <i class="fa-solid fa-users"></i>         Clientes</a>
+      <a class="nav-link" data-sec="productos"     onclick="goTo('productos')">    <i class="fa-solid fa-box"></i>           Productos</a>
+      <a class="nav-link" data-sec="pedidos"       onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i>  Pedidos</a>
+      <a class="nav-link" data-sec="suscriptores"  onclick="goTo('suscriptores')"> <i class="fa-solid fa-envelope"></i>      Suscriptores</a>
+      <a class="nav-link" data-sec="comprobantes"  onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i>    Comprobantes</a>
+      <a class="nav-link" data-sec="estadisticas"  onclick="goTo('estadisticas')"> <i class="fa-solid fa-chart-bar"></i>     Estadísticas</a>
+    </div>
+    <div class="sidebar-footer">
+      <button onclick="logout()" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
+    </div>
+  </nav>
+
+  <!-- MOBILE TOP NAV -->
+  <div id="mobile-nav">
+    <div class="mobile-logo"><span class="logo-red">VSB</span> CRM</div>
+    <div id="mobile-nav-scroll">
+      <button class="mnav-btn" data-sec="panel"        onclick="goTo('panel')">        <i class="fa-solid fa-gauge-high"></i></button>
+      <button class="mnav-btn" data-sec="facturacion"  onclick="goTo('facturacion')">  <i class="fa-solid fa-dollar-sign"></i></button>
+      <button class="mnav-btn" data-sec="clientes"     onclick="goTo('clientes')">     <i class="fa-solid fa-users"></i></button>
+      <button class="mnav-btn" data-sec="productos"    onclick="goTo('productos')">    <i class="fa-solid fa-box"></i></button>
+      <button class="mnav-btn" data-sec="pedidos"      onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i></button>
+      <button class="mnav-btn" data-sec="suscriptores" onclick="goTo('suscriptores')"> <i class="fa-solid fa-envelope"></i></button>
+      <button class="mnav-btn" data-sec="comprobantes" onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i></button>
+      <button class="mnav-btn" data-sec="estadisticas" onclick="goTo('estadisticas')"> <i class="fa-solid fa-chart-bar"></i></button>
+    </div>
+  </div>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main id="main-content">
+
+    <!-- PANEL -->
+    <section id="sec-panel" class="sec">
+      <h1 class="sec-title">Panel</h1>
+      <div id="panel-cards" class="stats-grid">
+        <div class="stat-card skeleton"></div>
+        <div class="stat-card skeleton"></div>
+        <div class="stat-card skeleton"></div>
+        <div class="stat-card skeleton"></div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <h3 class="card-title"><i class="fa-solid fa-bag-shopping"></i> Pedidos recientes</h3>
+          <div id="panel-pedidos-rec"></div>
+        </div>
+        <div class="card">
+          <h3 class="card-title"><i class="fa-solid fa-users"></i> Clientes recientes</h3>
+          <div id="panel-clientes-rec"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FACTURACIÓN -->
+    <section id="sec-facturacion" class="sec">
+      <h1 class="sec-title">Facturación</h1>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="anios"   onclick="factTab('anios')">Anual</button>
+        <button class="tab-btn"        data-tab="meses"   onclick="factTab('meses')">Mensual</button>
+        <button class="tab-btn"        data-tab="semanas" onclick="factTab('semanas')">Semanal</button>
+      </div>
+      <div id="fact-table" class="card"></div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="sec-clientes" class="sec">
+      <div class="sec-header">
+        <h1 class="sec-title">Clientes</h1>
+        <button class="btn-primary" onclick="abrirModalCliente()"><i class="fa-solid fa-plus"></i> Nuevo</button>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="cli-search" placeholder="Buscar nombre, email o teléfono…" oninput="filtrarClientes()">
+      </div>
+      <div class="card table-wrap"><div id="cli-table"></div></div>
+    </section>
+
+    <!-- PRODUCTOS -->
+    <section id="sec-productos" class="sec">
+      <h1 class="sec-title">Productos</h1>
+      <div class="toolbar">
+        <input type="search" id="prod-search" placeholder="Buscar producto…" oninput="filtrarProductos()">
+        <div id="prod-cats" class="chip-row"></div>
+      </div>
+      <div class="card table-wrap"><div id="prod-table"></div></div>
+    </section>
+
+    <!-- PEDIDOS -->
+    <section id="sec-pedidos" class="sec">
+      <div class="sec-header">
+        <h1 class="sec-title">Pedidos</h1>
+        <button class="btn-primary" onclick="abrirModalPedido()"><i class="fa-solid fa-plus"></i> Nuevo</button>
+      </div>
+      <div class="toolbar">
+        <input type="search" id="ped-search" placeholder="Buscar cliente o detalle…" oninput="filtrarPedidos()">
+        <select id="ped-estado-fil" class="sel" onchange="filtrarPedidos()">
+          <option value="">Todos los estados</option>
+          <option>Pendiente</option><option>Confirmado</option>
+          <option>En camino</option><option>Entregado</option><option>Cancelado</option>
+        </select>
+      </div>
+      <div class="card table-wrap"><div id="ped-table"></div></div>
+    </section>
+
+    <!-- SUSCRIPTORES -->
+    <section id="sec-suscriptores" class="sec">
+      <h1 class="sec-title">Suscriptores</h1>
+      <div class="card table-wrap"><div id="sus-table"></div></div>
+    </section>
+
+    <!-- COMPROBANTES -->
+    <section id="sec-comprobantes" class="sec">
+      <h1 class="sec-title">Comprobantes de pago</h1>
+      <p class="text-muted">Pedidos que tienen foto de comprobante subida por el cliente.</p>
+      <div class="card table-wrap"><div id="comp-table"></div></div>
+    </section>
+
+    <!-- ESTADÍSTICAS -->
+    <section id="sec-estadisticas" class="sec">
+      <h1 class="sec-title">Estadísticas web</h1>
+      <p class="text-muted">Nota: edad y sexo no están disponibles en este sistema; requieren Google Analytics 4 + Google Signals.</p>
+      <div id="stats-content"></div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== MODALES ===== -->
+
+<!-- Modal cliente -->
+<div id="modal-cliente" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-cliente')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="mcli-title">Nuevo cliente</h3>
+      <button class="modal-close" onclick="hide('modal-cliente')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mcli-id">
+      <div class="form-row">
+        <div class="form-group"><label>Nombre *</label><input type="text" id="mcli-nombre" placeholder="Nombre completo"></div>
+        <div class="form-group"><label>Teléfono</label><input type="tel" id="mcli-telefono" placeholder="+54 9 11 1234-5678"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Email</label><input type="email" id="mcli-email" placeholder="email@ejemplo.com"></div>
+        <div class="form-group"><label>Ciudad</label><input type="text" id="mcli-ciudad" placeholder="Buenos Aires"></div>
+      </div>
+      <div class="form-group"><label>Notas</label><textarea id="mcli-notas" rows="2" placeholder="Observaciones…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hide('modal-cliente')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarCliente()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal pedido -->
+<div id="modal-pedido" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-pedido')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="mped-title">Nuevo pedido</h3>
+      <button class="modal-close" onclick="hide('modal-pedido')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mped-id">
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <label>Cliente *</label>
+          <div class="input-with-btn">
+            <input type="text" id="mped-cliente" placeholder="Nombre del cliente">
+            <button class="btn-secondary btn-sm" onclick="toggleNuevoCli()" title="Crear cliente nuevo"><i class="fa-solid fa-user-plus"></i></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" id="mped-telefono" placeholder="+54 9 11 …">
+        </div>
+      </div>
+      <div id="nuevo-cli-wrap" class="inset-box" style="display:none">
+        <p class="label-sm">Datos del nuevo cliente</p>
+        <div class="form-row">
+          <input type="email" id="mped-ncli-email" placeholder="Email" class="form-input">
+          <input type="text"  id="mped-ncli-ciudad" placeholder="Ciudad" class="form-input">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Detalle del pedido</label>
+        <textarea id="mped-detalle" rows="3" placeholder="2x Producto A, 1x Producto B"></textarea>
+        <small class="text-muted">Formato: cantidad x nombre, separados por coma</small>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Monto ($)</label><input type="number" id="mped-monto" placeholder="0" min="0"></div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="mped-estado" class="sel">
+            <option>Pendiente</option><option>Confirmado</option>
+            <option>En camino</option><option>Entregado</option><option>Cancelado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Notas</label><textarea id="mped-notas" rows="2" placeholder="Observaciones…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hide('modal-pedido')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarPedido()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal producto (editar) -->
+<div id="modal-producto" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-producto')">
+  <div class="modal modal-wide" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="mprod-title">Producto</h3>
+      <button class="modal-close" onclick="hide('modal-producto')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="mprod-nombre-orig">
+      <div class="form-row">
+        <div class="form-group" style="flex:2"><label>Nombre</label><input type="text" id="mprod-nombre" readonly class="readonly-field"></div>
+        <div class="form-group"><label>Categoría</label><input type="text" id="mprod-categoria"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Precio ($)</label><input type="number" id="mprod-precio" min="0"></div>
+        <div class="form-group"><label>Costo ($)</label><input type="number" id="mprod-costo" min="0"></div>
+        <div class="form-group toggles-col">
+          <label>Stock</label>
+          <label class="toggle"><input type="checkbox" id="mprod-stock"><span class="slider"></span></label>
+        </div>
+        <div class="form-group toggles-col">
+          <label>Destacado</label>
+          <label class="toggle"><input type="checkbox" id="mprod-destacado"><span class="slider"></span></label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Fotos</label>
+        <div id="fotos-grid" class="fotos-grid"></div>
+        <div style="margin-top:10px">
+          <label class="btn-secondary btn-sm" style="cursor:pointer">
+            <i class="fa-solid fa-upload"></i> Subir foto
+            <input type="file" id="foto-input" accept="image/*" style="display:none" onchange="subirFoto(this)">
+          </label>
+          <small class="text-muted" style="margin-left:10px">La primera foto es la principal</small>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hide('modal-producto')">Cerrar</button>
+      <button class="btn-primary" onclick="guardarProducto()">Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal confirmación borrar -->
+<div id="modal-confirm" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-confirm')">
+  <div class="modal modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>¿Confirmás?</h3>
+      <button class="modal-close" onclick="hide('modal-confirm')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p id="confirm-msg">¿Seguro que querés borrar este registro?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hide('modal-confirm')">Cancelar</button>
+      <button class="btn-danger" id="confirm-btn" onclick="">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script src="panel.js"></script>
+</body>
+</html>

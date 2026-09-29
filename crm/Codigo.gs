@@ -11,21 +11,14 @@
 // Ya está puesto el ID de tu planilla — no lo toques
 var SHEET_ID = '1sufFbmZQzjG8i8FP-XybYReqeQgsHFjhSV2KEMaNTnA';
 
-// Planilla de Productos (la que tiene tabs por categoría)
-var PRODUCTOS_SHEET_ID = '1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw';
-
-// Planilla de Pedidos externos
-var PEDIDOS_SHEET_ID = '1TrrCEZvlQUcNTvPkBv9Ot57I5vebbySwWG2kagq42E0';
+// Productos y Pedidos externos están en pestañas de la misma planilla CRM
+var PRODUCTOS_SHEET_ID = SHEET_ID;
+var PEDIDOS_SHEET_ID   = SHEET_ID;
 
 // Tabs de categorías en el Sheet de Productos (en orden)
 var CAT_TABS = ['Juguetes','Belleza','Piletas ','Inflables','Bazar, baño y cocina',
                 'Muebles para el hogar','Camping','Playa','Mascotas',
                 'Pilates y Yoga','Fitness y musculacion'];
-
-// Clave para proteger endpoints financieros (Estadísticas, Abandonos)
-// Solo el panel principal la conoce. Ponele cualquier texto largo y difícil de adivinar.
-// Si lo dejás vacío, cualquiera puede llamar esos endpoints.
-var ADMIN_KEY = '';   // ← PEGAR UNA CLAVE SECRETA AQUÍ (ej: 'vsb-admin-2024-xk9m')
 
 // Para fotos de productos (GitHub repo de la tienda)
 // Creá un token en: github.com/settings/tokens → Fine-grained → Contents: Read and write
@@ -106,15 +99,6 @@ function manejar(e) {
     else if (accion === 'productos_list')  out = { ok:true, rows: productosListar() };
     else if (accion === 'productos_save')  out = { ok:true, saved: productosGuardar(p) };
     else if (accion === 'productos_add')   out = { ok:true, id: productosAgregar(p) };
-    else if (accion === 'evento_add')      out = { ok:true, saved: eventoAgregar(p) };
-    else if (accion === 'eventos_stats') {
-      if (ADMIN_KEY && p.admin_key !== ADMIN_KEY) throw 'Acceso denegado';
-      out = { ok:true, stats: eventosStats() };
-    }
-    else if (accion === 'abandonos_list') {
-      if (ADMIN_KEY && p.admin_key !== ADMIN_KEY) throw 'Acceso denegado';
-      out = { ok:true, rows: abandonosList() };
-    }
     else if (accion === 'fotos_list')      out = { ok:true, fotos: fotosListar(p) };
     else if (accion === 'foto_subir')      out = { ok:true, foto:    fotoSubir(p) };
     else if (accion === 'foto_borrar')     out = { ok:true, borrada: fotoBorrar(p) };
@@ -187,24 +171,6 @@ function hojaProductos() {
     sh.appendRow(PRODUCTOS_COLS);
     sh.getRange(1,1,1,PRODUCTOS_COLS.length).setFontWeight('bold');
     sh.setFrozenRows(1);
-  }
-  return sh;
-}
-
-// Devuelve la pestaña Eventos (misma planilla)
-var EVENTOS_COLS = ['Fecha','Tipo','Item','Sesión','Fuente','Contacto','Monto',
-  'País','Región','Ciudad','Dispositivo','SO','Navegador','Idioma','Pantalla'];
-
-function hojaEventos() {
-  var spreadsheet = ss();
-  var sh = spreadsheet.getSheetByName('Eventos');
-  if (!sh) {
-    sh = spreadsheet.insertSheet('Eventos');
-    sh.appendRow(EVENTOS_COLS);
-    sh.getRange(1,1,1,EVENTOS_COLS.length).setFontWeight('bold');
-    sh.setFrozenRows(1);
-  } else if (sh.getLastColumn() < EVENTOS_COLS.length) {
-    sh.getRange(1,1,1,EVENTOS_COLS.length).setValues([EVENTOS_COLS]).setFontWeight('bold');
   }
   return sh;
 }
@@ -454,136 +420,6 @@ function productosAgregar(p) {
   return true;
 }
 
-// ─── ESTADÍSTICAS (pestaña Eventos) ──────────────────────────
-
-function eventoAgregar(p) {
-  var tipo = String(p.tipo||'').trim();
-  if (!tipo) return false;
-  hojaEventos().appendRow([
-    new Date(),
-    tipo,
-    String(p.item||'').slice(0,500),
-    String(p.sesion||''),
-    String(p.fuente||''),
-    String(p.contacto||''),
-    parseInt(String(p.monto||'').replace(/[^\d]/g,''),10) || '',
-    String(p.pais||''),
-    String(p.region||''),
-    String(p.ciudad||''),
-    String(p.disp||''),
-    String(p.so||''),
-    String(p.nav||''),
-    String(p.idioma||''),
-    String(p.pantalla||'')
-  ]);
-  return true;
-}
-
-function _iniDia(d) { var x=new Date(d); x.setHours(0,0,0,0); return x; }
-function _iniSemana(d) { var x=_iniDia(d); var wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; }
-
-function eventosStats() {
-  var sh = hojaEventos();
-  var datos = sh.getDataRange().getValues();
-  var ahora = new Date();
-  var iniHoy = _iniDia(ahora);
-  var iniSem = _iniSemana(ahora);
-  var iniMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
-
-  var vis = { hoy:0, semana:0, mes:0, total:0 };
-  var fuentes={}, prod={}, cat={}, paises={}, regiones={}, ciudades={};
-  var dispositivos={}, sistemas={}, navegadores={}, idiomas={};
-  var carrito=0, abandonos=0, compras=0;
-
-  var suma = function(o,v) { v=String(v||'').trim(); if(v) o[v]=(o[v]||0)+1; };
-  var vVis={}, vProd={}, vCat={}, vCar={};
-  var ya = function(r,k) { if(r[k]) return true; r[k]=1; return false; };
-
-  // Últimos 14 días
-  var porDia = {};
-  for (var k=0; k<14; k++) {
-    var dd = _iniDia(ahora); dd.setDate(dd.getDate()-k);
-    porDia[Utilities.formatDate(dd,'GMT-3','yyyy-MM-dd')] = 0;
-  }
-
-  for (var i = 1; i < datos.length; i++) {
-    var f = datos[i][0];
-    if (!(f instanceof Date)) f = new Date(f);
-    if (isNaN(f)) continue;
-    var tipo = String(datos[i][1]||'').trim();
-    var item = String(datos[i][2]||'').trim();
-    var fuente = String(datos[i][4]||'').trim() || 'directo';
-    var ses = String(datos[i][3]||'').trim() || ('fila'+i);
-    var dia = Utilities.formatDate(f,'GMT-3','yyyy-MM-dd');
-
-    if (tipo === 'visita') {
-      if (ya(vVis, ses+'|'+dia)) continue;
-      vis.total++;
-      if (f >= iniHoy) vis.hoy++;
-      if (f >= iniSem) vis.semana++;
-      if (f >= iniMes) vis.mes++;
-      fuentes[fuente] = (fuentes[fuente]||0) + 1;
-      suma(paises,      datos[i][7]);
-      suma(regiones,    datos[i][8]);
-      suma(ciudades,    datos[i][9]);
-      suma(dispositivos,datos[i][10]);
-      suma(sistemas,    datos[i][11]);
-      suma(navegadores, datos[i][12]);
-      suma(idiomas,     datos[i][13]);
-      if (porDia[dia] !== undefined) porDia[dia]++;
-
-    } else if (tipo === 'producto' && item) {
-      if (!ya(vProd, ses+'|'+item+'|'+dia)) prod[item] = (prod[item]||0)+1;
-    } else if (tipo === 'categoria' && item) {
-      if (!ya(vCat, ses+'|'+item+'|'+dia)) cat[item] = (cat[item]||0)+1;
-    } else if (tipo === 'carrito') {
-      if (!ya(vCar, ses+'|'+dia)) carrito++;
-    } else if (tipo === 'abandono') {
-      abandonos++;
-    } else if (tipo === 'compra') {
-      compras++;
-    }
-  }
-
-  var top = function(o, n) {
-    return Object.keys(o).map(function(k){ return { nombre:k, n:o[k] }; })
-      .sort(function(a,b){ return b.n-a.n; }).slice(0, n||10);
-  };
-
-  return {
-    visitas:      vis,
-    porDia:       Object.keys(porDia).sort().map(function(k){ return { d:k, n:porDia[k] }; }),
-    fuentes:      top(fuentes,8),
-    topProductos: top(prod,10),
-    topCategorias:top(cat,12),
-    paises:       top(paises,15),
-    regiones:     top(regiones,15),
-    ciudades:     top(ciudades,20),
-    dispositivos: top(dispositivos,5),
-    sistemas:     top(sistemas,8),
-    navegadores:  top(navegadores,8),
-    idiomas:      top(idiomas,10),
-    carrito, abandonos, compras
-  };
-}
-
-function abandonosList() {
-  var sh = hojaEventos();
-  var datos = sh.getDataRange().getValues();
-  var out = [];
-  for (var i = 1; i < datos.length; i++) {
-    if (String(datos[i][1]||'').trim() !== 'abandono') continue;
-    var f = datos[i][0];
-    out.push({
-      fecha:    (f instanceof Date) ? Utilities.formatDate(f,'GMT-3','yyyy-MM-dd HH:mm') : String(f),
-      item:     String(datos[i][2]||''),
-      contacto: String(datos[i][5]||''),
-      monto:    datos[i][6]
-    });
-  }
-  return out.reverse().slice(0,100);
-}
-
 // ─── FOTOS DE PRODUCTOS (GitHub repo) ────────────────────────
 
 function ghApi(method, path, payload) {
@@ -784,7 +620,7 @@ function _headerIdx(headers) {
 
 function extProductosListar(p) {
   var filtCat = String(p.categoria||'').trim();
-  var ssP = SpreadsheetApp.openById(PRODUCTOS_SHEET_ID);
+  var ssP = ss();
   var result = [];
 
   CAT_TABS.forEach(function(tabName) {
@@ -853,8 +689,7 @@ function extProductoActualizar(p) {
   if (!sheetName || !row || !campo)
     return { ok:false, error:'Faltan parámetros (sheet, row, campo)' };
 
-  var ssP = SpreadsheetApp.openById(PRODUCTOS_SHEET_ID);
-  var sh  = ssP.getSheetByName(sheetName);
+  var sh  = ss().getSheetByName(sheetName);
   if (!sh) return { ok:false, error:'Hoja no encontrada: ' + sheetName };
 
   var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
@@ -876,10 +711,9 @@ function extProductoActualizar(p) {
 
 function extPedidosListar(p) {
   try {
-    var ssO  = SpreadsheetApp.openById(PEDIDOS_SHEET_ID);
-    var tabs = ssO.getSheets();
-    if (!tabs.length) return [];
-    var sh   = ssO.getSheetByName('Pedidos') || ssO.getSheetByName('pedidos') || tabs[0];
+    var ssO  = ss();
+    var sh   = ssO.getSheetByName('Pedidos externos') || ssO.getSheetByName('Pedidos Externos');
+    if (!sh) return [];
     var data = sh.getDataRange().getValues();
     if (data.length < 2) return [];
 

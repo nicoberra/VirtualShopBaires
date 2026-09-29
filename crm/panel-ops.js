@@ -16,7 +16,7 @@ function crm(params) {
     const qs = new URLSearchParams({ ...params, callback: cb, _: Date.now() });
     const s  = document.createElement('script');
     const ok = () => { delete window[cb]; s.remove(); };
-    const to = setTimeout(() => { ok(); reject(new Error('timeout')); }, 20000);
+    const to = setTimeout(() => { ok(); reject(new Error('timeout')); }, 45000);
     window[cb] = (data) => { clearTimeout(to); ok(); resolve(data); };
     s.onerror  = () => { clearTimeout(to); ok(); reject(new Error('red')); };
     s.src = CRM_URL + '?' + qs.toString();
@@ -86,9 +86,21 @@ function doLogin() {
     hide('login-wrap');
     show('app', 'flex');
     goTo('clientes');
+    prefetchAll();
   } else {
     $('login-err').textContent = 'Contraseña incorrecta.';
   }
+}
+
+function prefetchAll() {
+  getData('list', 'Clientes').catch(() => {});
+  crm({ action: 'ext_pedidos_listar' }).then(raw => {
+    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+  }).catch(() => {});
+  crm({ action: 'ext_productos_list' }).then(r => {
+    _productos = r.rows || [];
+    _cache['ext_productos_list'] = _productos;
+  }).catch(() => {});
 }
 
 function logout() {
@@ -154,6 +166,7 @@ function comprasDeCliente(cli) {
 }
 
 async function loadClientes(force=false) {
+  if (!force && _clientes.length) { filtrarClientes(); return; }
   $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     [_clientes, _pedidos_para_clientes] = await Promise.all([
@@ -162,7 +175,10 @@ async function loadClientes(force=false) {
     ]);
     filtrarClientes();
   } catch(e) {
-    $('cli-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
+    $('cli-table').innerHTML = `<div style="padding:20px;text-align:center">
+      <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
+      <button class="btn-secondary" onclick="loadClientes(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
+    </div>`;
   }
 }
 
@@ -254,6 +270,7 @@ function borrarCliente(id, nombre) {
 let _productos = [], _prodCatFil = 'Todos';
 
 async function loadProductos(force=false) {
+  if (!force && _productos.length) { buildProdCats(); filtrarProductos(); return; }
   $('prod-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos…</div>';
   try {
     const key = 'ext_productos_list';
@@ -264,7 +281,10 @@ async function loadProductos(force=false) {
     buildProdCats();
     filtrarProductos();
   } catch(e) {
-    $('prod-table').innerHTML = `<p class="text-muted" style="padding:20px">Error al cargar: ${e.message}</p>`;
+    $('prod-table').innerHTML = `<div style="padding:20px;text-align:center">
+      <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
+      <button class="btn-secondary" onclick="loadProductos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
+    </div>`;
   }
 }
 
@@ -343,7 +363,10 @@ function renderProductos(list) {
       <td class="td-editable td-desc"><span class="text-muted">${fmtPrecioSheet(p.descuento)}</span><i class="fa-solid fa-pen edit-hint"></i></td>
       <td class="td-center td-toggle td-stock">${p.stock ? '<span class="badge badge-conf">✓</span>' : '<span class="badge badge-cancel">✗</span>'}</td>
       <td class="td-center td-toggle td-dest">${p.destacado ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
-      <td><button class="btn-icon" title="Ver producto"><i class="fa-solid fa-image"></i></button></td>`;
+      <td style="white-space:nowrap">
+        <a class="btn-icon" href="https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria||'')}&buscar=${encodeURIComponent(p.nombre||'')}" target="_blank" rel="noopener" title="Ver en tienda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+        <button class="btn-icon" title="Ver fotos"><i class="fa-solid fa-image"></i></button>
+      </td>`;
 
     let pVal = precioN, dVal = descN, sVal = !!p.stock, hVal = !!p.destacado;
 
@@ -518,13 +541,17 @@ async function guardarProducto() {
 let _pedidos = [];
 
 async function loadPedidos(force=false) {
+  if (!force && _pedidos.length) { filtrarPedidos(); return; }
   $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     const raw = await crm({ action: 'ext_pedidos_listar' });
     _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
     filtrarPedidos();
   } catch(e) {
-    $('ped-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
+    $('ped-table').innerHTML = `<div style="padding:20px;text-align:center">
+      <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
+      <button class="btn-secondary" onclick="loadPedidos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
+    </div>`;
   }
 }
 

@@ -121,7 +121,6 @@ function loadSection(sec) {
     clientes:     loadClientes,
     productos:    loadProductos,
     pedidos:      loadPedidos,
-    'ped-ext':    loadPedExt,
     comprobantes: loadComprobantes,
   };
   if (loaders[sec]) loaders[sec]();
@@ -704,7 +703,8 @@ let _pedidos = [];
 async function loadPedidos(force=false) {
   $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
-    _pedidos = await getData('list','Pedidos',force);
+    const raw = await crm({ action: 'ext_pedidos_listar' });
+    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
     filtrarPedidos();
   } catch(e) {
     $('ped-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
@@ -715,11 +715,11 @@ function filtrarPedidos() {
   const q   = val('ped-search').toLowerCase();
   const est = val('ped-estado-fil');
   let list = _pedidos;
-  if (est) list = list.filter(p => p.estado === est);
+  if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
-    String(p.cliente||'').toLowerCase().includes(q) ||
-    String(p.detalle||'').toLowerCase().includes(q) ||
-    String(p.telefono||'').includes(q));
+    (p.nombre||p.cliente||'').toLowerCase().includes(q) ||
+    (p.producto||p.detalle||'').toLowerCase().includes(q) ||
+    (p.telefono||'').includes(q));
   renderPedidos(list);
 }
 
@@ -728,23 +728,21 @@ function renderPedidos(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-bag-shopping"></i>Sin pedidos</div>'; return; }
   el.innerHTML = `
     <table>
-      <thead><tr><th>Fecha</th><th>Cliente</th><th>Detalle</th><th>Monto</th><th>Estado</th><th>Comprobante</th><th></th></tr></thead>
+      <thead><tr>
+        <th>Fecha</th><th>Cliente</th><th>Producto</th>
+        <th>Talle</th><th>Color</th><th>Total</th><th>Pago</th><th>Estado</th>
+      </tr></thead>
       <tbody>
-        ${[...list].reverse().map(p => `
+        ${list.map(p => `
           <tr>
-            <td style="white-space:nowrap">${fmtFecha(p.fecha)}</td>
-            <td><strong>${p.cliente||'—'}</strong><div style="font-size:0.78rem;color:var(--text2)">${p.telefono||''}</div></td>
-            <td style="max-width:200px;font-size:0.82rem">${p.detalle||'—'}</td>
-            <td><strong>${fmtMoney(p.monto)}</strong></td>
-            <td>${badgeEstado(p.estado)}</td>
-            <td>${p.comprobante
-              ? `<a href="${p.comprobante}" target="_blank" rel="noopener" class="badge badge-conf" style="text-decoration:none;cursor:pointer"><i class="fa-solid fa-eye" style="margin-right:4px"></i>Ver</a>`
-              : '<span style="color:var(--text2);font-size:0.78rem">—</span>'
-            }</td>
-            <td class="td-actions">
-              <button class="btn-icon" onclick="editarPedido(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn-icon" onclick="borrarPedido('${p.id}')" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
-            </td>
+            <td style="white-space:nowrap">${fmtFecha(p.fecha||p.timestamp||'')}</td>
+            <td><strong>${p.nombre||p.cliente||'—'}</strong><div style="font-size:0.78rem;color:var(--text2)">${p.telefono||''}</div></td>
+            <td style="max-width:180px;font-size:0.82rem">${p.producto||p.detalle||'—'}</td>
+            <td>${p.talle||'—'}</td>
+            <td>${p.color||'—'}</td>
+            <td><strong>${p.total ? '$'+Number(p.total).toLocaleString('es-AR') : '—'}</strong></td>
+            <td>${p.metodo||p.pago||'—'}</td>
+            <td>${badgeEstado(p.estado||'Pendiente')}</td>
           </tr>`).join('')}
       </tbody>
     </table>`;
@@ -833,58 +831,6 @@ function borrarPedido(id) {
 }
 
 // ─── SUSCRIPTORES ────────────────────────────────────────────
-
-let _pedExtAll = [];
-
-async function loadPedExt(force=false) {
-  $('pext-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
-  try {
-    const list = await crm({ action: 'ext_pedidos_listar' });
-    _pedExtAll = Array.isArray(list) ? [...list].reverse() : [];
-    renderPedExt(_pedExtAll);
-  } catch(e) {
-    $('pext-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
-  }
-}
-
-function renderPedExt(list) {
-  const el = $('pext-table');
-  if (!list.length) {
-    el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-truck"></i>Sin pedidos externos</div>';
-    return;
-  }
-  el.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>Fecha</th><th>Cliente</th><th>Tel</th>
-        <th>Producto</th><th>Talle</th><th>Color</th>
-        <th>Total</th><th>Pago</th><th>Estado</th>
-      </tr></thead>
-      <tbody>
-        ${list.map(p => `
-          <tr>
-            <td>${fmtFecha(p.fecha||p.timestamp||'')}</td>
-            <td>${p.nombre||p.cliente||'—'}</td>
-            <td>${p.telefono||'—'}</td>
-            <td>${p.producto||p.detalle||'—'}</td>
-            <td>${p.talle||'—'}</td>
-            <td>${p.color||'—'}</td>
-            <td>${p.total ? '$'+Number(p.total).toLocaleString('es-AR') : '—'}</td>
-            <td>${p.metodo||p.pago||'—'}</td>
-            <td>${badgeEstado(p.estado||'Pendiente')}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
-}
-
-function filtrarPedExt() {
-  const q = ($('pext-search').value||'').toLowerCase();
-  renderPedExt(q ? _pedExtAll.filter(p =>
-    (p.nombre||p.cliente||'').toLowerCase().includes(q) ||
-    (p.producto||p.detalle||'').toLowerCase().includes(q) ||
-    (p.telefono||'').includes(q)
-  ) : _pedExtAll);
-}
 
 // ─── COMPROBANTES ────────────────────────────────────────────
 

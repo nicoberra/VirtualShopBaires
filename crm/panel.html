@@ -34,7 +34,7 @@
       <a class="nav-link" data-sec="clientes"      onclick="goTo('clientes')">     <i class="fa-solid fa-users"></i>         Clientes</a>
       <a class="nav-link" data-sec="productos"     onclick="goTo('productos')">    <i class="fa-solid fa-box"></i>           Productos</a>
       <a class="nav-link" data-sec="pedidos"       onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i>  Pedidos</a>
-      <a class="nav-link" data-sec="suscriptores"  onclick="goTo('suscriptores')"> <i class="fa-solid fa-envelope"></i>      Suscriptores</a>
+      <a class="nav-link" data-sec="ped-ext"       onclick="goTo('ped-ext')">      <i class="fa-solid fa-truck"></i>         Ped. Externos</a>
       <a class="nav-link" data-sec="comprobantes"  onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i>    Comprobantes</a>
     </div>
     <div class="sidebar-footer">
@@ -51,7 +51,7 @@
       <button class="mnav-btn" data-sec="clientes"     onclick="goTo('clientes')">     <i class="fa-solid fa-users"></i><span class="mnav-label">Clientes</span></button>
       <button class="mnav-btn" data-sec="productos"    onclick="goTo('productos')">    <i class="fa-solid fa-box"></i><span class="mnav-label">Productos</span></button>
       <button class="mnav-btn" data-sec="pedidos"      onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i><span class="mnav-label">Pedidos</span></button>
-      <button class="mnav-btn" data-sec="suscriptores" onclick="goTo('suscriptores')"> <i class="fa-solid fa-envelope"></i><span class="mnav-label">Suscript.</span></button>
+      <button class="mnav-btn" data-sec="ped-ext"      onclick="goTo('ped-ext')">      <i class="fa-solid fa-truck"></i><span class="mnav-label">Externos</span></button>
       <button class="mnav-btn" data-sec="comprobantes" onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i><span class="mnav-label">Comprob.</span></button>
     </div>
   </div>
@@ -130,10 +130,14 @@
       <div class="card table-wrap"><div id="ped-table"></div></div>
     </section>
 
-    <!-- SUSCRIPTORES -->
-    <section id="sec-suscriptores" class="sec">
-      <h1 class="sec-title">Suscriptores</h1>
-      <div class="card table-wrap"><div id="sus-table"></div></div>
+    <!-- PEDIDOS EXTERNOS -->
+    <section id="sec-ped-ext" class="sec">
+      <h1 class="sec-title">Pedidos externos</h1>
+      <p class="text-muted" style="margin-bottom:12px">Pedidos recibidos desde la tienda web.</p>
+      <div class="toolbar">
+        <input type="search" id="pext-search" placeholder="Buscar cliente, producto…" oninput="filtrarPedExt()">
+      </div>
+      <div class="card table-wrap"><div id="pext-table"></div></div>
     </section>
 
     <!-- COMPROBANTES -->

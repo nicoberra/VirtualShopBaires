@@ -37,6 +37,13 @@ var MP_ACCESS_TOKEN = '';     // ← APP_USR-... de PRODUCCIÓN
 // Avisos por Telegram cuando entra un pedido (opcional)
 var TG_TOKEN = '';
 var TG_CHAT  = '';
+
+// Datos bancarios para transferencia (se muestran en el checkout)
+var BANK_ALIAS   = '';   // ← Ej: 'VIRTUALSHOPBAIRES'
+var BANK_CBU     = '';   // ← Tu CBU de 22 dígitos
+var BANK_TITULAR = '';   // ← Nombre del titular de la cuenta
+var BANK_BANCO   = '';   // ← Nombre del banco (ej: 'Banco Galicia')
+var BANK_CUIT    = '';   // ← CUIT del titular
 // ─────────────────────────────────────────────────────────────
 
 // Estructura de cada pestaña: k = clave API, h = título en la hoja
@@ -82,6 +89,15 @@ function doPost(e) { return manejar(e); }
 
 function manejar(e) {
   var p = (e && e.parameter) ? e.parameter : {};
+
+  // Handle raw JSON POST body (checkout sends body: JSON.stringify(payload))
+  if (!p.action && e && e.postData && e.postData.contents) {
+    try {
+      var bd = JSON.parse(e.postData.contents);
+      if (bd && bd.action) p = bd;
+    } catch(ex) {}
+  }
+
   var out;
   try {
     var accion = p.action || 'list';
@@ -108,6 +124,9 @@ function manejar(e) {
     else if (accion === 'ext_productos_list')   out = { ok:true, rows: extProductosListar(p) };
     else if (accion === 'ext_producto_update')  out = extProductoActualizar(p);
     else if (accion === 'ext_pedidos_list')     out = { ok:true, rows: extPedidosListar(p) };
+    else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
+    else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
+    else if (accion === 'createOrder')          out = crearPedido(p);
     else if (accion === 'version')              out = { ok:true, version: 'v2' };
     else throw 'Acción desconocida: ' + accion;
 
@@ -729,10 +748,93 @@ function extPedidosListar(p) {
       });
       result.push(obj);
     }
-    return result.reverse().slice(0, 300);
+    return result.slice(0, 300);
   } catch(ex) {
     return [];
   }
+}
+
+function crearPedido(p) {
+  try {
+    var COLS = ['timestamp','orderNumber','nombre','apellido','email','telefono','dni',
+                'metodoEntrega','metodoPago','provincia','localidad','calle','numeroCalle',
+                'piso','cp','productos','subtotal','descuento','total','observaciones','estado'];
+
+    var ssO = ss();
+    var sh  = ssO.getSheetByName('Pedidos externos') || ssO.getSheetByName('Pedidos Externos');
+    if (!sh) {
+      sh = ssO.insertSheet('Pedidos externos');
+      sh.appendRow(COLS);
+      sh.getRange(1, 1, 1, COLS.length).setFontWeight('bold');
+      sh.setFrozenRows(1);
+    }
+
+    var orderNum = 'VSB-' + new Date().getTime();
+    var now = Utilities.formatDate(new Date(), 'GMT-3', 'yyyy-MM-dd HH:mm');
+
+    var productosStr = '';
+    try {
+      var prods = (typeof p.productos === 'string') ? JSON.parse(p.productos) : p.productos;
+      if (Array.isArray(prods)) {
+        productosStr = prods.map(function(i) {
+          return i.qty + 'x ' + i.nombre +
+            (i.color ? ' · ' + i.color : '') +
+            (i.talle ? ' / ' + i.talle : '');
+        }).join(', ');
+      }
+    } catch(ex) {}
+
+    var row = COLS.map(function(col) {
+      if (col === 'timestamp')   return now;
+      if (col === 'orderNumber') return orderNum;
+      if (col === 'estado')      return 'Pendiente';
+      if (col === 'productos')   return productosStr;
+      return (p[col] !== undefined && p[col] !== null) ? p[col] : '';
+    });
+
+    sh.appendRow(row);
+
+    avisarTelegram('🛒 Nuevo pedido: ' + orderNum +
+      '\n' + (p.nombre||'') + ' ' + (p.apellido||'') +
+      '\n' + (p.email||'') + ' · ' + (p.telefono||'') +
+      '\nTotal: $' + (p.total||0) + ' · ' + (p.metodoPago||'') + ' · ' + (p.metodoEntrega||''));
+
+    return {
+      ok:          true,
+      orderNumber: orderNum,
+      total:       p.total || 0,
+      bankData: {
+        alias:   BANK_ALIAS,
+        cbu:     BANK_CBU,
+        titular: BANK_TITULAR,
+        banco:   BANK_BANCO,
+        cuit:    BANK_CUIT
+      }
+    };
+  } catch(err) {
+    return { ok:false, error: String(err) };
+  }
+}
+
+function extPedidoActualizar(p) {
+  var row   = parseInt(p.row, 10);
+  var campo = String(p.campo||'').trim().toLowerCase();
+  var valor = p.valor;
+
+  if (!row || !campo) return { ok:false, error:'Faltan parámetros (row, campo)' };
+
+  var sh = ss().getSheetByName('Pedidos externos') || ss().getSheetByName('Pedidos Externos');
+  if (!sh) return { ok:false, error:'Hoja no encontrada' };
+
+  var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  var colIdx  = -1;
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i]||'').trim().toLowerCase() === campo) { colIdx = i + 1; break; }
+  }
+  if (colIdx < 0) return { ok:false, error:'Campo no encontrado: ' + campo };
+
+  sh.getRange(row, colIdx).setValue(valor);
+  return { ok:true };
 }
 
 // ─── COMPROBANTES DE PAGO (Google Drive) ─────────────────────

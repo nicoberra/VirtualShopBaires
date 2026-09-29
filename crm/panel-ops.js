@@ -562,34 +562,120 @@ function filtrarPedidos() {
   if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
     (p.nombre||p.cliente||'').toLowerCase().includes(q) ||
-    (p.producto||p.detalle||'').toLowerCase().includes(q) ||
-    (p.telefono||'').includes(q));
+    (p.apellido||'').toLowerCase().includes(q) ||
+    (p.email||'').toLowerCase().includes(q) ||
+    (p.productos||p.producto||p.detalle||'').toLowerCase().includes(q) ||
+    (p.orderNumber||'').toLowerCase().includes(q) ||
+    (p.telefono||'').includes(q) ||
+    (p.dni||'').includes(q));
   renderPedidos(list);
 }
 
 function renderPedidos(list) {
   const el = $('ped-table');
   if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-bag-shopping"></i>Sin pedidos</div>'; return; }
-  el.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>Fecha</th><th>Cliente</th><th>Producto</th>
-        <th>Talle</th><th>Color</th><th>Total</th><th>Pago</th><th>Estado</th>
-      </tr></thead>
-      <tbody>
-        ${list.map(p => `
-          <tr>
-            <td style="white-space:nowrap">${fmtFecha(p.fecha||p.timestamp||'')}</td>
-            <td><strong>${p.nombre||p.cliente||'—'}</strong><div style="font-size:0.78rem;color:var(--text2)">${p.telefono||''}</div></td>
-            <td style="max-width:180px;font-size:0.82rem">${p.producto||p.detalle||'—'}</td>
-            <td>${p.talle||'—'}</td>
-            <td>${p.color||'—'}</td>
-            <td><strong>${p.total ? '$'+Number(p.total).toLocaleString('es-AR') : '—'}</strong></td>
-            <td>${p.metodo||p.pago||'—'}</td>
-            <td>${badgeEstado(p.estado||'Pendiente')}</td>
-          </tr>`).join('')}
-      </tbody>
-    </table>`;
+
+  const t = document.createElement('table');
+  const thead = t.createTHead();
+  const hr = thead.insertRow();
+  ['Fecha','Pedido','Cliente','Email','Total','Pago','Entrega','Estado',''].forEach(h => {
+    const th = document.createElement('th'); th.textContent = h; hr.appendChild(th);
+  });
+  const tbody = t.createTBody();
+
+  list.forEach(p => {
+    const nombre   = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
+    const telefono = p.telefono || '';
+    const email    = p.email || '';
+    const orderNum = p.orderNumber || p.id || '';
+    const total    = p.total  ? '$' + Number(p.total).toLocaleString('es-AR')
+                   : p.monto  ? '$' + Number(p.monto).toLocaleString('es-AR') : '—';
+    const pago     = p.metodoPago || p.metodo || p.pago || '—';
+    const entrega  = p.metodoEntrega || '—';
+    const estado   = p.estado || 'Pendiente';
+
+    const tr = tbody.insertRow();
+    tr.className = 'ped-row-main';
+
+    const tdFecha = tr.insertCell(); tdFecha.style.whiteSpace = 'nowrap';
+    tdFecha.textContent = fmtFecha(p.timestamp || p.fecha || '');
+
+    const tdNum = tr.insertCell();
+    tdNum.style.cssText = 'font-size:0.72rem;color:var(--text2);white-space:nowrap';
+    tdNum.textContent = orderNum;
+
+    const tdCli = tr.insertCell();
+    tdCli.innerHTML = `<strong>${nombre}</strong>${telefono ? `<div style="font-size:0.78rem;color:var(--text2)">${telefono}</div>` : ''}`;
+
+    const tdEmail = tr.insertCell(); tdEmail.style.fontSize = '0.82rem';
+    tdEmail.textContent = email;
+
+    const tdTotal = tr.insertCell();
+    tdTotal.innerHTML = `<strong>${total}</strong>`;
+
+    const tdPago = tr.insertCell(); tdPago.style.fontSize = '0.82rem';
+    tdPago.textContent = pago;
+
+    const tdEntrega = tr.insertCell(); tdEntrega.style.fontSize = '0.82rem';
+    tdEntrega.textContent = entrega;
+
+    const tdEstado = tr.insertCell();
+    tdEstado.innerHTML = badgeEstado(estado);
+
+    const tdChev = tr.insertCell();
+    tdChev.innerHTML = '<i class="fa-solid fa-chevron-down ped-chevron"></i>';
+
+    const dr = tbody.insertRow();
+    dr.style.display = 'none';
+    const dc = dr.insertCell();
+    dc.colSpan = 9;
+
+    let dir = '';
+    if (p.calle) {
+      dir = p.calle + (p.numeroCalle ? ' ' + p.numeroCalle : '');
+      if (p.piso)      dir += ', piso ' + p.piso;
+      if (p.localidad) dir += ' · ' + p.localidad;
+      if (p.provincia) dir += ', ' + p.provincia;
+      if (p.cp)        dir += ' (CP ' + p.cp + ')';
+    }
+
+    dc.innerHTML = `<div class="ped-detail-box">
+      ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${p.dni}</div>` : ''}
+      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${dir}</div>` : ''}
+      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${p.productos}</div>` : ''}
+      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${p.observaciones}</div>` : ''}
+      ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
+      <div style="margin-top:4px;flex-basis:100%">
+        <span class="ped-label">Estado:</span>
+        <select class="sel sel-sm" onchange="cambiarEstadoPedido(this,${p._row||0})">
+          ${['Pendiente','Confirmado','En camino','Entregado','Cancelado'].map(e =>
+            `<option${e===estado?' selected':''}>${e}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+
+    tr.addEventListener('click', () => {
+      const open = dr.style.display !== 'none';
+      dr.style.display = open ? 'none' : 'table-row';
+      const ch = tdChev.querySelector('.ped-chevron');
+      if (ch) ch.style.transform = open ? '' : 'rotate(180deg)';
+    });
+  });
+
+  el.innerHTML = '';
+  el.appendChild(t);
+}
+
+async function cambiarEstadoPedido(sel, row) {
+  const estado = sel.value;
+  try {
+    await crm({ action: 'ext_pedido_update', row, campo: 'estado', valor: estado });
+    const p = _pedidos.find(x => String(x._row) === String(row));
+    if (p) p.estado = estado;
+    toast('Estado actualizado');
+  } catch(e) {
+    toast('Error al actualizar', 'err');
+  }
 }
 
 function abrirModalPedido() {

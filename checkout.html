@@ -701,8 +701,8 @@ async function submitOrder() {
   showLoading("Procesando tu pedido...");
 
   try {
-    // Sin Content-Type para evitar preflight CORS con Apps Script
-    const res = await fetch(APPS_SCRIPT_URL, {
+    // Enviamos al CRM (Google Apps Script)
+    const res = await fetch(CRM_URL, {
       method: "POST",
       body: JSON.stringify(payload),
       redirect: "follow",

@@ -354,6 +354,23 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 .form-label-sm { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; }
 .readonly-field { background: var(--bg3); color: var(--text2); cursor: default; }
 
+/* ─── PEDIDOS EXPANDIBLES ────────────────────────────────── */
+.ped-row-main { cursor: pointer; }
+.ped-row-main:hover { background: var(--bg3); }
+.ped-chevron { color: var(--text2); font-size: 0.72rem; transition: transform 0.2s; display: inline-block; }
+.ped-detail-row > td { padding: 0 12px 12px; background: var(--bg2); }
+.ped-detail-box {
+  display: flex; flex-wrap: wrap; gap: 6px 24px;
+  padding: 12px 16px; background: var(--bg3);
+  border-radius: 8px; font-size: 0.82rem; line-height: 1.6;
+}
+.ped-detail-box > div { flex: 0 0 auto; max-width: 100%; }
+.ped-label { color: var(--text2); font-weight: 500; margin-right: 4px; }
+.sel-sm {
+  padding: 2px 8px; font-size: 0.78rem; border-radius: 4px;
+  border: 1px solid var(--border); background: var(--bg2); color: var(--text);
+}
+
 /* ─── FOTOS ──────────────────────────────────────────────── */
 .fotos-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .foto-item {

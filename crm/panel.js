@@ -6,7 +6,6 @@
 // ─── CONFIG — CAMBIÁ ESTOS DOS VALORES ───────────────────────
 const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwmPAvB8_p0muyXl3Q-qt0XWaE_mk76HTImcPt3vdFzVpO8vwQUjOoDCpu_BZWlezyh/exec';
 const PANEL_PASS = '2208';
-const ADMIN_KEY  = '';  // ← Copiar exactamente la misma clave que pusiste en Codigo.gs
 // ─────────────────────────────────────────────────────────────
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────
@@ -124,7 +123,6 @@ function loadSection(sec) {
     pedidos:      loadPedidos,
     suscriptores: loadSuscriptores,
     comprobantes: loadComprobantes,
-    estadisticas: loadEstadisticas,
   };
   if (loaders[sec]) loaders[sec]();
 }
@@ -153,10 +151,9 @@ async function loadPanel() {
   cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
 
   try {
-    const [clientes, pedidos, stats] = await Promise.all([
+    const [clientes, pedidos] = await Promise.all([
       getData('list', 'Clientes'),
       getData('list', 'Pedidos'),
-      crm({ action: 'eventos_stats', admin_key: ADMIN_KEY })
     ]);
     const mes = new Date(); mes.setDate(1); mes.setHours(0,0,0,0);
     const factMes = pedidos.filter(p => new Date(String(p.fecha).replace(' ','T')) >= mes)
@@ -176,11 +173,6 @@ async function loadPanel() {
       <div class="stat-card">
         <div class="stat-label">Facturación del mes</div>
         <div class="stat-val">${fmtMoney(factMes)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Visitas hoy</div>
-        <div class="stat-val">${(stats.visitas && stats.visitas.hoy) || 0}</div>
-        <div class="stat-sub">${(stats.visitas && stats.visitas.mes) || 0} este mes</div>
       </div>
     `;
 
@@ -857,161 +849,6 @@ async function loadComprobantes(force=false) {
   } catch(e) {
     $('comp-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
   }
-}
-
-// ─── ESTADÍSTICAS ────────────────────────────────────────────
-
-async function loadEstadisticas() {
-  $('stats-content').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando estadísticas…</div>';
-  try {
-    const [statsRes, abandonos] = await Promise.all([
-      crm({ action:'eventos_stats', admin_key: ADMIN_KEY }),
-      crm({ action:'abandonos_list', admin_key: ADMIN_KEY })
-    ]);
-    const s = statsRes.stats || statsRes;
-    const ab = abandonos.rows || [];
-    renderStats(s, ab);
-  } catch(e) {
-    $('stats-content').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
-  }
-}
-
-function barChart(datos) {
-  if (!datos || !datos.length) return '<p class="text-muted">Sin datos</p>';
-  const max = Math.max(...datos.map(d=>d.n), 1);
-  return `<div class="bar-chart">
-    ${datos.map(d => {
-      const h = Math.round((d.n / max) * 68);
-      const lbl = d.d ? d.d.slice(5) : (d.nombre||'');
-      return `<div class="bar-item"><div class="bar-fill" style="height:${h}px"></div><div class="bar-label">${lbl}</div></div>`;
-    }).join('')}
-  </div>`;
-}
-
-function topList(items, labelKey='nombre', countKey='n') {
-  if (!items || !items.length) return '<p class="text-muted">Sin datos</p>';
-  return `<ul class="top-list">
-    ${items.slice(0,10).map((it,i) => `
-      <li>
-        <span><span class="top-rank">${i+1}.</span> ${it[labelKey]||'—'}</span>
-        <span class="top-n">${it[countKey]}</span>
-      </li>`).join('')}
-  </ul>`;
-}
-
-function renderStats(s, abandonos) {
-  const v = s.visitas||{};
-  const el = $('stats-content');
-  el.innerHTML = `
-    <!-- Visitas -->
-    <div class="stats-row" style="margin-bottom:20px">
-      <div class="stat-card"><div class="stat-label">Hoy</div><div class="stat-val">${v.hoy||0}</div></div>
-      <div class="stat-card"><div class="stat-label">Esta semana</div><div class="stat-val">${v.semana||0}</div></div>
-      <div class="stat-card"><div class="stat-label">Este mes</div><div class="stat-val">${v.mes||0}</div></div>
-      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${v.total||0}</div></div>
-    </div>
-
-    <!-- Gráfico 14 días -->
-    <div class="card" style="margin-bottom:14px">
-      <h3 class="card-title"><i class="fa-solid fa-chart-bar"></i> Visitas últimos 14 días</h3>
-      ${barChart(s.porDia||[])}
-    </div>
-
-    <!-- Embudo -->
-    <div class="stats-3col">
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Carritos</div>
-        <div class="stat-val text-yellow">${s.carrito||0}</div>
-      </div>
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Abandonos</div>
-        <div class="stat-val text-red">${s.abandonos||0}</div>
-      </div>
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Compras</div>
-        <div class="stat-val text-green">${s.compras||0}</div>
-      </div>
-    </div>
-
-    <!-- Top productos y categorías -->
-    <div class="stats-2col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-fire"></i> Productos más vistos</h3>
-        ${topList(s.topProductos)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-tags"></i> Categorías más vistas</h3>
-        ${topList(s.topCategorias)}
-      </div>
-    </div>
-
-    <!-- Fuentes y ubicaciones -->
-    <div class="stats-2col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-share-nodes"></i> Fuentes de tráfico</h3>
-        ${topList(s.fuentes)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-location-dot"></i> Ciudades</h3>
-        ${topList(s.ciudades)}
-      </div>
-    </div>
-
-    <div class="stats-3col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-globe"></i> Países</h3>
-        ${topList(s.paises)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-map"></i> Regiones</h3>
-        ${topList(s.regiones)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-language"></i> Idiomas</h3>
-        ${topList(s.idiomas)}
-      </div>
-    </div>
-
-    <!-- Dispositivos -->
-    <div class="stats-3col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-mobile"></i> Dispositivos</h3>
-        ${topList(s.dispositivos)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-desktop"></i> Sistemas operativos</h3>
-        ${topList(s.sistemas)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-browser"></i> Navegadores</h3>
-        ${topList(s.navegadores)}
-      </div>
-    </div>
-
-    <!-- Carritos abandonados -->
-    ${abandonos.length ? `
-    <div class="card">
-      <h3 class="card-title"><i class="fa-solid fa-cart-xmark"></i> Carritos abandonados (últimos 100)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Fecha</th><th>Ítem</th><th>Contacto</th><th>Monto aprox.</th></tr></thead>
-          <tbody>
-            ${abandonos.map(a=>`
-              <tr>
-                <td>${fmtFecha(a.fecha)}</td>
-                <td>${a.item||'—'}</td>
-                <td>${a.contacto||'—'}</td>
-                <td>${a.monto ? fmtMoney(a.monto) : '—'}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>` : ''}
-
-    <p class="text-muted" style="font-size:0.78rem;text-align:center;margin-top:8px">
-      ⓘ Edad y sexo no están disponibles en este sistema — requieren Google Analytics 4 + Google Signals.
-    </p>
-  `;
 }
 
 // ─── INIT ─────────────────────────────────────────────────────

@@ -354,33 +354,35 @@ function renderProductos(list) {
       descripcion: p.descripcion, subcategoria: p.subcategoria
     }));
 
+    let pVal = precioN, dVal = descN, sVal = Number(p.stock) || 0, hVal = !!p.destacado;
+
+    const renderStock = v => v > 0
+      ? `<strong>${v}</strong><i class="fa-solid fa-pen edit-hint"></i>`
+      : `<span class="badge badge-cancel">0</span><i class="fa-solid fa-pen edit-hint"></i>`;
+
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
+      <td class="td-nombre" style="cursor:pointer"><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
       ${hayColor ? `<td>${colorMarca ? `<span class="badge-color">${colorMarca}</span>` : '—'}</td>` : ''}
       ${hayTalle ? `<td>${p.talle||'—'}</td>` : ''}
       <td class="td-editable td-precio"><strong>${fmtPrecioSheet(p.precio)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
       <td class="td-editable td-desc"><span class="text-muted">${fmtPrecioSheet(p.descuento)}</span><i class="fa-solid fa-pen edit-hint"></i></td>
-      <td class="td-center td-toggle td-stock">${p.stock ? '<span class="badge badge-conf">✓</span>' : '<span class="badge badge-cancel">✗</span>'}</td>
-      <td class="td-center td-toggle td-dest">${p.destacado ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
+      <td class="td-editable td-stock">${renderStock(sVal)}</td>
+      <td class="td-center td-toggle td-dest">${hVal ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
       <td style="white-space:nowrap">
         <a class="btn-icon" href="https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria||'')}&buscar=${encodeURIComponent(p.nombre||'')}" target="_blank" rel="noopener" title="Ver en tienda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <button class="btn-icon" title="Ver fotos"><i class="fa-solid fa-image"></i></button>
+        <button class="btn-icon" title="Ver / editar completo"><i class="fa-solid fa-pen-to-square"></i></button>
       </td>`;
 
-    let pVal = precioN, dVal = descN, sVal = !!p.stock, hVal = !!p.destacado;
-
+    tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
     tr.querySelector('.td-precio').addEventListener('click', function() {
-      editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; });
+      editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; }, '$');
     });
     tr.querySelector('.td-desc').addEventListener('click', function() {
-      editarCeldaNum(this, p, 'descuento', dVal, v => { dVal = v; p.descuento = v; });
+      editarCeldaNum(this, p, 'descuento', dVal, v => { dVal = v; p.descuento = v; }, '$');
     });
     tr.querySelector('.td-stock').addEventListener('click', function() {
-      sVal = !sVal; p.stock = sVal;
-      this.innerHTML = sVal ? '<span class="badge badge-conf">✓</span>' : '<span class="badge badge-cancel">✗</span>';
-      crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo:'stock', valor: sVal })
-        .then(() => toast('Stock actualizado ✓')).catch(() => toast('Error','err'));
+      editarCeldaNum(this, p, 'stock', sVal, v => { sVal = v; p.stock = v; }, '', renderStock);
     });
     tr.querySelector('.td-dest').addEventListener('click', function() {
       hVal = !hVal; p.destacado = hVal;
@@ -394,13 +396,14 @@ function renderProductos(list) {
   });
 }
 
-async function editarCeldaNum(td, p, campo, valorActual, onSave) {
+async function editarCeldaNum(td, p, campo, valorActual, onSave, prefix='$', customRender=null) {
   if (td.querySelector('input')) return;
   td.innerHTML = `<input type="number" class="inline-input" value="${valorActual}" min="0" step="1">`;
   const input = td.querySelector('input');
   input.focus(); input.select();
-  const renderVal = v => v ? `<strong>$${Number(v).toLocaleString('es-AR')}</strong><i class="fa-solid fa-pen edit-hint"></i>`
-                           : `<span class="text-muted">—</span><i class="fa-solid fa-pen edit-hint"></i>`;
+  const renderVal = customRender || (v => v
+    ? `<strong>${prefix}${Number(v).toLocaleString('es-AR')}</strong><i class="fa-solid fa-pen edit-hint"></i>`
+    : `<span class="text-muted">—</span><i class="fa-solid fa-pen edit-hint"></i>`);
   const guardar = async () => {
     const nuevo = Number(input.value) || 0;
     td.innerHTML = renderVal(nuevo);
@@ -539,6 +542,14 @@ async function guardarProducto() {
 // ─── PEDIDOS ─────────────────────────────────────────────────
 
 let _pedidos = [];
+
+async function refreshPedidos() {
+  const btn = $('btn-refresh-ped');
+  if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 650); }
+  delete _cache['ext_pedidos_listar'];
+  _pedidos = [];
+  await loadPedidos(true);
+}
 
 async function loadPedidos(force=false) {
   if (!force && _pedidos.length) { filtrarPedidos(); return; }

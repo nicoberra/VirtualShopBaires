@@ -235,6 +235,18 @@ textarea { min-height: unset; }
 }
 .label-sm { font-size: 0.78rem; color: var(--text2); margin-bottom: 8px; }
 
+/* ─── REFRESH BUTTON ─────────────────────────────────────── */
+.btn-refresh {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid var(--border); background: var(--bg2);
+  color: var(--text2); font-size: 1rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all var(--trans); flex-shrink: 0;
+}
+.btn-refresh:hover { border-color: var(--red); color: var(--red); background: var(--bg3); }
+.btn-refresh.spinning i { animation: spin360 0.6s linear; }
+@keyframes spin360 { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 /* ─── BUTTONS ────────────────────────────────────────────── */
 .btn-primary {
   background: var(--red); color: #fff; border: none;

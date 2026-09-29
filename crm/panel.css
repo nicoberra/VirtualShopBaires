@@ -19,7 +19,7 @@
   --sidebar: 220px;
   --radius:  10px;
   --trans:   0.18s ease;
-  --mobile-nav-h: 96px;
+  --mobile-nav-h: 112px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -81,7 +81,7 @@ img { max-width: 100%; }
 }
 .nav-link i { width: 16px; text-align: center; font-size: 0.9rem; flex-shrink: 0; }
 .nav-link:hover { background: var(--bg3); color: var(--text); }
-.nav-link.active { background: rgba(204,18,18,0.12); color: var(--red); border-right: 3px solid var(--red); }
+.nav-link.active { background: rgba(204,18,18,0.13); color: var(--red); border-right: 3px solid var(--red); font-weight: 600; }
 .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); flex-shrink: 0; }
 .btn-logout {
   background: none; border: 1px solid var(--border); color: var(--text2);
@@ -98,8 +98,8 @@ img { max-width: 100%; }
   flex-direction: column;
 }
 .mobile-logo {
-  font-size: 1.1rem; font-weight: 800; padding: 10px 16px 6px;
-  flex-shrink: 0;
+  font-size: 1.05rem; font-weight: 800; padding: 10px 16px 6px;
+  flex-shrink: 0; letter-spacing: -0.3px;
 }
 #mobile-nav-scroll {
   display: flex; gap: 6px; overflow-x: auto;
@@ -108,13 +108,21 @@ img { max-width: 100%; }
   -webkit-overflow-scrolling: touch;
 }
 #mobile-nav-scroll::-webkit-scrollbar { display: none; }
+/* Panel-ops: 3 items — distribuir equitativamente sin scroll */
+#mobile-nav-scroll.mnav-stretch { overflow-x: visible; }
+#mobile-nav-scroll.mnav-stretch .mnav-btn { flex: 1; }
 .mnav-btn {
   flex: 0 0 auto;
   background: var(--bg3); border: 1px solid var(--border);
-  color: var(--text2); padding: 10px 16px; border-radius: 8px;
+  color: var(--text2); padding: 8px 10px; border-radius: 8px;
   font-size: 1rem; transition: all var(--trans);
-  min-width: 44px; min-height: 44px;
+  min-width: 52px; min-height: 52px;
   display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 3px;
+}
+.mnav-label {
+  font-size: 0.6rem; font-weight: 600; letter-spacing: 0.02em;
+  line-height: 1; text-transform: uppercase;
 }
 .mnav-btn.active { background: rgba(204,18,18,0.15); color: var(--red); border-color: var(--red); }
 
@@ -510,13 +518,64 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .card { padding: 14px; }
   .sec-title { font-size: 1.25rem; }
 
-  /* Fotos más pequeñas */
   .foto-item { width: 72px; height: 72px; }
 
-  /* Tabla sin min-width: scroll horizontal */
   table { font-size: 0.82rem; }
 
-  /* Botones de acción apilados en tabla */
   .td-actions { flex-direction: column; gap: 4px; }
   .td-actions .btn-icon { width: 100%; justify-content: center; }
+}
+
+/* ─── MEJORAS EXTRA MOBILE ───────────────────────────────── */
+
+/* Cards con transición sutil en hover desktop */
+@media (hover: hover) {
+  .stat-card:hover {
+    border-color: rgba(204,18,18,0.3);
+    transition: border-color 0.2s ease;
+  }
+}
+
+/* Login: responsive en pantallas muy chicas */
+@media (max-width: 400px) {
+  #login-box { padding: 32px 20px; }
+  .login-logo { font-size: 1.7rem; }
+}
+
+/* Mobile nav texto siempre visible en touch */
+@media (max-width: 768px) {
+  /* Ajustar padding top al nuevo alto del nav */
+  #main-content {
+    padding-top: calc(var(--mobile-nav-h) + 14px);
+  }
+
+  /* Tabla: hacer los th sticky sin desbordarse */
+  th { white-space: nowrap; }
+
+  /* Modales: el body del modal no se desborda */
+  .modal-body { -webkit-overflow-scrolling: touch; }
+
+  /* Input search full width en mobile */
+  .toolbar input[type=search] { width: 100%; min-width: unset; }
+
+  /* Sección título + botón bien alineados */
+  .sec-header {
+    align-items: flex-start;
+  }
+  .sec-header .sec-title { flex: 1; }
+  .sec-header .btn-primary {
+    width: auto;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+/* Accesibilidad: focus visible en todos los interactivos */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
 }

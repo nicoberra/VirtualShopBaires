@@ -154,25 +154,27 @@ function invalidate(...keys) {
 
 // ─── CLIENTES ────────────────────────────────────────────────
 
-let _clientes = [], _pedidos_para_clientes = [];
+let _clientes = [];
 
-function comprasDeCliente(cli) {
+function pedidosDeCliente(cli) {
   const dig = t => String(t||'').replace(/\D/g,'');
-  return _pedidos_para_clientes.filter(p =>
-    (p.clienteid && p.clienteid === cli.id) ||
-    (!p.clienteid && dig(p.telefono) && dig(p.telefono) === dig(cli.telefono)) ||
-    (!p.clienteid && p.cliente && p.cliente.trim().toLowerCase() === String(cli.nombre).trim().toLowerCase())
-  ).length;
+  const cliTel   = dig(cli.telefono);
+  const cliEmail = (cli.email||'').toLowerCase().trim();
+  const cliNom   = (cli.nombre||'').trim().toLowerCase();
+  return _pedidos.filter(p => {
+    if (cliEmail && (p.email||'').toLowerCase().trim() === cliEmail) return true;
+    if (cliTel   && dig(p.telefono) === cliTel) return true;
+    const pNom = ((p.nombre||'') + ' ' + (p.apellido||'')).trim().toLowerCase();
+    if (cliNom   && pNom.includes(cliNom)) return true;
+    return false;
+  });
 }
 
 async function loadClientes(force=false) {
   if (!force && _clientes.length) { filtrarClientes(); return; }
   $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
-    [_clientes, _pedidos_para_clientes] = await Promise.all([
-      getData('list','Clientes',force),
-      getData('list','Pedidos',force)
-    ]);
+    _clientes = await getData('list','Clientes',force);
     filtrarClientes();
   } catch(e) {
     $('cli-table').innerHTML = `<div style="padding:20px;text-align:center">
@@ -187,6 +189,7 @@ function filtrarClientes() {
   const list = q
     ? _clientes.filter(c =>
         String(c.nombre||'').toLowerCase().includes(q) ||
+        String(c.apellido||'').toLowerCase().includes(q) ||
         String(c.email||'').toLowerCase().includes(q) ||
         String(c.telefono||'').includes(q))
     : _clientes;
@@ -199,38 +202,93 @@ function renderClientes(list) {
   el.innerHTML = `
     <table>
       <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Compras</th><th></th></tr></thead>
-      <tbody>
-        ${list.map(c => `
-          <tr>
-            <td><strong>${c.nombre||'—'}</strong></td>
-            <td>${c.email||'—'}</td>
-            <td>${c.telefono||'—'}</td>
-            <td>${c.ciudad||'—'}</td>
-            <td>${comprasDeCliente(c)}</td>
-            <td class="td-actions">
-              <button class="btn-icon" onclick="editarCliente(${JSON.stringify(c).replace(/"/g,'&quot;')})"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn-icon" onclick="borrarCliente('${c.id}','${(c.nombre||'').replace(/'/g,'')}')" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
-            </td>
-          </tr>`).join('')}
-      </tbody>
+      <tbody id="cli-tbody"></tbody>
     </table>`;
+  const tbody = $('cli-tbody');
+  list.forEach(c => {
+    const numPedidos = pedidosDeCliente(c).length;
+    const nombreCompleto = [c.nombre, c.apellido].filter(Boolean).join(' ');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-nombre" style="cursor:pointer"><strong>${nombreCompleto||'—'}</strong>${c.ciudad ? `<div class="prod-sub">${c.ciudad}</div>` : ''}</td>
+      <td>${c.email||'—'}</td>
+      <td>${c.telefono||'—'}</td>
+      <td class="hide-mobile">${c.ciudad||'—'}</td>
+      <td style="text-align:center">
+        <span class="badge ${numPedidos > 0 ? 'badge-conf' : ''}" style="cursor:${numPedidos>0?'pointer':'default'}">${numPedidos}</span>
+      </td>
+      <td class="td-actions">
+        <button class="btn-icon" title="Ver historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
+        <button class="btn-icon edit-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-icon del-btn" title="Borrar" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
+      </td>`;
+    tr.querySelector('.td-nombre').addEventListener('click', () => verHistorialCliente(c));
+    tr.querySelector('td:nth-child(5) .badge').addEventListener('click', () => verHistorialCliente(c));
+    tr.querySelector('.btn-icon').addEventListener('click', () => verHistorialCliente(c));
+    tr.querySelector('.edit-btn').addEventListener('click', () => editarCliente(c));
+    tr.querySelector('.del-btn').addEventListener('click', () => borrarCliente(c.id, c.nombre||''));
+    tbody.appendChild(tr);
+  });
 }
+
+function verHistorialCliente(cli) {
+  const ped = pedidosDeCliente(cli);
+  const nombreCompleto = [cli.nombre, cli.apellido].filter(Boolean).join(' ');
+  $('mhist-title').textContent = `${nombreCompleto} — ${ped.length} pedido${ped.length !== 1 ? 's' : ''}`;
+  const body = $('mhist-body');
+  if (!ped.length) {
+    body.innerHTML = '<div class="empty-state" style="padding:30px 0"><i class="fa-solid fa-bag-shopping"></i><p>Sin pedidos registrados</p></div>';
+  } else {
+    const sorted = [...ped].sort((a,b) => new Date(b.fecha||0) - new Date(a.fecha||0));
+    body.innerHTML = sorted.map(p => {
+      const fecha = p.fecha ? new Date(p.fecha).toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      const esEnvio = (p.entrega||'').toLowerCase().includes('env');
+      const estadoCls = {'pendiente':'badge-pend','confirmado':'badge-conf','en camino':'badge-cam','entregado':'badge-entr','cancelado':'badge-cancel'}[(p.estado||'').toLowerCase()] || '';
+      return `<div class="hist-item">
+        <div class="hist-header">
+          <span class="hist-num">${p.orderNumber||'Pedido'}</span>
+          <span class="hist-fecha">${fecha}</span>
+          <span class="badge ${estadoCls}">${p.estado||'—'}</span>
+        </div>
+        <div class="hist-productos">${p.productos||'—'}</div>
+        <div class="hist-meta">
+          <span><i class="fa-solid fa-${esEnvio?'truck':'store-alt'}" style="margin-right:4px;color:var(--text2)"></i>${esEnvio?'Envío a domicilio':'Retiro en local'}</span>
+          <span><i class="fa-solid fa-credit-card" style="margin-right:4px;color:var(--text2)"></i>${p.metodoPago||'—'}</span>
+          <span class="hist-total">$${Number(p.total||0).toLocaleString('es-AR')}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  show('modal-cli-hist', 'flex');
+}
+
+const _CLI_FIELDS = ['mcli-id','mcli-nombre','mcli-apellido','mcli-telefono','mcli-dni',
+  'mcli-email','mcli-direccion','mcli-cp','mcli-ciudad','mcli-provincia',
+  'mcli-cuit','mcli-iva','mcli-razon','mcli-notas'];
 
 function abrirModalCliente() {
   $('mcli-title').textContent = 'Nuevo cliente';
-  ['mcli-id','mcli-nombre','mcli-telefono','mcli-email','mcli-ciudad','mcli-notas'].forEach(id => $(id).value = '');
+  _CLI_FIELDS.forEach(id => $(id).value = '');
   show('modal-cliente', 'flex');
   setTimeout(() => $('mcli-nombre').focus(), 50);
 }
 
 function editarCliente(c) {
   $('mcli-title').textContent = 'Editar cliente';
-  $('mcli-id').value       = c.id||'';
-  $('mcli-nombre').value   = c.nombre||'';
-  $('mcli-telefono').value = c.telefono||'';
-  $('mcli-email').value    = c.email||'';
-  $('mcli-ciudad').value   = c.ciudad||'';
-  $('mcli-notas').value    = c.notas||'';
+  $('mcli-id').value        = c.id||'';
+  $('mcli-nombre').value    = c.nombre||'';
+  $('mcli-apellido').value  = c.apellido||'';
+  $('mcli-telefono').value  = c.telefono||'';
+  $('mcli-dni').value       = c.dni||'';
+  $('mcli-email').value     = c.email||'';
+  $('mcli-direccion').value = c.direccion||'';
+  $('mcli-cp').value        = c.cp||'';
+  $('mcli-ciudad').value    = c.ciudad||'';
+  $('mcli-provincia').value = c.provincia||'';
+  $('mcli-cuit').value      = c.cuit||'';
+  $('mcli-iva').value       = c.iva||'';
+  $('mcli-razon').value     = c.razon||'';
+  $('mcli-notas').value     = c.notas||'';
   show('modal-cliente', 'flex');
 }
 
@@ -240,8 +298,12 @@ async function guardarCliente() {
   const id = val('mcli-id');
   const params = {
     action: id ? 'update' : 'add', tab: 'Clientes',
-    nombre, telefono: val('mcli-telefono'), email: val('mcli-email'),
-    ciudad: val('mcli-ciudad'), notas: val('mcli-notas')
+    nombre, apellido: val('mcli-apellido'), telefono: val('mcli-telefono'),
+    dni: val('mcli-dni'), email: val('mcli-email'),
+    direccion: val('mcli-direccion'), cp: val('mcli-cp'),
+    ciudad: val('mcli-ciudad'), provincia: val('mcli-provincia'),
+    cuit: val('mcli-cuit'), iva: val('mcli-iva'), razon: val('mcli-razon'),
+    notas: val('mcli-notas')
   };
   if (id) params.id = id;
   try {
@@ -371,7 +433,7 @@ function renderProductos(list) {
       <td class="td-center td-toggle td-dest">${hVal ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
       <td style="white-space:nowrap">
         <a class="btn-icon" href="https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria||'')}&buscar=${encodeURIComponent(p.nombre||'')}" target="_blank" rel="noopener" title="Ver en tienda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-        <button class="btn-icon" title="Ver / editar completo"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button class="btn-icon btn-edit-prod" title="Ver / editar completo"><i class="fa-solid fa-pen-to-square"></i></button>
       </td>`;
 
     tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
@@ -390,7 +452,7 @@ function renderProductos(list) {
       crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo:'destacado', valor: hVal })
         .then(() => toast('Destacado actualizado ✓')).catch(() => toast('Error','err'));
     });
-    tr.querySelector('.btn-icon').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
+    tr.querySelector('.btn-edit-prod').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
 
     tbody.appendChild(tr);
   });

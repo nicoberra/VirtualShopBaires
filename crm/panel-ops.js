@@ -218,13 +218,21 @@ function renderClientes(list) {
         <span class="badge ${numPedidos > 0 ? 'badge-conf' : ''}" style="cursor:${numPedidos>0?'pointer':'default'}">${numPedidos}</span>
       </td>
       <td class="td-actions">
+        ${c.telefono ? `<button class="btn-icon btn-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
         <button class="btn-icon" title="Ver historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
         <button class="btn-icon edit-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button class="btn-icon del-btn" title="Borrar" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
       </td>`;
     tr.querySelector('.td-nombre').addEventListener('click', () => verHistorialCliente(c));
     tr.querySelector('td:nth-child(5) .badge').addEventListener('click', () => verHistorialCliente(c));
-    tr.querySelector('.btn-icon').addEventListener('click', () => verHistorialCliente(c));
+    const waBtn = tr.querySelector('.btn-wa');
+    if (waBtn) {
+      waBtn.addEventListener('click', () => {
+        const tel = String(c.telefono||'').replace(/\D/g,'');
+        window.open('https://wa.me/' + tel, '_blank');
+      });
+    }
+    tr.querySelector('.btn-icon:not(.btn-wa)').addEventListener('click', () => verHistorialCliente(c));
     tr.querySelector('.edit-btn').addEventListener('click', () => editarCliente(c));
     tr.querySelector('.del-btn').addEventListener('click', () => borrarCliente(c.id, c.nombre||''));
     tbody.appendChild(tr);
@@ -489,25 +497,32 @@ function editarProducto(raw) {
   const p = typeof raw === 'string' ? JSON.parse(raw) : raw;
   _prodActual = p;
 
-  $('mprod-title').textContent  = p.categoria;
-  $('mprod-nombre').value       = p.nombre;
-  $('mprod-categoria-info').textContent = p.categoria || '';
-  $('mprod-color-info').textContent     = (p.color || p.marca || p.talle)
-    ? [p.color||p.marca, p.talle].filter(Boolean).join(' · ') : '—';
+  $('mprod-title').textContent   = p.nombre || p.categoria || 'Producto';
+  $('mprod-nombre').value        = p.nombre || '';
+  $('mprod-color').value         = p.color || p.marca || '';
+  $('mprod-talle').value         = p.talle || p.subcategoria || '';
+  $('mprod-descripcion').value   = p.descripcion || '';
 
   const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
   const descN   = Number(String(p.descuento||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
-  $('mprod-precio').value     = precioN;
-  $('mprod-descuento').value  = descN;
-  $('mprod-stock').checked    = !!p.stock;
-  $('mprod-destacado').checked= !!p.destacado;
+  const stockN  = Number(p.stock) || 0;
+  $('mprod-precio').value      = precioN;
+  $('mprod-descuento').value   = descN;
+  $('mprod-stock-num').value   = stockN;
+  $('mprod-destacado').checked = !!p.destacado;
 
-  if (p.descripcion) {
-    $('mprod-desc-wrap').style.display = 'block';
-    $('mprod-desc').textContent = p.descripcion;
-  } else {
-    $('mprod-desc-wrap').style.display = 'none';
-  }
+  const todasCats = [...new Set(_productos.map(x => x.categoria).filter(Boolean))].sort();
+  const selCats   = (p.categoria||'').split(',').map(c => c.trim()).filter(Boolean);
+  const wrap = $('mprod-cats-chips');
+  wrap.innerHTML = '';
+  todasCats.forEach(cat => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'cat-chip' + (selCats.includes(cat) ? ' cat-chip-sel' : '');
+    chip.textContent = cat;
+    chip.addEventListener('click', () => chip.classList.toggle('cat-chip-sel'));
+    wrap.appendChild(chip);
+  });
 
   $('fotos-grid').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i></div>';
   show('modal-producto', 'flex');
@@ -527,7 +542,7 @@ async function cargarFotos(p) {
 function renderFotos(fotos, carpeta) {
   const grid = $('fotos-grid');
   if (!fotos.length) { grid.innerHTML = '<p class="text-muted" style="font-size:0.82rem">Sin fotos</p>'; return; }
-  const base = location.origin + '/' + window.location.pathname.replace(/\/crm\/.*$/, '/');
+  const base = location.origin + window.location.pathname.replace(/\/crm\/.*$/, '/');
   grid.innerHTML = fotos.map((fn, i) => {
     const url = base + carpeta + '/' + fn;
     return `
@@ -570,16 +585,26 @@ async function borrarFoto(carpeta, filename) {
 async function guardarProducto() {
   if (!_prodActual) return;
   const p = _prodActual;
+  const nombre    = $('mprod-nombre').value.trim();
+  const color     = $('mprod-color').value.trim();
+  const talle     = $('mprod-talle').value.trim();
+  const descripcion = $('mprod-descripcion').value.trim();
   const precio    = Number($('mprod-precio').value) || 0;
   const descuento = Number($('mprod-descuento').value) || 0;
-  const stock     = $('mprod-stock').checked;
+  const stock     = Number($('mprod-stock-num').value) || 0;
   const destacado = $('mprod-destacado').checked;
+  const catsSel   = [...$('mprod-cats-chips').querySelectorAll('.cat-chip-sel')].map(ch => ch.textContent).join(', ');
 
   const updates = [
-    { campo:'precio',    valor: precio    },
-    { campo:'descuento', valor: descuento },
-    { campo:'stock',     valor: stock     },
-    { campo:'destacado', valor: destacado },
+    { campo:'nombre',      valor: nombre      },
+    { campo:'categoria',   valor: catsSel     },
+    { campo:'color',       valor: color       },
+    { campo:'talle',       valor: talle       },
+    { campo:'descripcion', valor: descripcion },
+    { campo:'precio',      valor: precio      },
+    { campo:'descuento',   valor: descuento   },
+    { campo:'stock',       valor: stock       },
+    { campo:'destacado',   valor: destacado   },
   ];
 
   try {
@@ -588,10 +613,7 @@ async function guardarProducto() {
     }
     const idx = _productos.findIndex(x => x._sheet === p._sheet && x._row === p._row);
     if (idx >= 0) {
-      _productos[idx].precio    = precio;
-      _productos[idx].descuento = descuento;
-      _productos[idx].stock     = stock;
-      _productos[idx].destacado = destacado;
+      Object.assign(_productos[idx], { nombre, categoria: catsSel, color, talle, descripcion, precio, descuento, stock, destacado });
     }
     toast('Producto guardado en Sheets ✓');
     hide('modal-producto');

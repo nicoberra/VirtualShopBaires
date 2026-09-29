@@ -5,7 +5,7 @@
 
 // ─── CONFIG ──────────────────────────────────────────────────
 const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwmPAvB8_p0muyXl3Q-qt0XWaE_mk76HTImcPt3vdFzVpO8vwQUjOoDCpu_BZWlezyh/exec';
-const PANEL_PASS = 'OPS_PASS_AQUI'; // ← Cambiá esta contraseña
+const PANEL_PASS = '2208';
 // ─────────────────────────────────────────────────────────────
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────

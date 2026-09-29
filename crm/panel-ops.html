@@ -226,13 +226,23 @@
       <button class="modal-close" onclick="hide('modal-producto')">&times;</button>
     </div>
     <div class="modal-body">
-      <div class="form-group" style="margin-bottom:8px">
+      <div class="form-group">
         <label>Nombre</label>
-        <input type="text" id="mprod-nombre" readonly class="readonly-field">
+        <input type="text" id="mprod-nombre">
       </div>
-      <div class="form-row" style="margin-bottom:12px;gap:12px">
-        <div style="flex:1"><span class="form-label-sm">Categoría</span><div id="mprod-categoria-info" class="info-chip"></div></div>
-        <div style="flex:1"><span class="form-label-sm">Color / Talle</span><div id="mprod-color-info" class="info-chip"></div></div>
+      <div class="form-group">
+        <label>Categorías <span style="font-size:0.75rem;color:var(--text2)">(tocá para seleccionar, podés elegir varias)</span></label>
+        <div id="mprod-cats-chips" class="cats-chips-wrap"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Color / Marca</label>
+          <input type="text" id="mprod-color" placeholder="Ej: Rojo, Sluban">
+        </div>
+        <div class="form-group">
+          <label>Talle / Subtipo</label>
+          <input type="text" id="mprod-talle" placeholder="Ej: XL, Para armar">
+        </div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -243,18 +253,20 @@
           <label>Precio original ($) <span style="font-size:0.75rem;color:var(--text2)">tachado</span></label>
           <input type="number" id="mprod-descuento" min="0" step="1">
         </div>
-        <div class="form-group toggles-col">
-          <label>Stock</label>
-          <label class="toggle"><input type="checkbox" id="mprod-stock"><span class="slider"></span></label>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Stock (unidades)</label>
+          <input type="number" id="mprod-stock-num" min="0" step="1" value="0">
         </div>
         <div class="form-group toggles-col">
           <label>Destacado ⭐</label>
           <label class="toggle"><input type="checkbox" id="mprod-destacado"><span class="slider"></span></label>
         </div>
       </div>
-      <div id="mprod-desc-wrap" style="display:none;margin-top:8px">
-        <label class="form-label-sm">Descripción</label>
-        <p id="mprod-desc" style="font-size:0.82rem;color:var(--text2);margin:4px 0 0;line-height:1.5;max-height:80px;overflow:auto"></p>
+      <div class="form-group">
+        <label>Descripción</label>
+        <textarea id="mprod-descripcion" rows="4" placeholder="Descripción del producto…"></textarea>
       </div>
       <div class="form-group">
         <label>Fotos</label>

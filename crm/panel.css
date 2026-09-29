@@ -529,13 +529,22 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .stats-3col   { grid-template-columns: 1fr 1fr; }
 }
 
+/* ─── OCULTAR EN MOBILE ──────────────────────────────────── */
+@media (max-width: 600px) {
+  .hide-mobile { display: none !important; }
+}
+
+/* ─── BADGE ALIASES ──────────────────────────────────────── */
+.badge-cam   { background: rgba(59,130,246,0.15); color: var(--blue); }
+.badge-entr  { background: rgba(34,197,94,0.2);   color: #4ade80; }
+
 /* ─── RESPONSIVE 768px (MOBILE) ──────────────────────────── */
 @media (max-width: 768px) {
   #sidebar      { display: none; }
   #mobile-nav   { display: flex; }
   #main-content {
     margin-left: 0;
-    padding: calc(var(--mobile-nav-h) + 16px) 14px 28px;
+    padding: calc(var(--mobile-nav-h) + 14px) 14px 28px;
     max-width: 100%;
   }
 
@@ -584,7 +593,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   /* Sección header */
   .sec-header { flex-wrap: wrap; }
-  .sec-header .btn-primary { width: 100%; justify-content: center; }
+  .sec-header .btn-primary { width: auto; flex-shrink: 0; white-space: nowrap; }
 
   /* Tabla: reducir padding */
   th, td { padding: 9px 8px; }
@@ -605,8 +614,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
   table { font-size: 0.82rem; }
 
-  .td-actions { flex-direction: column; gap: 4px; }
-  .td-actions .btn-icon { width: 100%; justify-content: center; }
+  /* Botones de acción: flex-wrap para que no ocupen toda la columna */
+  .td-actions { flex-wrap: wrap; gap: 4px; }
+  .td-actions .btn-icon { min-height: 36px; padding: 6px 8px; }
 }
 
 /* ─── MEJORAS EXTRA MOBILE ───────────────────────────────── */
@@ -625,32 +635,13 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .login-logo { font-size: 1.7rem; }
 }
 
-/* Mobile nav texto siempre visible en touch */
+/* Ajustes adicionales mobile — se consolidan aquí para no duplicar el bloque 768px */
 @media (max-width: 768px) {
-  /* Ajustar padding top al nuevo alto del nav */
-  #main-content {
-    padding-top: calc(var(--mobile-nav-h) + 14px);
-  }
-
-  /* Tabla: hacer los th sticky sin desbordarse */
   th { white-space: nowrap; }
-
-  /* Modales: el body del modal no se desborda */
   .modal-body { -webkit-overflow-scrolling: touch; }
-
-  /* Input search full width en mobile */
   .toolbar input[type=search] { width: 100%; min-width: unset; }
-
-  /* Sección título + botón bien alineados */
-  .sec-header {
-    align-items: flex-start;
-  }
+  .sec-header { align-items: flex-start; }
   .sec-header .sec-title { flex: 1; }
-  .sec-header .btn-primary {
-    width: auto;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
 }
 
 /* ─── PANEL DASHBOARD: items recientes ──────────────────────── */

@@ -22,6 +22,11 @@ var CAT_TABS = ['Juguetes','Belleza','Piletas ','Inflables','Bazar, baño y coci
                 'Muebles para el hogar','Camping','Playa','Mascotas',
                 'Pilates y Yoga','Fitness y musculacion'];
 
+// Clave para proteger endpoints financieros (Estadísticas, Abandonos)
+// Solo el panel principal la conoce. Ponele cualquier texto largo y difícil de adivinar.
+// Si lo dejás vacío, cualquiera puede llamar esos endpoints.
+var ADMIN_KEY = '';   // ← PEGAR UNA CLAVE SECRETA AQUÍ (ej: 'vsb-admin-2024-xk9m')
+
 // Para fotos de productos (GitHub repo de la tienda)
 // Creá un token en: github.com/settings/tokens → Fine-grained → Contents: Read and write
 var GH_TOKEN  = '';   // ← PEGAR TU TOKEN AQUÍ
@@ -102,8 +107,14 @@ function manejar(e) {
     else if (accion === 'productos_save')  out = { ok:true, saved: productosGuardar(p) };
     else if (accion === 'productos_add')   out = { ok:true, id: productosAgregar(p) };
     else if (accion === 'evento_add')      out = { ok:true, saved: eventoAgregar(p) };
-    else if (accion === 'eventos_stats')   out = { ok:true, stats: eventosStats() };
-    else if (accion === 'abandonos_list')  out = { ok:true, rows: abandonosList() };
+    else if (accion === 'eventos_stats') {
+      if (ADMIN_KEY && p.admin_key !== ADMIN_KEY) throw 'Acceso denegado';
+      out = { ok:true, stats: eventosStats() };
+    }
+    else if (accion === 'abandonos_list') {
+      if (ADMIN_KEY && p.admin_key !== ADMIN_KEY) throw 'Acceso denegado';
+      out = { ok:true, rows: abandonosList() };
+    }
     else if (accion === 'fotos_list')      out = { ok:true, fotos: fotosListar(p) };
     else if (accion === 'foto_subir')      out = { ok:true, foto:    fotoSubir(p) };
     else if (accion === 'foto_borrar')     out = { ok:true, borrada: fotoBorrar(p) };

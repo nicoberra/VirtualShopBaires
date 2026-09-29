@@ -1,12 +1,11 @@
 // ============================================================
-//  CRM Panel — Virtual Shop Baires
-//  panel.js
+//  CRM Panel Operaciones — Virtual Shop Baires
+//  panel-ops.js  (solo Clientes, Productos, Pedidos)
 // ============================================================
 
-// ─── CONFIG — CAMBIÁ ESTOS DOS VALORES ───────────────────────
+// ─── CONFIG ──────────────────────────────────────────────────
 const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwmPAvB8_p0muyXl3Q-qt0XWaE_mk76HTImcPt3vdFzVpO8vwQUjOoDCpu_BZWlezyh/exec';
-const PANEL_PASS = '2208';
-const ADMIN_KEY  = '';  // ← Copiar exactamente la misma clave que pusiste en Codigo.gs
+const PANEL_PASS = 'OPS_PASS_AQUI'; // ← Cambiá esta contraseña
 // ─────────────────────────────────────────────────────────────
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────
@@ -46,7 +45,7 @@ function fileABase64(file) {
 // ─── HELPERS UI ──────────────────────────────────────────────
 
 const $ = id => document.getElementById(id);
-const val = id => ($( id) ? $(id).value.trim() : '');
+const val = id => ($(id) ? $(id).value.trim() : '');
 const hide  = id => { const el = $(id); if (el) el.style.display = 'none'; };
 const show  = (id, d='block') => { const el = $(id); if (el) el.style.display = d; };
 const fmtMoney = n => '$' + Number(n || 0).toLocaleString('es-AR', {minimumFractionDigits:0});
@@ -83,17 +82,17 @@ function badgeEstado(estado) {
 function doLogin() {
   const pass = val('login-pass');
   if (pass === PANEL_PASS) {
-    sessionStorage.setItem('crm_auth', '1');
+    sessionStorage.setItem('ops_auth', '1');
     hide('login-wrap');
     show('app', 'flex');
-    goTo('panel');
+    goTo('clientes');
   } else {
     $('login-err').textContent = 'Contraseña incorrecta.';
   }
 }
 
 function logout() {
-  sessionStorage.removeItem('crm_auth');
+  sessionStorage.removeItem('ops_auth');
   location.reload();
 }
 
@@ -117,14 +116,9 @@ function goTo(sec) {
 
 function loadSection(sec) {
   const loaders = {
-    panel:        loadPanel,
-    facturacion:  loadFacturacion,
-    clientes:     loadClientes,
-    productos:    loadProductos,
-    pedidos:      loadPedidos,
-    suscriptores: loadSuscriptores,
-    comprobantes: loadComprobantes,
-    estadisticas: loadEstadisticas,
+    clientes:  loadClientes,
+    productos: loadProductos,
+    pedidos:   loadPedidos,
   };
   if (loaders[sec]) loaders[sec]();
 }
@@ -144,191 +138,6 @@ async function getData(action, tab, force = false) {
 }
 function invalidate(...keys) {
   keys.forEach(k => delete _cache[k]);
-}
-
-// ─── PANEL (DASHBOARD) ───────────────────────────────────────
-
-async function loadPanel() {
-  const cards = $('panel-cards');
-  cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
-
-  try {
-    const [clientes, pedidos, stats] = await Promise.all([
-      getData('list', 'Clientes'),
-      getData('list', 'Pedidos'),
-      crm({ action: 'eventos_stats', admin_key: ADMIN_KEY })
-    ]);
-    const mes = new Date(); mes.setDate(1); mes.setHours(0,0,0,0);
-    const factMes = pedidos.filter(p => new Date(String(p.fecha).replace(' ','T')) >= mes)
-                           .reduce((s,p) => s + (Number(String(p.monto).replace(/[^\d.]/g,'')) || 0), 0);
-    const pendientes = pedidos.filter(p => p.estado === 'Pendiente' || !p.estado).length;
-
-    cards.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-label">Clientes</div>
-        <div class="stat-val">${clientes.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Pedidos pendientes</div>
-        <div class="stat-val text-yellow">${pendientes}</div>
-        <div class="stat-sub">${pedidos.length} totales</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Facturación del mes</div>
-        <div class="stat-val">${fmtMoney(factMes)}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Visitas hoy</div>
-        <div class="stat-val">${(stats.visitas && stats.visitas.hoy) || 0}</div>
-        <div class="stat-sub">${(stats.visitas && stats.visitas.mes) || 0} este mes</div>
-      </div>
-    `;
-
-    // Pedidos recientes
-    const recPed = [...pedidos].reverse().slice(0, 5);
-    $('panel-pedidos-rec').innerHTML = recPed.length ? `
-      <table><tbody>
-        ${recPed.map(p => `
-          <tr>
-            <td>${p.cliente || '—'}</td>
-            <td>${fmtMoney(p.monto)}</td>
-            <td>${badgeEstado(p.estado)}</td>
-          </tr>`).join('')}
-      </tbody></table>` : '<div class="empty-state"><i class="fa-solid fa-inbox"></i>Sin pedidos</div>';
-
-    // Clientes recientes
-    const recCli = [...clientes].reverse().slice(0, 5);
-    $('panel-clientes-rec').innerHTML = recCli.length ? `
-      <table><tbody>
-        ${recCli.map(c => `
-          <tr>
-            <td>${c.nombre || '—'}</td>
-            <td style="color:var(--text2);font-size:0.82rem">${c.email || c.telefono || ''}</td>
-          </tr>`).join('')}
-      </tbody></table>` : '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
-
-  } catch(e) {
-    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar datos: ${e.message}</p></div>`;
-  }
-}
-
-// ─── FACTURACIÓN ─────────────────────────────────────────────
-
-let _factData = null, _factTab = 'anios';
-
-function parseDetalle(det) {
-  if (!det) return [];
-  return String(det).split(',').map(s => {
-    const m = s.trim().match(/^(\d+)x\s+(.+)$/);
-    return m ? { nombre: m[2].trim(), cantidad: +m[1] } : null;
-  }).filter(Boolean);
-}
-
-const lunesDe = d => { const x = new Date(d); x.setHours(0,0,0,0); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; };
-const parseFecha = f => { const d = new Date(String(f).replace(' ','T')); return isNaN(d) ? null : d; };
-
-function agruparFacturacion(pedidos, productos) {
-  const costoDe = nombre => { const p = productos.find(x => x.nombre === nombre); return p ? (Number(String(p.costo).replace(/[^\d.]/g,''))||0) : 0; };
-  const ventas = pedidos.map(p => {
-    const items = parseDetalle(p.detalle);
-    const monto = Number(String(p.monto).replace(/[^\d.]/g,''))||0;
-    const costo = items.reduce((s,it) => s + costoDe(it.nombre)*(it.cantidad||1), 0);
-    return { fecha: parseFecha(p.fecha), monto, beneficio: monto - costo, items };
-  }).filter(v => v.fecha);
-
-  const bucket = (map, key, d, v) => {
-    const b = map[key] || (map[key] = { monto:0, ben:0, n:0, d, prod:{} });
-    b.monto += v.monto; b.ben += v.beneficio; b.n++;
-    v.items.forEach(it => { b.prod[it.nombre] = (b.prod[it.nombre]||0)+(it.cantidad||1); });
-  };
-  const por = { anios:{}, meses:{}, semanas:{} };
-  ventas.forEach(v => {
-    bucket(por.anios,   v.fecha.getFullYear(),                                   new Date(v.fecha.getFullYear(),0,1), v);
-    bucket(por.meses,   v.fecha.getFullYear()+'-'+v.fecha.getMonth(),            v.fecha, v);
-    const l = lunesDe(v.fecha);
-    bucket(por.semanas, l.getTime(),                                             l, v);
-  });
-  const orden = o => Object.values(o).sort((a,b) => b.d - a.d);
-  return { anios: orden(por.anios), meses: orden(por.meses), semanas: orden(por.semanas) };
-}
-
-function fmtPeriodo(tab, b) {
-  if (tab === 'anios')   return String(b.d.getFullYear());
-  if (tab === 'meses')   return b.d.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
-  const fin = new Date(b.d); fin.setDate(fin.getDate()+6);
-  return b.d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}) + ' – ' + fin.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-}
-
-async function loadFacturacion(force=false) {
-  const el = $('fact-table');
-  el.innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
-  try {
-    const [pedidos, productoRes] = await Promise.all([
-      getData('list', 'Pedidos', force),
-      crm({ action: 'productos_list' })
-    ]);
-    const productos = productoRes.rows || [];
-    _factData = agruparFacturacion(pedidos, productos);
-    renderFact();
-  } catch(e) {
-    el.innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
-  }
-}
-
-function factTab(tab) {
-  _factTab = tab;
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-  renderFact();
-}
-
-function renderFact() {
-  if (!_factData) return;
-  const rows = _factData[_factTab];
-  const el = $('fact-table');
-  if (!rows.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-chart-line"></i>Sin datos</div>'; return; }
-  el.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>Período</th><th>N° ventas</th><th>Facturado</th><th>Beneficio</th>
-      </tr></thead>
-      <tbody id="fact-tbody"></tbody>
-    </table>`;
-  const tbody = $('fact-tbody');
-  rows.forEach((b,i) => {
-    const rid = 'frow'+i;
-    const tr = document.createElement('tr');
-    tr.className = 'fact-row'; tr.dataset.rid = rid;
-    tr.innerHTML = `
-      <td><i class="fa-solid fa-chevron-right" id="ficon-${rid}" style="font-size:0.7rem;margin-right:8px;color:var(--text2);transition:transform 0.2s"></i>${fmtPeriodo(_factTab,b)}</td>
-      <td>${b.n}</td>
-      <td>${fmtMoney(b.monto)}</td>
-      <td class="${b.ben>=0?'text-green':'text-red'}">${fmtMoney(b.ben)}</td>`;
-    tr.onclick = () => toggleFactDetail(rid, b);
-    tbody.appendChild(tr);
-    const det = document.createElement('tr');
-    det.id = rid; det.className = 'fact-detail-row'; det.style.display='none';
-    det.innerHTML = `<td colspan="4"><div class="fact-detail-inner" id="${rid}-inner"></div></td>`;
-    tbody.appendChild(det);
-  });
-}
-
-function toggleFactDetail(rid, b) {
-  const row = $(rid);
-  const icon = $('ficon-'+rid);
-  if (row.style.display === 'none') {
-    row.style.display = '';
-    if (icon) icon.style.transform = 'rotate(90deg)';
-    const inner = $(rid+'-inner');
-    const prods = Object.entries(b.prod).sort((a,z)=>z[1]-a[1]);
-    inner.innerHTML = prods.length ? `
-      <table style="font-size:0.82rem">
-        <thead><tr><th>Producto</th><th>Cantidad vendida</th></tr></thead>
-        <tbody>${prods.map(([n,c])=>`<tr><td>${n}</td><td>${c}</td></tr>`).join('')}</tbody>
-      </table>` : '<p class="text-muted">Sin detalle de productos</p>';
-  } else {
-    row.style.display = 'none';
-    if (icon) icon.style.transform = 'rotate(0deg)';
-  }
 }
 
 // ─── CLIENTES ────────────────────────────────────────────────
@@ -495,7 +304,6 @@ function renderProductos(list) {
     return;
   }
 
-  // Detectar si hay columna talle o color en este set
   const hayColor = list.some(p => p.color || p.marca);
   const hayTalle = list.some(p => p.talle);
 
@@ -649,7 +457,6 @@ async function guardarProducto() {
     for (const u of updates) {
       await crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo: u.campo, valor: u.valor });
     }
-    // Actualizar cache local
     const idx = _productos.findIndex(x => x._sheet === p._sheet && x._row === p._row);
     if (idx >= 0) {
       _productos[idx].precio    = precio;
@@ -748,7 +555,6 @@ async function guardarPedido() {
   const id = val('mped-id');
   let clienteid = '';
 
-  // Si hay datos de nuevo cliente, crearlo primero
   if (_mostrarNuevoCli && !id) {
     try {
       const r = await crm({
@@ -789,226 +595,12 @@ function borrarPedido(id) {
   });
 }
 
-// ─── SUSCRIPTORES ────────────────────────────────────────────
-
-async function loadSuscriptores(force=false) {
-  $('sus-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
-  try {
-    const list = await getData('list','Suscriptores',force);
-    if (!list.length) { $('sus-table').innerHTML = '<div class="empty-state"><i class="fa-solid fa-envelope"></i>Sin suscriptores</div>'; return; }
-    $('sus-table').innerHTML = `
-      <table>
-        <thead><tr><th>Fecha</th><th>Email</th><th>Nombre</th><th>Origen</th></tr></thead>
-        <tbody>
-          ${[...list].reverse().map(s => `
-            <tr>
-              <td>${fmtFecha(s.fecha)}</td>
-              <td>${s.email||'—'}</td>
-              <td>${s.nombre||'—'}</td>
-              <td>${s.origen||'web'}</td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-  } catch(e) {
-    $('sus-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
-  }
-}
-
-// ─── COMPROBANTES ────────────────────────────────────────────
-
-async function loadComprobantes(force=false) {
-  $('comp-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
-  try {
-    const pedidos = await getData('list','Pedidos',force);
-    const conComp = pedidos.filter(p => p.comprobante);
-    if (!conComp.length) {
-      $('comp-table').innerHTML = '<div class="empty-state"><i class="fa-solid fa-file-image"></i>Sin comprobantes subidos</div>';
-      return;
-    }
-    $('comp-table').innerHTML = `
-      <table>
-        <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Comprobante</th></tr></thead>
-        <tbody>
-          ${[...conComp].reverse().map(p => `
-            <tr>
-              <td>${fmtFecha(p.fecha)}</td>
-              <td><strong>${p.cliente||'—'}</strong></td>
-              <td>${fmtMoney(p.monto)}</td>
-              <td>${badgeEstado(p.estado)}</td>
-              <td>
-                <a href="${p.comprobante}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none">
-                  <i class="fa-solid fa-eye"></i> Ver
-                </a>
-              </td>
-            </tr>`).join('')}
-        </tbody>
-      </table>`;
-  } catch(e) {
-    $('comp-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
-  }
-}
-
-// ─── ESTADÍSTICAS ────────────────────────────────────────────
-
-async function loadEstadisticas() {
-  $('stats-content').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando estadísticas…</div>';
-  try {
-    const [statsRes, abandonos] = await Promise.all([
-      crm({ action:'eventos_stats', admin_key: ADMIN_KEY }),
-      crm({ action:'abandonos_list', admin_key: ADMIN_KEY })
-    ]);
-    const s = statsRes.stats || statsRes;
-    const ab = abandonos.rows || [];
-    renderStats(s, ab);
-  } catch(e) {
-    $('stats-content').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
-  }
-}
-
-function barChart(datos) {
-  if (!datos || !datos.length) return '<p class="text-muted">Sin datos</p>';
-  const max = Math.max(...datos.map(d=>d.n), 1);
-  return `<div class="bar-chart">
-    ${datos.map(d => {
-      const h = Math.round((d.n / max) * 68);
-      const lbl = d.d ? d.d.slice(5) : (d.nombre||'');
-      return `<div class="bar-item"><div class="bar-fill" style="height:${h}px"></div><div class="bar-label">${lbl}</div></div>`;
-    }).join('')}
-  </div>`;
-}
-
-function topList(items, labelKey='nombre', countKey='n') {
-  if (!items || !items.length) return '<p class="text-muted">Sin datos</p>';
-  return `<ul class="top-list">
-    ${items.slice(0,10).map((it,i) => `
-      <li>
-        <span><span class="top-rank">${i+1}.</span> ${it[labelKey]||'—'}</span>
-        <span class="top-n">${it[countKey]}</span>
-      </li>`).join('')}
-  </ul>`;
-}
-
-function renderStats(s, abandonos) {
-  const v = s.visitas||{};
-  const el = $('stats-content');
-  el.innerHTML = `
-    <!-- Visitas -->
-    <div class="stats-row" style="margin-bottom:20px">
-      <div class="stat-card"><div class="stat-label">Hoy</div><div class="stat-val">${v.hoy||0}</div></div>
-      <div class="stat-card"><div class="stat-label">Esta semana</div><div class="stat-val">${v.semana||0}</div></div>
-      <div class="stat-card"><div class="stat-label">Este mes</div><div class="stat-val">${v.mes||0}</div></div>
-      <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${v.total||0}</div></div>
-    </div>
-
-    <!-- Gráfico 14 días -->
-    <div class="card" style="margin-bottom:14px">
-      <h3 class="card-title"><i class="fa-solid fa-chart-bar"></i> Visitas últimos 14 días</h3>
-      ${barChart(s.porDia||[])}
-    </div>
-
-    <!-- Embudo -->
-    <div class="stats-3col">
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Carritos</div>
-        <div class="stat-val text-yellow">${s.carrito||0}</div>
-      </div>
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Abandonos</div>
-        <div class="stat-val text-red">${s.abandonos||0}</div>
-      </div>
-      <div class="stat-card" style="text-align:center">
-        <div class="stat-label">Compras</div>
-        <div class="stat-val text-green">${s.compras||0}</div>
-      </div>
-    </div>
-
-    <!-- Top productos y categorías -->
-    <div class="stats-2col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-fire"></i> Productos más vistos</h3>
-        ${topList(s.topProductos)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-tags"></i> Categorías más vistas</h3>
-        ${topList(s.topCategorias)}
-      </div>
-    </div>
-
-    <!-- Fuentes y ubicaciones -->
-    <div class="stats-2col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-share-nodes"></i> Fuentes de tráfico</h3>
-        ${topList(s.fuentes)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-location-dot"></i> Ciudades</h3>
-        ${topList(s.ciudades)}
-      </div>
-    </div>
-
-    <div class="stats-3col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-globe"></i> Países</h3>
-        ${topList(s.paises)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-map"></i> Regiones</h3>
-        ${topList(s.regiones)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-language"></i> Idiomas</h3>
-        ${topList(s.idiomas)}
-      </div>
-    </div>
-
-    <!-- Dispositivos -->
-    <div class="stats-3col">
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-mobile"></i> Dispositivos</h3>
-        ${topList(s.dispositivos)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-desktop"></i> Sistemas operativos</h3>
-        ${topList(s.sistemas)}
-      </div>
-      <div class="card">
-        <h3 class="card-title"><i class="fa-solid fa-browser"></i> Navegadores</h3>
-        ${topList(s.navegadores)}
-      </div>
-    </div>
-
-    <!-- Carritos abandonados -->
-    ${abandonos.length ? `
-    <div class="card">
-      <h3 class="card-title"><i class="fa-solid fa-cart-xmark"></i> Carritos abandonados (últimos 100)</h3>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Fecha</th><th>Ítem</th><th>Contacto</th><th>Monto aprox.</th></tr></thead>
-          <tbody>
-            ${abandonos.map(a=>`
-              <tr>
-                <td>${fmtFecha(a.fecha)}</td>
-                <td>${a.item||'—'}</td>
-                <td>${a.contacto||'—'}</td>
-                <td>${a.monto ? fmtMoney(a.monto) : '—'}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>` : ''}
-
-    <p class="text-muted" style="font-size:0.78rem;text-align:center;margin-top:8px">
-      ⓘ Edad y sexo no están disponibles en este sistema — requieren Google Analytics 4 + Google Signals.
-    </p>
-  `;
-}
-
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('crm_auth') === '1') {
+  if (sessionStorage.getItem('ops_auth') === '1') {
     hide('login-wrap');
     show('app', 'flex');
-    goTo('panel');
+    goTo('clientes');
   }
 });

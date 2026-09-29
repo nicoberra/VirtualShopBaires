@@ -77,10 +77,9 @@
     <section id="sec-pedidos" class="sec">
       <div class="sec-header">
         <h1 class="sec-title">Pedidos</h1>
-        <button class="btn-primary" onclick="abrirModalPedido()"><i class="fa-solid fa-plus"></i> Nuevo</button>
       </div>
       <div class="toolbar">
-        <input type="search" id="ped-search" placeholder="Buscar cliente o detalle…" oninput="filtrarPedidos()">
+        <input type="search" id="ped-search" placeholder="Buscar cliente, producto, teléfono…" oninput="filtrarPedidos()">
         <select id="ped-estado-fil" class="sel" onchange="filtrarPedidos()">
           <option value="">Todos los estados</option>
           <option>Pendiente</option><option>Confirmado</option>

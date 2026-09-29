@@ -309,49 +309,90 @@ function renderProductos(list) {
 
   el.innerHTML = `
     <table>
-      <thead>
-        <tr>
-          <th>Nombre</th>
-          ${hayColor ? '<th>Color / Marca</th>' : ''}
-          ${hayTalle ? '<th>Talle</th>' : ''}
-          <th>Precio</th>
-          <th>P. Original</th>
-          <th>Stock</th>
-          <th>⭐</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        ${list.map(p => {
-          const colorMarca = (p.color || p.marca || '').trim();
-          const safe = encodeURIComponent(JSON.stringify({
-            _sheet: p._sheet, _row: p._row,
-            nombre: p.nombre, categoria: p.categoria,
-            color: p.color, marca: p.marca, talle: p.talle,
-            precio: p.precio, descuento: p.descuento,
-            stock: p.stock, destacado: p.destacado,
-            descripcion: p.descripcion, subcategoria: p.subcategoria
-          }));
-          return `
-          <tr>
-            <td><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
-            ${hayColor ? `<td>${colorMarca ? `<span class="badge-color">${colorMarca}</span>` : '—'}</td>` : ''}
-            ${hayTalle ? `<td>${p.talle||'—'}</td>` : ''}
-            <td><strong>${fmtPrecioSheet(p.precio)}</strong></td>
-            <td class="text-muted">${fmtPrecioSheet(p.descuento)}</td>
-            <td class="td-center">${p.stock
-              ? '<span class="badge badge-conf">✓</span>'
-              : '<span class="badge badge-cancel">✗</span>'}</td>
-            <td class="td-center">${p.destacado ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
-            <td>
-              <button class="btn-icon" onclick="editarProducto(decodeURIComponent('${safe}'))">
-                <i class="fa-solid fa-pen"></i>
-              </button>
-            </td>
-          </tr>`;
-        }).join('')}
-      </tbody>
+      <thead><tr>
+        <th>Nombre</th>
+        ${hayColor ? '<th>Color / Marca</th>' : ''}
+        ${hayTalle ? '<th>Talle</th>' : ''}
+        <th>Precio</th>
+        <th>P. Original</th>
+        <th>Stock</th>
+        <th>⭐</th>
+        <th></th>
+      </tr></thead>
+      <tbody id="prod-tbody"></tbody>
     </table>`;
+
+  const tbody = $('prod-tbody');
+  list.forEach(p => {
+    const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+    const descN   = Number(String(p.descuento||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+    const colorMarca = (p.color || p.marca || '').trim();
+    const safe = encodeURIComponent(JSON.stringify({
+      _sheet: p._sheet, _row: p._row, nombre: p.nombre, categoria: p.categoria,
+      color: p.color, marca: p.marca, talle: p.talle, precio: p.precio,
+      descuento: p.descuento, stock: p.stock, destacado: p.destacado,
+      descripcion: p.descripcion, subcategoria: p.subcategoria
+    }));
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
+      ${hayColor ? `<td>${colorMarca ? `<span class="badge-color">${colorMarca}</span>` : '—'}</td>` : ''}
+      ${hayTalle ? `<td>${p.talle||'—'}</td>` : ''}
+      <td class="td-editable td-precio"><strong>${fmtPrecioSheet(p.precio)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
+      <td class="td-editable td-desc"><span class="text-muted">${fmtPrecioSheet(p.descuento)}</span><i class="fa-solid fa-pen edit-hint"></i></td>
+      <td class="td-center td-toggle td-stock">${p.stock ? '<span class="badge badge-conf">✓</span>' : '<span class="badge badge-cancel">✗</span>'}</td>
+      <td class="td-center td-toggle td-dest">${p.destacado ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
+      <td><button class="btn-icon" title="Ver producto"><i class="fa-solid fa-image"></i></button></td>`;
+
+    let pVal = precioN, dVal = descN, sVal = !!p.stock, hVal = !!p.destacado;
+
+    tr.querySelector('.td-precio').addEventListener('click', function() {
+      editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; });
+    });
+    tr.querySelector('.td-desc').addEventListener('click', function() {
+      editarCeldaNum(this, p, 'descuento', dVal, v => { dVal = v; p.descuento = v; });
+    });
+    tr.querySelector('.td-stock').addEventListener('click', function() {
+      sVal = !sVal; p.stock = sVal;
+      this.innerHTML = sVal ? '<span class="badge badge-conf">✓</span>' : '<span class="badge badge-cancel">✗</span>';
+      crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo:'stock', valor: sVal })
+        .then(() => toast('Stock actualizado ✓')).catch(() => toast('Error','err'));
+    });
+    tr.querySelector('.td-dest').addEventListener('click', function() {
+      hVal = !hVal; p.destacado = hVal;
+      this.innerHTML = hVal ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>';
+      crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo:'destacado', valor: hVal })
+        .then(() => toast('Destacado actualizado ✓')).catch(() => toast('Error','err'));
+    });
+    tr.querySelector('.btn-icon').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function editarCeldaNum(td, p, campo, valorActual, onSave) {
+  if (td.querySelector('input')) return;
+  td.innerHTML = `<input type="number" class="inline-input" value="${valorActual}" min="0" step="1">`;
+  const input = td.querySelector('input');
+  input.focus(); input.select();
+  const renderVal = v => v ? `<strong>$${Number(v).toLocaleString('es-AR')}</strong><i class="fa-solid fa-pen edit-hint"></i>`
+                           : `<span class="text-muted">—</span><i class="fa-solid fa-pen edit-hint"></i>`;
+  const guardar = async () => {
+    const nuevo = Number(input.value) || 0;
+    td.innerHTML = renderVal(nuevo);
+    if (nuevo === valorActual) return;
+    try {
+      await crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo, valor: nuevo });
+      onSave(nuevo);
+      toast('Guardado ✓');
+    } catch(e) { toast('Error al guardar','err'); td.innerHTML = renderVal(valorActual); }
+  };
+  input.addEventListener('blur', guardar);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { td.innerHTML = renderVal(valorActual); }
+  });
 }
 
 let _prodActual = null;
@@ -479,7 +520,8 @@ let _pedidos = [];
 async function loadPedidos(force=false) {
   $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
-    _pedidos = await getData('list','Pedidos',force);
+    const raw = await crm({ action: 'ext_pedidos_listar' });
+    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
     filtrarPedidos();
   } catch(e) {
     $('ped-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
@@ -490,11 +532,11 @@ function filtrarPedidos() {
   const q   = val('ped-search').toLowerCase();
   const est = val('ped-estado-fil');
   let list = _pedidos;
-  if (est) list = list.filter(p => p.estado === est);
+  if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
-    String(p.cliente||'').toLowerCase().includes(q) ||
-    String(p.detalle||'').toLowerCase().includes(q) ||
-    String(p.telefono||'').includes(q));
+    (p.nombre||p.cliente||'').toLowerCase().includes(q) ||
+    (p.producto||p.detalle||'').toLowerCase().includes(q) ||
+    (p.telefono||'').includes(q));
   renderPedidos(list);
 }
 
@@ -503,23 +545,21 @@ function renderPedidos(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-bag-shopping"></i>Sin pedidos</div>'; return; }
   el.innerHTML = `
     <table>
-      <thead><tr><th>Fecha</th><th>Cliente</th><th>Detalle</th><th>Monto</th><th>Estado</th><th>Comprobante</th><th></th></tr></thead>
+      <thead><tr>
+        <th>Fecha</th><th>Cliente</th><th>Producto</th>
+        <th>Talle</th><th>Color</th><th>Total</th><th>Pago</th><th>Estado</th>
+      </tr></thead>
       <tbody>
-        ${[...list].reverse().map(p => `
+        ${list.map(p => `
           <tr>
-            <td style="white-space:nowrap">${fmtFecha(p.fecha)}</td>
-            <td><strong>${p.cliente||'—'}</strong><div style="font-size:0.78rem;color:var(--text2)">${p.telefono||''}</div></td>
-            <td style="max-width:200px;font-size:0.82rem">${p.detalle||'—'}</td>
-            <td><strong>${fmtMoney(p.monto)}</strong></td>
-            <td>${badgeEstado(p.estado)}</td>
-            <td>${p.comprobante
-              ? `<a href="${p.comprobante}" target="_blank" rel="noopener" class="badge badge-conf" style="text-decoration:none;cursor:pointer"><i class="fa-solid fa-eye" style="margin-right:4px"></i>Ver</a>`
-              : '<span style="color:var(--text2);font-size:0.78rem">—</span>'
-            }</td>
-            <td class="td-actions">
-              <button class="btn-icon" onclick="editarPedido(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="fa-solid fa-pen"></i></button>
-              <button class="btn-icon" onclick="borrarPedido('${p.id}')" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
-            </td>
+            <td style="white-space:nowrap">${fmtFecha(p.fecha||p.timestamp||'')}</td>
+            <td><strong>${p.nombre||p.cliente||'—'}</strong><div style="font-size:0.78rem;color:var(--text2)">${p.telefono||''}</div></td>
+            <td style="max-width:180px;font-size:0.82rem">${p.producto||p.detalle||'—'}</td>
+            <td>${p.talle||'—'}</td>
+            <td>${p.color||'—'}</td>
+            <td><strong>${p.total ? '$'+Number(p.total).toLocaleString('es-AR') : '—'}</strong></td>
+            <td>${p.metodo||p.pago||'—'}</td>
+            <td>${badgeEstado(p.estado||'Pendiente')}</td>
           </tr>`).join('')}
       </tbody>
     </table>`;

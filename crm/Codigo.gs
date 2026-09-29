@@ -761,3 +761,50 @@ function comprobanteSubir(p) {
   avisarTelegram('📎 Comprobante subido' + (p.pedidoId ? ' (pedido '+p.pedidoId+')' : ''));
   return url;
 }
+
+// ─── MIGRACIÓN: correr UNA SOLA VEZ desde Apps Script ────────
+// Copia las pestañas de productos y pedidos externos a esta planilla.
+// Pasos: Abrir Apps Script → seleccionar "migrarPlanillas" → ▶ Ejecutar
+
+function migrarPlanillas() {
+  var ID_PRODUCTOS = '1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw';
+  var ID_PEDIDOS   = '1TrrCEZvlQUcNTvPkBv9Ot57I5vebbySwWG2kagq42E0';
+  var dest = ss();
+  var log  = [];
+
+  // 1. Copiar pestañas de productos por categoría
+  try {
+    var ssP = SpreadsheetApp.openById(ID_PRODUCTOS);
+    CAT_TABS.forEach(function(tabName) {
+      var origen = ssP.getSheetByName(tabName);
+      if (!origen) { log.push('SKIP productos: ' + tabName + ' (no existe)'); return; }
+
+      var existente = dest.getSheetByName(tabName);
+      if (existente) dest.deleteSheet(existente);
+
+      origen.copyTo(dest).setName(tabName);
+      log.push('OK productos: ' + tabName);
+    });
+  } catch(e) {
+    log.push('ERROR productos: ' + e);
+  }
+
+  // 2. Copiar pedidos externos → pestaña "Pedidos externos"
+  try {
+    var ssO      = SpreadsheetApp.openById(ID_PEDIDOS);
+    var shOrigen = ssO.getSheetByName('Pedidos') || ssO.getSheetByName('pedidos') || ssO.getSheets()[0];
+    if (shOrigen) {
+      var existePed = dest.getSheetByName('Pedidos externos');
+      if (existePed) dest.deleteSheet(existePed);
+      shOrigen.copyTo(dest).setName('Pedidos externos');
+      log.push('OK pedidos externos');
+    } else {
+      log.push('SKIP pedidos: hoja no encontrada');
+    }
+  } catch(e) {
+    log.push('ERROR pedidos: ' + e);
+  }
+
+  Logger.log(log.join('\n'));
+  SpreadsheetApp.getUi().alert('Migración completa:\n\n' + log.join('\n'));
+}

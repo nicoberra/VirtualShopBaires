@@ -611,6 +611,36 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   }
 }
 
+/* ─── PANEL DASHBOARD: items recientes ──────────────────────── */
+.panel-rec-item {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.panel-rec-item:last-child { border-bottom: none; }
+.panel-rec-left { flex: 1; min-width: 0; }
+.panel-rec-name { font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-rec-sub  { font-size: 0.74rem; color: var(--text2); margin-top: 2px; }
+.panel-rec-right { flex-shrink: 0; text-align: right; }
+.panel-rec-total { font-weight: 700; font-size: 0.88rem; color: var(--green); }
+
+/* ─── MOBILE: pedidos tabla → ocultar columnas en pantallas chicas ── */
+@media (max-width: 600px) {
+  /* Ocultar columnas secundarias — se ven en el row expandido */
+  #ped-table th:nth-child(2), #ped-table td:nth-child(2),   /* # Pedido */
+  #ped-table th:nth-child(4), #ped-table td:nth-child(4),   /* Email */
+  #ped-table th:nth-child(6), #ped-table td:nth-child(6),   /* Pago */
+  #ped-table th:nth-child(7), #ped-table td:nth-child(7) {  /* Entrega */
+    display: none;
+  }
+  /* Ocultar columnas secundarias en Productos */
+  #prod-table th:nth-child(3), #prod-table td:nth-child(3), /* Descuento */
+  #prod-table th:nth-child(6), #prod-table td:nth-child(6), /* Imagen */
+  #prod-table th:nth-child(7), #prod-table td:nth-child(7) { /* Link */
+    display: none;
+  }
+}
+
 /* Accesibilidad: focus visible en todos los interactivos */
 button:focus-visible,
 input:focus-visible,

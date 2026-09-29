@@ -163,56 +163,77 @@ async function loadPanel() {
   cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
 
   try {
-    const [clientes, pedidos] = await Promise.all([
-      getData('list', 'Clientes'),
-      getData('list', 'Pedidos'),
-    ]);
+    // Clientes: fuente principal
+    const clientes = await getData('list', 'Clientes');
+
+    // Pedidos: usar cache si ya cargó (prefetchAll), si no fetchear
+    let pedidos = _pedidos.length ? _pedidos : [];
+    if (!pedidos.length) {
+      const raw = await crm({ action: 'ext_pedidos_listar' });
+      pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+      _pedidos = pedidos;
+    }
+
     const mes = new Date(); mes.setDate(1); mes.setHours(0,0,0,0);
-    const factMes = pedidos.filter(p => new Date(String(p.fecha).replace(' ','T')) >= mes)
-                           .reduce((s,p) => s + (Number(String(p.monto).replace(/[^\d.]/g,'')) || 0), 0);
-    const pendientes = pedidos.filter(p => p.estado === 'Pendiente' || !p.estado).length;
+    const pendientes = pedidos.filter(p => (p.estado||'Pendiente') === 'Pendiente').length;
+    const delMes     = pedidos.filter(p => {
+      const d = new Date(String(p.timestamp||p.fecha||'').replace(' ','T'));
+      return !isNaN(d) && d >= mes;
+    });
+    const factMes = delMes.reduce((s,p) => s + (Number(String(p.total||p.monto||0).replace(/[^\d.]/g,'')) || 0), 0);
 
     cards.innerHTML = `
       <div class="stat-card">
-        <div class="stat-label">Clientes</div>
+        <div class="stat-label"><i class="fa-solid fa-users" style="color:var(--red)"></i> Clientes</div>
         <div class="stat-val">${clientes.length}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Pedidos pendientes</div>
+        <div class="stat-label"><i class="fa-solid fa-clock" style="color:#f59e0b"></i> Pendientes</div>
         <div class="stat-val text-yellow">${pendientes}</div>
         <div class="stat-sub">${pedidos.length} totales</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Facturación del mes</div>
-        <div class="stat-val">${fmtMoney(factMes)}</div>
+        <div class="stat-label"><i class="fa-solid fa-calendar-day" style="color:var(--green)"></i> Este mes</div>
+        <div class="stat-val">${delMes.length}</div>
+        <div class="stat-sub">pedidos</div>
       </div>
-    `;
+      <div class="stat-card">
+        <div class="stat-label"><i class="fa-solid fa-dollar-sign" style="color:var(--green)"></i> Facturación</div>
+        <div class="stat-val">${fmtMoney(factMes)}</div>
+        <div class="stat-sub">este mes</div>
+      </div>`;
 
-    // Pedidos recientes
-    const recPed = [...pedidos].reverse().slice(0, 5);
-    $('panel-pedidos-rec').innerHTML = recPed.length ? `
-      <table><tbody>
-        ${recPed.map(p => `
-          <tr>
-            <td>${p.cliente || '—'}</td>
-            <td>${fmtMoney(p.monto)}</td>
-            <td>${badgeEstado(p.estado)}</td>
-          </tr>`).join('')}
-      </tbody></table>` : '<div class="empty-state"><i class="fa-solid fa-inbox"></i>Sin pedidos</div>';
+    // Pedidos recientes (formato web: nombre+apellido, total, estado)
+    const recPed = pedidos.slice(0, 5);
+    $('panel-pedidos-rec').innerHTML = recPed.length ? recPed.map(p => {
+      const nombre = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
+      const total  = p.total ? fmtMoney(p.total) : p.monto ? fmtMoney(p.monto) : '—';
+      return `<div class="panel-rec-item">
+        <div class="panel-rec-left">
+          <div class="panel-rec-name">${nombre}</div>
+          <div class="panel-rec-sub">${fmtFecha(p.timestamp||p.fecha||'')} · ${p.metodoPago||p.metodo||''}</div>
+        </div>
+        <div class="panel-rec-right">
+          <div class="panel-rec-total">${total}</div>
+          ${badgeEstado(p.estado||'Pendiente')}
+        </div>
+      </div>`;
+    }).join('') : '<div class="empty-state"><i class="fa-solid fa-inbox"></i>Sin pedidos</div>';
 
     // Clientes recientes
     const recCli = [...clientes].reverse().slice(0, 5);
-    $('panel-clientes-rec').innerHTML = recCli.length ? `
-      <table><tbody>
-        ${recCli.map(c => `
-          <tr>
-            <td>${c.nombre || '—'}</td>
-            <td style="color:var(--text2);font-size:0.82rem">${c.email || c.telefono || ''}</td>
-          </tr>`).join('')}
-      </tbody></table>` : '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
+    $('panel-clientes-rec').innerHTML = recCli.length ? recCli.map(c => `
+      <div class="panel-rec-item">
+        <div class="panel-rec-left">
+          <div class="panel-rec-name">${c.nombre || '—'}</div>
+          <div class="panel-rec-sub">${c.email || c.telefono || ''}</div>
+        </div>
+        <div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${c.ciudad||''}</div>
+      </div>`).join('') : '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
 
   } catch(e) {
-    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar datos: ${e.message}</p></div>`;
+    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${e.message}</p>
+      <button class="btn-secondary" style="margin-top:10px" onclick="loadPanel()"><i class="fa-solid fa-rotate-right"></i> Reintentar</button></div>`;
   }
 }
 

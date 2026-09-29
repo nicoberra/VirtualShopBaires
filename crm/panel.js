@@ -696,7 +696,7 @@ function renderPedidos(list) {
   if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-bag-shopping"></i>Sin pedidos</div>'; return; }
   el.innerHTML = `
     <table>
-      <thead><tr><th>Fecha</th><th>Cliente</th><th>Detalle</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
+      <thead><tr><th>Fecha</th><th>Cliente</th><th>Detalle</th><th>Monto</th><th>Estado</th><th>Comprobante</th><th></th></tr></thead>
       <tbody>
         ${[...list].reverse().map(p => `
           <tr>
@@ -705,6 +705,10 @@ function renderPedidos(list) {
             <td style="max-width:200px;font-size:0.82rem">${p.detalle||'—'}</td>
             <td><strong>${fmtMoney(p.monto)}</strong></td>
             <td>${badgeEstado(p.estado)}</td>
+            <td>${p.comprobante
+              ? `<a href="${p.comprobante}" target="_blank" rel="noopener" class="badge badge-conf" style="text-decoration:none;cursor:pointer"><i class="fa-solid fa-eye" style="margin-right:4px"></i>Ver</a>`
+              : '<span style="color:var(--text2);font-size:0.78rem">—</span>'
+            }</td>
             <td class="td-actions">
               <button class="btn-icon" onclick="editarPedido(${JSON.stringify(p).replace(/"/g,'&quot;')})"><i class="fa-solid fa-pen"></i></button>
               <button class="btn-icon" onclick="borrarPedido('${p.id}')" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
@@ -719,6 +723,7 @@ function abrirModalPedido() {
   ['mped-id','mped-cliente','mped-telefono','mped-detalle','mped-monto','mped-notas'].forEach(id => $(id).value = '');
   $('mped-estado').value = 'Pendiente';
   hide('nuevo-cli-wrap');
+  hide('mped-comp-wrap');
   show('modal-pedido', 'flex');
   setTimeout(() => $('mped-cliente').focus(), 50);
 }
@@ -733,6 +738,12 @@ function editarPedido(p) {
   $('mped-estado').value   = p.estado||'Pendiente';
   $('mped-notas').value    = p.notas||'';
   hide('nuevo-cli-wrap');
+  if (p.comprobante) {
+    $('mped-comp-link').href = p.comprobante;
+    show('mped-comp-wrap');
+  } else {
+    hide('mped-comp-wrap');
+  }
   show('modal-pedido', 'flex');
 }
 

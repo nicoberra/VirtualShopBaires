@@ -166,6 +166,15 @@
         </div>
       </div>
       <div class="form-group"><label>Notas</label><textarea id="mped-notas" rows="2" placeholder="Observaciones…"></textarea></div>
+      <!-- Comprobante de transferencia -->
+      <div id="mped-comp-wrap" style="display:none;margin-top:4px;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px">
+        <div style="font-size:0.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">
+          <i class="fa-solid fa-receipt" style="margin-right:5px;color:var(--green)"></i>Comprobante de transferencia
+        </div>
+        <a id="mped-comp-link" href="#" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none">
+          <i class="fa-solid fa-eye"></i>&nbsp; Ver comprobante
+        </a>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn-secondary" onclick="hide('modal-pedido')">Cancelar</button>

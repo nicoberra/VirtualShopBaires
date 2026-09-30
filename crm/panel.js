@@ -222,14 +222,19 @@ async function loadPanel() {
 
     // Clientes recientes
     const recCli = [...clientes].reverse().slice(0, 5);
-    $('panel-clientes-rec').innerHTML = recCli.length ? recCli.map(c => `
-      <div class="panel-rec-item">
-        <div class="panel-rec-left">
-          <div class="panel-rec-name">${c.nombre || '—'}</div>
-          <div class="panel-rec-sub">${c.email || c.telefono || ''}</div>
-        </div>
-        <div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${c.ciudad||''}</div>
-      </div>`).join('') : '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
+    const recCliWrap = $('panel-clientes-rec');
+    recCliWrap.innerHTML = '';
+    if (recCli.length) {
+      recCli.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'panel-rec-item panel-rec-clickable';
+        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${c.nombre||'—'}</div><div class="panel-rec-sub">${c.email||c.telefono||''}</div></div><div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${c.ciudad||''}</div>`;
+        item.addEventListener('click', () => { goTo('clientes'); verHistorialCliente(c); });
+        recCliWrap.appendChild(item);
+      });
+    } else {
+      recCliWrap.innerHTML = '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
+    }
 
   } catch(e) {
     cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${e.message}</p>

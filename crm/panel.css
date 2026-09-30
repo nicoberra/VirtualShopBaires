@@ -651,6 +651,8 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   border-bottom: 1px solid var(--border);
 }
 .panel-rec-item:last-child { border-bottom: none; }
+.panel-rec-clickable { cursor: pointer; border-radius: 6px; margin: 0 -8px; padding: 10px 8px; }
+.panel-rec-clickable:hover { background: var(--bg3); }
 .panel-rec-left { flex: 1; min-width: 0; }
 .panel-rec-name { font-weight: 600; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .panel-rec-sub  { font-size: 0.74rem; color: var(--text2); margin-top: 2px; }

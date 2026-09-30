@@ -85,7 +85,7 @@ function doLogin() {
     sessionStorage.setItem('ops_auth', '1');
     hide('login-wrap');
     show('app', 'flex');
-    goTo('clientes');
+    goTo('panel');
     prefetchAll();
   } else {
     $('login-err').textContent = 'Contraseña incorrecta.';
@@ -128,11 +128,73 @@ function goTo(sec) {
 
 function loadSection(sec) {
   const loaders = {
+    panel:     loadPanel,
     clientes:  loadClientes,
     productos: loadProductos,
     pedidos:   loadPedidos,
   };
   if (loaders[sec]) loaders[sec]();
+}
+
+async function loadPanel() {
+  const cards = $('panel-ops-cards');
+  cards.innerHTML = '<div class="stat-card" style="grid-column:1/-1"><div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div></div>';
+  try {
+    const [clientes, productos, pedidos] = await Promise.all([
+      getData('ext_clientes_listar', null, false).catch(() => []),
+      getData('ext_productos_listar', null, false).catch(() => []),
+      getData('ext_pedidos_listar',   null, false).catch(() => []),
+    ]);
+    if (!_clientes.length  && clientes.length)  _clientes  = clientes;
+    if (!_productos.length && productos.length) _productos = productos;
+    if (!_pedidos.length   && pedidos.length)   _pedidos   = pedidos;
+
+    const pendientes = pedidos.filter(p => !p.estado || p.estado === 'Pendiente').length;
+    const enCamino   = pedidos.filter(p => p.estado === 'En camino').length;
+
+    cards.innerHTML = `
+      <div class="stat-card"><div class="stat-label">Clientes</div><div class="stat-val">${clientes.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Productos</div><div class="stat-val">${productos.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Pedidos pendientes</div><div class="stat-val">${pendientes}</div></div>
+      <div class="stat-card"><div class="stat-label">En camino</div><div class="stat-val">${enCamino}</div></div>`;
+
+    // Pedidos recientes
+    const recPed = pedidos.slice(0, 5);
+    const pedWrap = $('panel-ops-pedidos-rec');
+    pedWrap.innerHTML = '';
+    if (recPed.length) {
+      recPed.forEach(p => {
+        const nombre = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
+        const est    = p.estado || 'Pendiente';
+        const cls    = est === 'Entregado' ? 'badge-entre' : est === 'En camino' ? 'badge-camino' : 'badge-pend';
+        const item   = document.createElement('div');
+        item.className = 'panel-rec-item panel-rec-clickable';
+        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${nombre}</div><div class="panel-rec-sub">${p.productos||p.producto||p.detalle||''}</div></div><span class="badge ${cls}">${est}</span>`;
+        item.addEventListener('click', () => goTo('pedidos'));
+        pedWrap.appendChild(item);
+      });
+    } else {
+      pedWrap.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i>Sin pedidos</div>';
+    }
+
+    // Clientes recientes
+    const recCli = [...clientes].reverse().slice(0, 5);
+    const cliWrap = $('panel-ops-clientes-rec');
+    cliWrap.innerHTML = '';
+    if (recCli.length) {
+      recCli.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'panel-rec-item panel-rec-clickable';
+        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${c.nombre||'—'}</div><div class="panel-rec-sub">${c.email||c.telefono||''}</div></div><div style="font-size:0.78rem;color:var(--text2)">${c.ciudad||''}</div>`;
+        item.addEventListener('click', () => { goTo('clientes'); verHistorialCliente(c); });
+        cliWrap.appendChild(item);
+      });
+    } else {
+      cliWrap.innerHTML = '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
+    }
+  } catch(e) {
+    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${e.message}</p></div>`;
+  }
 }
 
 // ─── CACHÉ DE DATOS ───────────────────────────────────────────
@@ -860,6 +922,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sessionStorage.getItem('ops_auth') === '1') {
     hide('login-wrap');
     show('app', 'flex');
-    goTo('clientes');
+    goTo('panel');
   }
 });

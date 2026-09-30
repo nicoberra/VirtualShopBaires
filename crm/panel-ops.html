@@ -35,6 +35,7 @@
   <nav id="sidebar">
     <div class="sidebar-logo"><span class="logo-red">VSB</span> Ops</div>
     <div class="nav-links">
+      <a class="nav-link" data-sec="panel"     onclick="goTo('panel')">     <i class="fa-solid fa-gauge"></i>        Panel</a>
       <a class="nav-link" data-sec="clientes"  onclick="goTo('clientes')">  <i class="fa-solid fa-users"></i>        Clientes</a>
       <a class="nav-link" data-sec="productos" onclick="goTo('productos')"> <i class="fa-solid fa-box"></i>          Productos</a>
       <a class="nav-link" data-sec="pedidos"   onclick="goTo('pedidos')">   <i class="fa-solid fa-bag-shopping"></i> Pedidos</a>
@@ -48,6 +49,7 @@
   <div id="mobile-nav">
     <div class="mobile-logo"><span class="logo-red">VSB</span> Ops</div>
     <div id="mobile-nav-scroll" class="mnav-stretch">
+      <button class="mnav-btn" data-sec="panel"     onclick="goTo('panel')">     <i class="fa-solid fa-gauge"></i><span class="mnav-label">Panel</span></button>
       <button class="mnav-btn" data-sec="clientes"  onclick="goTo('clientes')">  <i class="fa-solid fa-users"></i><span class="mnav-label">Clientes</span></button>
       <button class="mnav-btn" data-sec="productos" onclick="goTo('productos')"> <i class="fa-solid fa-box"></i><span class="mnav-label">Productos</span></button>
       <button class="mnav-btn" data-sec="pedidos"   onclick="goTo('pedidos')">   <i class="fa-solid fa-bag-shopping"></i><span class="mnav-label">Pedidos</span></button>
@@ -56,6 +58,22 @@
 
   <!-- CONTENIDO PRINCIPAL -->
   <main id="main-content">
+
+    <!-- PANEL -->
+    <section id="sec-panel" class="sec">
+      <h1 class="sec-title">Panel</h1>
+      <div id="panel-ops-cards" class="stats-grid"></div>
+      <div class="stats-grid" style="margin-top:16px">
+        <div class="card">
+          <div class="card-title"><i class="fa-solid fa-bag-shopping" style="color:var(--red)"></i> Pedidos recientes</div>
+          <div id="panel-ops-pedidos-rec"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><i class="fa-solid fa-users" style="color:var(--red)"></i> Clientes recientes</div>
+          <div id="panel-ops-clientes-rec"></div>
+        </div>
+      </div>
+    </section>
 
     <!-- CLIENTES -->
     <section id="sec-clientes" class="sec">

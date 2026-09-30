@@ -1,0 +1,26 @@
+{
+  "name": "VSB CRM",
+  "short_name": "VSB CRM",
+  "description": "Panel de administración de Virtual Shop Baires",
+  "start_url": "/crm/panel.html",
+  "scope": "/crm/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/crm/icon-crm.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/crm/icon-crm.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

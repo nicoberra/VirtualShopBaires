@@ -2,8 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Preguntas Frecuentes | Virtual Shop Baires</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="description" content="Respondemos tus dudas sobre envíos, pagos, garantías y devoluciones. Virtual Shop Baires, importador directo en Buenos Aires. Enviamos a todo Argentina." />
   <meta property="og:title" content="Preguntas Frecuentes | Virtual Shop Baires" />
   <meta property="og:description" content="Todo lo que necesitás saber sobre envíos, pagos, garantías y cómo comprar en Virtual Shop Baires." />
@@ -384,5 +390,13 @@
 <script src="js/productos.js"></script>
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {});
+  });
+}
+</script>
 </body>
 </html>

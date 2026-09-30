@@ -2,8 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Mis compras | Virtual Shop Baires</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="logo.png" type="image/png" />
   <link rel="stylesheet" href="css/styles.css" />
@@ -234,6 +240,14 @@ async function buscarPedidos() {
     errEl.textContent = "Error de conexión. Verificá tu internet e intentá de nuevo.";
     errEl.style.display = "block";
   }
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {});
+  });
 }
 </script>
 </body>

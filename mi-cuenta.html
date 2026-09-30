@@ -2,8 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Mi cuenta | Virtual Shop Baires</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="logo.png" type="image/png" />
   <link rel="stylesheet" href="css/styles.css" />
@@ -240,6 +246,14 @@ function cerrarSesion() {
   if (!confirm('¿Seguro que querés cerrar Sesión?')) return;
   localStorage.removeItem('vsb_user');
   window.location.href = 'index.html';
+}
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {});
+  });
 }
 </script>
 </body>

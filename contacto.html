@@ -2,8 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Contacto | Virtual Shop Baires</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="description" content="Contactate con Virtual Shop Baires por WhatsApp, email o formulario. Atendemos de lunes a viernes de 9 a 17hs. Marcelo Gamboa 6306, Versalles, Buenos Aires." />
   <meta property="og:title" content="Contacto | Virtual Shop Baires" />
   <meta property="og:description" content="Contactanos por WhatsApp, email o formulario. Atención de lunes a viernes, envíos a todo Argentina." />
@@ -262,6 +268,14 @@
     showToast("✅ Mensaje enviado. Te contactaremos pronto.");
     e.target.reset();
   }
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {});
+  });
+}
 </script>
 </body>
 </html>

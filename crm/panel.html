@@ -2,13 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>CRM · Virtual Shop Baires</title>
   <link rel="apple-touch-icon" href="icon-crm.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="VSB CRM">
   <meta name="theme-color" content="#1a1a2e">
+  <link rel="manifest" href="/crm/manifest.webmanifest">
   <link rel="stylesheet" href="panel.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -364,5 +365,13 @@
 <div id="toast" class="toast"></div>
 
 <script src="panel.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/crm/sw.js', { scope: '/crm/' })
+      .catch(() => {});
+  });
+}
+</script>
 </body>
 </html>

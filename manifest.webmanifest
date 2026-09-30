@@ -1,0 +1,42 @@
+{
+  "name": "Virtual Shop Baires",
+  "short_name": "VSB Tienda",
+  "description": "Importador directo de productos sin intermediarios. Envíos a todo Argentina.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#CC1212",
+  "lang": "es",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Productos",
+      "short_name": "Productos",
+      "url": "/productos.html",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Mi Carrito",
+      "short_name": "Carrito",
+      "url": "/checkout.html",
+      "icons": [{ "src": "/logo.png", "sizes": "96x96" }]
+    }
+  ]
+}

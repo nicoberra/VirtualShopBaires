@@ -38,11 +38,11 @@ var TG_TOKEN = '';
 var TG_CHAT  = '';
 
 // Datos bancarios para transferencia (se muestran en el checkout)
-var BANK_ALIAS   = '';   // ← Ej: 'VIRTUALSHOPBAIRES'
-var BANK_CBU     = '';   // ← Tu CBU de 22 dígitos
-var BANK_TITULAR = '';   // ← Nombre del titular de la cuenta
-var BANK_BANCO   = '';   // ← Nombre del banco (ej: 'Banco Galicia')
-var BANK_CUIT    = '';   // ← CUIT del titular
+var BANK_ALIAS   = 'virtualshopbairescvu';
+var BANK_CBU     = '0000003100000091453220';
+var BANK_TITULAR = 'BR TRADE SRL';
+var BANK_BANCO   = 'Mercado Pago CVU';
+var BANK_CUIT    = '30-71077182-7';
 // ─────────────────────────────────────────────────────────────
 
 // Estructura de cada pestaña: k = clave API, h = título en la hoja

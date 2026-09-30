@@ -925,6 +925,23 @@ function borrarPedido(id) {
   });
 }
 
+// ─── AUTO-REFRESH PEDIDOS ─────────────────────────────────────
+
+function _silentRefreshPedidos() {
+  if (!localStorage.getItem('ops_auth') && !localStorage.getItem('crm_auth')) return;
+  delete _cache['ext_pedidos_listar'];
+  _pedidos = [];
+  loadPedidos(true).then(() => {
+    if (currentSec === 'panel') loadPanel();
+  }).catch(() => {});
+}
+
+setInterval(() => { if (!document.hidden) _silentRefreshPedidos(); }, 30000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) _silentRefreshPedidos();
+});
+
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {

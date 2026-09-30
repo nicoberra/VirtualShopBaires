@@ -1113,6 +1113,25 @@ async function loadComprobantes(force=false) {
   }
 }
 
+// ─── AUTO-REFRESH PEDIDOS ─────────────────────────────────────
+
+function _silentRefreshPedidos() {
+  if (!localStorage.getItem('crm_auth')) return;
+  delete _cache['ext_pedidos_listar'];
+  _pedidos = [];
+  loadPedidos(true).then(() => {
+    if (currentSec === 'panel') loadPanel();
+  }).catch(() => {});
+}
+
+// Cada 30 segundos si la pestaña está visible
+setInterval(() => { if (!document.hidden) _silentRefreshPedidos(); }, 30000);
+
+// Al volver a la pestaña/app después de estar en otro lado
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) _silentRefreshPedidos();
+});
+
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {

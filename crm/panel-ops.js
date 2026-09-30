@@ -154,10 +154,10 @@ async function loadPanel() {
     const enCamino   = pedidos.filter(p => p.estado === 'En camino').length;
 
     cards.innerHTML = `
-      <div class="stat-card"><div class="stat-label">Clientes</div><div class="stat-val">${clientes.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Productos</div><div class="stat-val">${productos.length}</div></div>
-      <div class="stat-card"><div class="stat-label">Pedidos pendientes</div><div class="stat-val">${pendientes}</div></div>
-      <div class="stat-card"><div class="stat-label">En camino</div><div class="stat-val">${enCamino}</div></div>`;
+      <div class="stat-card stat-card-link" onclick="goTo('clientes')"><div class="stat-label">Clientes</div><div class="stat-val">${clientes.length}</div></div>
+      <div class="stat-card stat-card-link" onclick="goTo('productos')"><div class="stat-label">Productos</div><div class="stat-val">${productos.length}</div></div>
+      <div class="stat-card stat-card-link" onclick="goTo('pedidos')"><div class="stat-label">Pedidos pendientes</div><div class="stat-val">${pendientes}</div></div>
+      <div class="stat-card stat-card-link" onclick="goTo('pedidos')"><div class="stat-label">En camino</div><div class="stat-val">${enCamino}</div></div>`;
 
     // Pedidos recientes
     const recPed = pedidos.slice(0, 5);

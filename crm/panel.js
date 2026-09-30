@@ -183,21 +183,21 @@ async function loadPanel() {
     const factMes = delMes.reduce((s,p) => s + (Number(String(p.total||p.monto||0).replace(/[^\d.]/g,'')) || 0), 0);
 
     cards.innerHTML = `
-      <div class="stat-card">
+      <div class="stat-card stat-card-link" onclick="goTo('clientes')">
         <div class="stat-label"><i class="fa-solid fa-users" style="color:var(--red)"></i> Clientes</div>
         <div class="stat-val">${clientes.length}</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-link" onclick="goTo('pedidos')">
         <div class="stat-label"><i class="fa-solid fa-clock" style="color:#f59e0b"></i> Pendientes</div>
         <div class="stat-val text-yellow">${pendientes}</div>
         <div class="stat-sub">${pedidos.length} totales</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-link" onclick="goTo('pedidos')">
         <div class="stat-label"><i class="fa-solid fa-calendar-day" style="color:var(--green)"></i> Este mes</div>
         <div class="stat-val">${delMes.length}</div>
         <div class="stat-sub">pedidos</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card stat-card-link" onclick="goTo('facturacion')">
         <div class="stat-label"><i class="fa-solid fa-dollar-sign" style="color:var(--green)"></i> Facturación</div>
         <div class="stat-val">${fmtMoney(factMes)}</div>
         <div class="stat-sub">este mes</div>

@@ -169,6 +169,7 @@ img { max-width: 100%; }
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 20px;
 }
+.stat-card-link { cursor: pointer; }
 .stat-label { font-size: 0.78rem; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
 .stat-val { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
 .stat-sub { font-size: 0.78rem; color: var(--text2); margin-top: 4px; }

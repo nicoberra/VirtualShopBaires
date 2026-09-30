@@ -836,6 +836,28 @@ async function guardarProducto() {
 // ─── PEDIDOS ─────────────────────────────────────────────────
 
 let _pedidos = [];
+let _pedPeriodo = 'hoy';
+
+function setPedPeriodo(p) {
+  _pedPeriodo = p;
+  document.querySelectorAll('#ped-periodo-chips .cat-chip').forEach(b => b.classList.toggle('cat-chip-sel', b.dataset.p === p));
+  filtrarPedidos();
+}
+
+function _filtrarPorPeriodo(list) {
+  if (_pedPeriodo === 'todos') return list;
+  const hoy  = new Date(); hoy.setHours(0,0,0,0);
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1);
+  const sem  = new Date(hoy); sem.setDate(sem.getDate()-6);
+  return list.filter(p => {
+    const d = new Date(String(p.timestamp||p.fecha||'').replace(' ','T'));
+    if (isNaN(d)) return false;
+    if (_pedPeriodo === 'hoy')    return d >= hoy;
+    if (_pedPeriodo === 'ayer')   return d >= ayer && d < hoy;
+    if (_pedPeriodo === 'semana') return d >= sem;
+    return true;
+  });
+}
 
 function refreshCurrent() {
   const btn = $('btn-refresh-global');
@@ -875,7 +897,7 @@ async function loadPedidos(force=false, silent=false) {
 function filtrarPedidos() {
   const q   = val('ped-search').toLowerCase();
   const est = val('ped-estado-fil');
-  let list = _pedidos;
+  let list = _filtrarPorPeriodo(_pedidos);
   if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
     (p.nombre||p.cliente||'').toLowerCase().includes(q) ||

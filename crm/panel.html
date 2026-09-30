@@ -133,6 +133,12 @@
           <option>En camino</option><option>Entregado</option><option>Cancelado</option>
         </select>
       </div>
+      <div class="chip-row" id="ped-periodo-chips" style="padding:0 0 10px">
+        <button class="cat-chip cat-chip-sel" data-p="hoy"    onclick="setPedPeriodo('hoy')">Hoy</button>
+        <button class="cat-chip"              data-p="ayer"   onclick="setPedPeriodo('ayer')">Ayer</button>
+        <button class="cat-chip"              data-p="semana" onclick="setPedPeriodo('semana')">Esta semana</button>
+        <button class="cat-chip"              data-p="todos"  onclick="setPedPeriodo('todos')">Todos</button>
+      </div>
       <div class="card table-wrap"><div id="ped-table"></div></div>
     </section>
 

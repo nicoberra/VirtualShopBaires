@@ -857,9 +857,9 @@ async function refreshPedidos() {
   await loadPedidos(true);
 }
 
-async function loadPedidos(force=false) {
+async function loadPedidos(force=false, silent=false) {
   if (!force && _pedidos.length) { filtrarPedidos(); return; }
-  $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  if (!silent) $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     const raw = await crm({ action: 'ext_pedidos_listar' });
     _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
@@ -1119,7 +1119,7 @@ function _silentRefreshPedidos() {
   if (!localStorage.getItem('crm_auth')) return;
   delete _cache['ext_pedidos_listar'];
   _pedidos = [];
-  loadPedidos(true).then(() => {
+  loadPedidos(true, true).then(() => {
     if (currentSec === 'panel') loadPanel();
   }).catch(() => {});
 }

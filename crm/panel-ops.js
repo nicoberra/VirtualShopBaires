@@ -105,6 +105,7 @@ function prefetchAll() {
 
 function logout() {
   localStorage.removeItem('ops_auth');
+  localStorage.removeItem('vsb_nav_from_crm');
   location.reload();
 }
 
@@ -967,7 +968,7 @@ document.addEventListener('visibilitychange', () => {
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('vsb_from_crm') === '1') {
+  if (localStorage.getItem('vsb_nav_from_crm') === '1') {
     const btn = $('btn-volver-crm');
     if (btn) btn.style.display = 'flex';
   }

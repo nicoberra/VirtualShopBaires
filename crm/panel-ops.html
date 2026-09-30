@@ -41,7 +41,7 @@
       <a class="nav-link" data-sec="pedidos"   onclick="goTo('pedidos')">   <i class="fa-solid fa-bag-shopping"></i> Pedidos</a>
     </div>
     <div class="sidebar-footer">
-      <a id="btn-volver-crm" href="/crm/panel.html" class="btn-logout" style="display:none;align-items:center;gap:8px;text-decoration:none;margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Volver al CRM</a>
+      <a id="btn-volver-crm" href="/crm/panel.html" onclick="localStorage.removeItem('vsb_nav_from_crm')" class="btn-logout" style="display:none;align-items:center;gap:8px;text-decoration:none;margin-bottom:8px;"><i class="fa-solid fa-arrow-left"></i> Volver al CRM</a>
       <button onclick="logout()" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i> Salir</button>
     </div>
   </nav>

@@ -945,7 +945,7 @@ document.addEventListener('visibilitychange', () => {
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (new URLSearchParams(location.search).get('from') === 'crm') {
+  if (sessionStorage.getItem('vsb_from_crm') === '1') {
     const btn = $('btn-volver-crm');
     if (btn) btn.style.display = 'flex';
   }

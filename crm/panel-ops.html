@@ -33,7 +33,7 @@
 
   <!-- SIDEBAR -->
   <nav id="sidebar">
-    <div class="sidebar-logo"><span class="logo-red">VSB</span> Ops</div>
+    <div class="sidebar-logo"><span class="logo-red">VSB</span> Ops <button class="btn-refresh" style="margin-left:auto" onclick="refreshCurrent()" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button></div>
     <div class="nav-links">
       <a class="nav-link" data-sec="panel"     onclick="goTo('panel')">     <i class="fa-solid fa-gauge"></i>        Panel</a>
       <a class="nav-link" data-sec="clientes"  onclick="goTo('clientes')">  <i class="fa-solid fa-users"></i>        Clientes</a>
@@ -48,6 +48,7 @@
   <!-- MOBILE TOP NAV -->
   <div id="mobile-nav">
     <div class="mobile-logo"><span class="logo-red">VSB</span> Ops</div>
+    <button id="btn-refresh-global" class="btn-refresh" onclick="refreshCurrent()" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button>
     <div id="mobile-nav-scroll" class="mnav-stretch">
       <button class="mnav-btn" data-sec="panel"     onclick="goTo('panel')">     <i class="fa-solid fa-gauge"></i><span class="mnav-label">Panel</span></button>
       <button class="mnav-btn" data-sec="clientes"  onclick="goTo('clientes')">  <i class="fa-solid fa-users"></i><span class="mnav-label">Clientes</span></button>

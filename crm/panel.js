@@ -837,6 +837,18 @@ async function guardarProducto() {
 
 let _pedidos = [];
 
+function refreshCurrent() {
+  const btn = $('btn-refresh-global');
+  if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 700); }
+  const key = currentSec;
+  if (key === 'pedidos')      { delete _cache['ext_pedidos_listar'];   _pedidos   = []; loadPedidos(true);   return; }
+  if (key === 'clientes')     { delete _cache['ext_clientes_listar'];  _clientes  = []; loadClientes(true);  return; }
+  if (key === 'productos')    { delete _cache['ext_productos_listar']; _productos = []; loadProductos(true); return; }
+  if (key === 'facturacion')  { loadFacturacion(true); return; }
+  if (key === 'comprobantes') { loadComprobantes(true); return; }
+  if (key === 'panel')        { loadPanel(); return; }
+}
+
 async function refreshPedidos() {
   const btn = $('btn-refresh-ped');
   if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 650); }

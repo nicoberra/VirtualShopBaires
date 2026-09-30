@@ -66,6 +66,7 @@ img { max-width: 100%; }
   overflow-y: auto;
 }
 .sidebar-logo {
+  display: flex; align-items: center;
   font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px;
   padding: 24px 20px 20px;
   border-bottom: 1px solid var(--border);
@@ -98,9 +99,11 @@ img { max-width: 100%; }
   flex-direction: column;
 }
 .mobile-logo {
+  display: flex; align-items: center;
   font-size: 1.05rem; font-weight: 800; padding: 10px 16px 6px;
   flex-shrink: 0; letter-spacing: -0.3px;
 }
+.mobile-logo + .btn-refresh { margin: 6px 16px 0 auto; flex-shrink: 0; }
 #mobile-nav-scroll {
   display: flex; gap: 6px; overflow-x: auto;
   padding: 0 12px 10px;

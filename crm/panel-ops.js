@@ -689,6 +689,15 @@ async function guardarProducto() {
 
 let _pedidos = [];
 
+function refreshCurrent() {
+  const btn = $('btn-refresh-global');
+  if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 700); }
+  if (currentSec === 'pedidos')   { delete _cache['ext_pedidos_listar'];   _pedidos   = []; loadPedidos(true);   return; }
+  if (currentSec === 'clientes')  { delete _cache['ext_clientes_listar'];  _clientes  = []; loadClientes(true);  return; }
+  if (currentSec === 'productos') { delete _cache['ext_productos_listar']; _productos = []; loadProductos(true); return; }
+  if (currentSec === 'panel')     { loadPanel(); return; }
+}
+
 async function refreshPedidos() {
   const btn = $('btn-refresh-ped');
   if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 650); }

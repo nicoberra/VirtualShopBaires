@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  CRM Panel — Virtual Shop Baires
 //  panel.js
 // ============================================================
@@ -82,7 +82,7 @@ function badgeEstado(estado) {
 function doLogin() {
   const pass = val('login-pass');
   if (pass === PANEL_PASS) {
-    sessionStorage.setItem('crm_auth', '1');
+    localStorage.setItem('crm_auth', '1');
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');
@@ -105,7 +105,7 @@ function prefetchAll() {
 }
 
 function logout() {
-  sessionStorage.removeItem('crm_auth');
+  localStorage.removeItem('crm_auth');
   location.reload();
 }
 
@@ -1104,7 +1104,7 @@ async function loadComprobantes(force=false) {
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('crm_auth') === '1') {
+  if (localStorage.getItem('crm_auth') === '1') {
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');

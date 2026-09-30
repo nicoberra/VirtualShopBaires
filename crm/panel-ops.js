@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 //  CRM Panel Operaciones — Virtual Shop Baires
 //  panel-ops.js  (solo Clientes, Productos, Pedidos)
 // ============================================================
@@ -82,7 +82,7 @@ function badgeEstado(estado) {
 function doLogin() {
   const pass = val('login-pass');
   if (pass === PANEL_PASS) {
-    sessionStorage.setItem('ops_auth', '1');
+    localStorage.setItem('ops_auth', '1');
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');
@@ -104,7 +104,7 @@ function prefetchAll() {
 }
 
 function logout() {
-  sessionStorage.removeItem('ops_auth');
+  localStorage.removeItem('ops_auth');
   location.reload();
 }
 
@@ -919,7 +919,7 @@ function borrarPedido(id) {
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (sessionStorage.getItem('ops_auth') === '1') {
+  if (localStorage.getItem('ops_auth') === '1') {
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');

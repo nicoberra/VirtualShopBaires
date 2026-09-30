@@ -4,7 +4,7 @@
 // ============================================================
 
 // ─── CONFIG — CAMBIÁ ESTOS DOS VALORES ───────────────────────
-const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwOJf8gF40LAoM4MyrYZUxH157UXnGvKywfXm9teRk7gXkmPdp6WQYkiiTNqHRpQ_KG/exec';
+const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
 const PANEL_PASS = '2208';
 // ─────────────────────────────────────────────────────────────
 

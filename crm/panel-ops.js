@@ -945,6 +945,10 @@ document.addEventListener('visibilitychange', () => {
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (new URLSearchParams(location.search).get('from') === 'crm') {
+    const btn = $('btn-volver-crm');
+    if (btn) btn.style.display = 'flex';
+  }
   if (localStorage.getItem('ops_auth') === '1') {
     hide('login-wrap');
     show('app', 'flex');

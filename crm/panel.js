@@ -572,13 +572,10 @@ function buildProdCats() {
   const html = cats.map(c => {
     const active = c === _prodCatFil ? ' active' : '';
     const catEsc = c.replace(/'/g, "\\'");
-    const del = c !== 'Todos'
-      ? `<span class="chip-del" title="Eliminar categoría" onclick="event.stopPropagation();eliminarCategoria('${catEsc}')">×</span>`
-      : '';
-    return `<span class="chip${active}" onclick="setProdCat('${catEsc}')">${c}${del}</span>`;
+    return `<span class="chip${active}" onclick="setProdCat('${catEsc}')">${c}</span>`;
   }).join('');
   $('prod-cats').innerHTML = html +
-    `<span class="chip chip-add" onclick="abrirModalNuevaCat()" title="Nueva categoría"><i class="fa-solid fa-plus"></i> Cat</span>`;
+    `<button class="btn-danger btn-sm" style="margin-left:4px" onclick="abrirModalEditarCats()"><i class="fa-solid fa-pen"></i> Editar categorías</button>`;
 }
 
 function setProdCat(cat) {
@@ -1199,10 +1196,21 @@ function eliminarProducto(p) {
   });
 }
 
-function abrirModalNuevaCat() {
+function abrirModalEditarCats() {
+  const cats = [...new Set(_productos.map(p => p.categoria).filter(Boolean))].sort();
+  const lista = $('editar-cats-lista');
+  lista.innerHTML = cats.length
+    ? cats.map(c => `
+        <div class="editar-cat-row">
+          <span>${c}</span>
+          <button class="btn-danger btn-sm btn-del-cat" data-cat="${c}"><i class="fa-solid fa-trash"></i> Eliminar</button>
+        </div>`).join('')
+    : '<p class="text-muted">No hay categorías todavía.</p>';
+  lista.querySelectorAll('.btn-del-cat').forEach(btn => {
+    btn.addEventListener('click', () => eliminarCategoria(btn.dataset.cat));
+  });
   $('nueva-cat-nombre').value = '';
-  show('modal-nueva-cat', 'flex');
-  setTimeout(() => $('nueva-cat-nombre').focus(), 100);
+  show('modal-editar-cats', 'flex');
 }
 
 async function guardarNuevaCat() {
@@ -1212,7 +1220,7 @@ async function guardarNuevaCat() {
     const r = await crm({ action:'ext_categoria_agregar', nombre });
     if (!r.ok) { toast(r.error || 'Error', 'err'); return; }
     toast('Categoría creada ✓');
-    hide('modal-nueva-cat');
+    hide('modal-editar-cats');
     delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
   } catch(e) { toast('Error al crear categoría', 'err'); }
 }
@@ -1223,6 +1231,7 @@ function eliminarCategoria(cat) {
       await crm({ action:'ext_categoria_eliminar', nombre: cat });
       toast('Categoría eliminada');
       _prodCatFil = 'Todos';
+      hide('modal-editar-cats');
       delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
     } catch(e) { toast('Error al eliminar categoría', 'err'); }
   });

@@ -295,11 +295,12 @@ textarea { min-height: unset; }
   background: var(--bg3); border: 1px solid var(--border); color: var(--text2);
   padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer;
   transition: all var(--trans); min-height: 32px; display: inline-flex; align-items: center;
+  font-weight: 700;
 }
 .chip.active { background: rgba(204,18,18,0.15); color: var(--red); border-color: var(--red); }
-.chip-del { margin-left: 6px; opacity: 0.5; font-size: 1rem; line-height: 1; transition: opacity var(--trans); }
-.chip-del:hover { opacity: 1; }
-.chip-add { color: var(--text2); gap: 4px; }
+.editar-cat-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); gap:8px; }
+.editar-cat-row:last-child { border-bottom:none; }
+.editar-cat-row span { font-weight:600; }
 
 /* ─── TABLES ─────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

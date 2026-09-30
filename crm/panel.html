@@ -399,22 +399,24 @@
   </div>
 </div>
 
-<!-- Modal nueva categoría -->
-<div id="modal-nueva-cat" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-nueva-cat')">
+<!-- Modal editar categorías -->
+<div id="modal-editar-cats" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-editar-cats')">
   <div class="modal modal-sm" onclick="event.stopPropagation()">
     <div class="modal-header">
-      <h3>Nueva categoría</h3>
-      <button class="modal-close" onclick="hide('modal-nueva-cat')">&times;</button>
+      <h3>Editar categorías</h3>
+      <button class="modal-close" onclick="hide('modal-editar-cats')">&times;</button>
     </div>
     <div class="modal-body">
+      <div id="editar-cats-lista" style="margin-bottom:16px"></div>
+      <hr style="border:none;border-top:1px solid var(--border);margin-bottom:16px">
       <div class="form-group">
-        <label>Nombre de la categoría *</label>
+        <label>Nueva categoría</label>
         <input type="text" id="nueva-cat-nombre" placeholder="Ej: Electrónica" onkeydown="if(event.key==='Enter')guardarNuevaCat()">
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn-secondary" onclick="hide('modal-nueva-cat')">Cancelar</button>
-      <button class="btn-primary" onclick="guardarNuevaCat()">Crear categoría</button>
+      <button class="btn-secondary" onclick="hide('modal-editar-cats')">Cerrar</button>
+      <button class="btn-danger" onclick="guardarNuevaCat()">Agregar categoría</button>
     </div>
   </div>
 </div>

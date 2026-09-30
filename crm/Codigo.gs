@@ -31,7 +31,7 @@ var COMPROB_FOLDER_ID = '';   // ← PEGAR ID DE CARPETA DRIVE AQUÍ (opcional)
 
 // Mercado Pago Checkout Pro
 // Obtené el Access Token en: mercadopago.com.ar/developers → Tu aplicación → Credenciales
-var MP_ACCESS_TOKEN = '';     // ← APP_USR-... de PRODUCCIÓN
+var MP_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('MP_ACCESS_TOKEN') || '';
 
 // Avisos por Telegram cuando entra un pedido (opcional)
 var TG_TOKEN = '';

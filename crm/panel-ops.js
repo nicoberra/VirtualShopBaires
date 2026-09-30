@@ -695,7 +695,7 @@ function refreshCurrent() {
   if (currentSec === 'pedidos')   { delete _cache['ext_pedidos_listar'];   _pedidos   = []; loadPedidos(true);   return; }
   if (currentSec === 'clientes')  { delete _cache['ext_clientes_listar'];  _clientes  = []; loadClientes(true);  return; }
   if (currentSec === 'productos') { delete _cache['ext_productos_listar']; _productos = []; loadProductos(true); return; }
-  if (currentSec === 'panel')     { loadPanel(); return; }
+  if (currentSec === 'panel')     { Object.keys(_cache).forEach(k => delete _cache[k]); _clientes = []; _pedidos = []; _productos = []; loadPanel(); return; }
 }
 
 async function refreshPedidos() {

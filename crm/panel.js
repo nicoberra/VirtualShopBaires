@@ -846,7 +846,7 @@ function refreshCurrent() {
   if (key === 'productos')    { delete _cache['ext_productos_listar']; _productos = []; loadProductos(true); return; }
   if (key === 'facturacion')  { loadFacturacion(true); return; }
   if (key === 'comprobantes') { loadComprobantes(true); return; }
-  if (key === 'panel')        { loadPanel(); return; }
+  if (key === 'panel')        { Object.keys(_cache).forEach(k => delete _cache[k]); _clientes = []; _pedidos = []; _productos = []; loadPanel(); return; }
 }
 
 async function refreshPedidos() {

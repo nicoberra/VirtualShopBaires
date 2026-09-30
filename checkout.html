@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -17,111 +17,198 @@
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
     html, body { overflow-x: hidden; }
-    .checkout-page { min-height: 80vh; padding: 40px 0 80px; background: var(--black); width: 100%; }
-    .checkout-steps { display: flex; margin-bottom: 36px; }
-    .checkout-step { flex: 1; text-align: center; position: relative; font-size: 0.78rem; font-weight: 600; color: var(--gray); padding-top: 36px; }
-    .checkout-step::before { content: counter(step); counter-increment: step; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 50%; background: var(--black-2); color: var(--gray); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; z-index: 1; }
-    .checkout-steps { counter-reset: step; }
-    .checkout-step::after { content: ""; position: absolute; top: 14px; left: calc(50% + 14px); right: calc(-50% + 14px); height: 2px; background: var(--black-2); }
-    .checkout-step:last-child::after { display: none; }
-    .checkout-step.active::before { background: var(--red); color: #fff; }
-    .checkout-step.done::before { content: "✓"; background: var(--accent); color: #fff; }
-    .checkout-step.active { color: var(--white); }
 
-    .checkout-grid { display: block; max-width: 640px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-    .checkout-sidebar { display: none; }
+    /* ── CHECKOUT — TEMA CLARO ── */
+    .checkout-page {
+      min-height: 80vh;
+      padding: 28px 0 80px;
+      background: #F0F2F5;
+      width: 100%;
+    }
 
-    .checkout-card { background: var(--black-3); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
-    .checkout-card h2 { font-size: 1rem; font-weight: 700; color: var(--white); margin: 0 0 16px; display: flex; align-items: center; justify-content: center; gap: 10px; }
-    .checkout-card h2 i { color: var(--red); }
+    /* Layout dos columnas */
+    .co-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 20px;
+      align-items: start;
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 0 16px;
+      box-sizing: border-box;
+    }
+    @media (max-width: 800px) {
+      .co-layout { grid-template-columns: 1fr; }
+      .co-sidebar-col { order: -1; }
+    }
+    .co-form-col { display: flex; flex-direction: column; gap: 14px; }
 
-    .co-items-scroll { max-height: 300px; overflow-y: auto; padding-right: 4px; margin-bottom: 4px; }
-    .co-items-scroll::-webkit-scrollbar { width: 5px; }
-    .co-items-scroll::-webkit-scrollbar-track { background: var(--black-2); border-radius: 4px; }
-    .co-items-scroll::-webkit-scrollbar-thumb { background: var(--gray); border-radius: 4px; }
-    .co-items-scroll::-webkit-scrollbar-thumb:hover { background: var(--red); }
-    .co-item { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--black-2); }
-    .co-item:last-child { border-bottom: none; }
-    .co-item-img { width: 38px; height: 38px; border-radius: 6px; object-fit: cover; background: var(--black-2); flex-shrink: 0; }
-    .co-item-info { flex: 1; min-width: 0; }
-    .co-item-name { font-size: 0.8rem; font-weight: 600; color: var(--white); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .co-item-var { font-size: 0.7rem; color: var(--gray); margin-top: 2px; }
-    .co-item-ver-mas { font-size: 0.68rem; color: var(--red); cursor: pointer; text-decoration: underline; display: inline-block; margin-top: 1px; background: none; border: none; padding: 0; }
-    .co-item-ver-mas:hover { opacity: 0.75; }
-    .co-item-qty { font-size: 0.7rem; color: var(--gray); }
-    .co-item-price { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 0.85rem; }
-    .co-item-remove { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 0.8rem; padding: 4px 6px; border-radius: 4px; transition: color 0.2s; flex-shrink: 0; line-height: 1; }
-    .co-item-remove:hover { color: var(--red); }
+    /* Cards */
+    .co-card {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #E1E5EB;
+      padding: 20px 22px;
+    }
+    .co-card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #1B2B8B;
+      margin: 0 0 16px;
+    }
+    .co-sticky { position: sticky; top: 76px; }
 
-    .price-summary { margin-top: 20px; }
-    .price-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.9rem; color: var(--gray); }
-    .price-row.discount { color: var(--red); font-weight: 600; }
-    .price-row.total { border-top: 2px solid var(--black-2); margin-top: 8px; padding-top: 12px; font-size: 1.15rem; font-weight: 800; color: var(--white); }
-    .discount-badge { display: inline-block; background: rgba(204,18,18,0.10); color: var(--red); font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 12px; margin-left: 6px; }
+    /* Opciones de pago */
+    .co-payment-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1.5px solid #E1E5EB;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: border-color 0.15s, background 0.15s;
+      background: #fff;
+    }
+    .co-payment-option:last-child { margin-bottom: 0; }
+    .co-payment-option:has(input:checked) {
+      border-color: #C8F135;
+      background: #FAFFF0;
+    }
+    .co-payment-option input[type="radio"] {
+      accent-color: #1B2B8B;
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+    .co-pay-main { font-size: 0.95rem; font-weight: 600; color: #1A1A2E; }
+    .co-pay-sub { font-size: 0.78rem; color: #6B7280; font-weight: 400; margin-top: 2px; display: block; }
+    .co-pay-badge {
+      display: inline-block;
+      background: rgba(200,241,53,0.35);
+      color: #3A6800;
+      font-size: 0.69rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 6px;
+    }
 
-    .form-row { margin-bottom: 18px; }
-    .form-row label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--white); margin-bottom: 6px; }
-    .form-row input, .form-row textarea, .form-row select { width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid var(--black-2); border-radius: 8px; font-size: 0.92rem; background: var(--black); color: var(--white); transition: border-color 0.2s; }
-    .form-row input:focus, .form-row textarea:focus, .form-row select:focus { outline: none; border-color: var(--red); }
-    .form-row select option { background: var(--black); color: var(--white); }
-    .form-row textarea { resize: vertical; min-height: 72px; }
-    .form-row.required label::after { content: " *"; color: var(--red); }
-    .form-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
-    @media (max-width: 540px) { .form-2col { grid-template-columns: 1fr; } }
-    .form-section-title { font-size: 0.78rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.06em; margin: 22px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--black-2); }
+    /* Inputs — tema claro */
+    .co-form-row { margin-bottom: 13px; }
+    .co-form-row label { display: block; font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 5px; }
+    .co-form-row.required label::after { content: " *"; color: #CC0000; }
+    .co-input {
+      width: 100%; box-sizing: border-box;
+      padding: 10px 14px;
+      border: 1.5px solid #D1D5DB;
+      border-radius: 8px;
+      font-size: 0.93rem;
+      background: #fff;
+      color: #1A1A2E;
+      transition: border-color 0.2s;
+      outline: none;
+      font-family: inherit;
+    }
+    .co-input:focus { border-color: #1B2B8B; }
+    .co-input::placeholder { color: #9CA3AF; }
+    textarea.co-input { resize: vertical; min-height: 68px; }
+    .co-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+    @media (max-width: 520px) { .co-2col { grid-template-columns: 1fr; } }
+    .co-section-label {
+      font-size: 0.72rem; font-weight: 700; color: #9CA3AF;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      margin: 16px 0 12px; padding-bottom: 6px;
+      border-bottom: 1px solid #F0F2F5;
+    }
 
-    .bank-box { background: rgba(204,18,18,0.06); border: 2px solid var(--red); border-radius: var(--radius); padding: 20px; margin: 20px 0; }
-    .bank-box h3 { color: var(--red); font-size: 1rem; margin: 0 0 14px; }
-    .bank-row { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; }
-    .bank-label { font-size: 0.78rem; font-weight: 700; color: var(--gray); min-width: 80px; }
-    .bank-val { font-size: 0.95rem; font-weight: 600; color: var(--white); word-break: break-all; flex: 1; }
-    .bank-copy { background: none; border: none; cursor: pointer; color: var(--gray); font-size: 0.85rem; padding: 2px 6px; border-radius: 4px; transition: color 0.2s; }
-    .bank-copy:hover { color: var(--red); }
+    /* Info retiro */
+    .co-retiro-box {
+      background: #EFF6FF; border: 1px solid #BFDBFE;
+      border-radius: 8px; padding: 12px 14px;
+      font-size: 0.83rem; color: #1E3A5F;
+      margin-bottom: 14px; line-height: 1.7;
+    }
+    .co-retiro-box i { color: #2563EB; margin-right: 6px; }
 
-    .order-num-box { background: var(--accent); color: #fff; border-radius: 10px; padding: 16px 20px; text-align: center; margin-bottom: 16px; }
-    .order-num-box .olabel { font-size: 0.78rem; opacity: 0.8; }
-    .order-num-box .onum { font-size: 1.5rem; font-weight: 800; letter-spacing: 1px; }
-    .total-box { background: var(--red); color: #fff; border-radius: 10px; padding: 14px 20px; text-align: center; margin: 0 0 16px; }
-    .total-box .tlabel { font-size: 0.82rem; opacity: 0.85; }
-    .total-box .tval { font-size: 1.6rem; font-weight: 800; }
+    /* Resumen pedido */
+    .co-items-scroll { max-height: 260px; overflow-y: auto; margin-bottom: 2px; }
+    .co-items-scroll::-webkit-scrollbar { width: 4px; }
+    .co-items-scroll::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 4px; }
+    .co-order-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid #F3F4F6; gap: 8px; }
+    .co-order-item:last-child { border-bottom: none; }
+    .co-order-item-name { font-size: 0.87rem; font-weight: 600; color: #1A1A2E; }
+    .co-order-item-var { font-size: 0.74rem; color: #6B7280; display: block; margin-top: 1px; }
+    .co-order-item-qty { font-size: 0.74rem; color: #9CA3AF; display: block; }
+    .co-order-item-right { text-align: right; flex-shrink: 0; }
+    .co-order-item-price { font-size: 0.9rem; font-weight: 700; color: #1A1A2E; }
+    .co-order-item-original { font-size: 0.74rem; color: #9CA3AF; text-decoration: line-through; }
+    .co-item-remove { background: none; border: none; cursor: pointer; color: #D1D5DB; font-size: 0.72rem; padding: 2px 3px; display: block; margin-top: 2px; transition: color 0.15s; }
+    .co-item-remove:hover { color: #CC0000; }
 
-    .expiry-warn { background: rgba(255,215,0,0.10); border: 1px solid rgba(255,215,0,0.3); border-radius: 8px; padding: 10px 14px; font-size: 0.8rem; color: var(--gray); display: flex; gap: 8px; align-items: flex-start; margin-bottom: 16px; }
-    .expiry-warn i { color: #FFD700; margin-top: 2px; flex-shrink: 0; }
+    /* Precios sidebar */
+    .co-prices { margin-top: 12px; border-top: 1px solid #F3F4F6; padding-top: 10px; }
+    .co-price-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 0.9rem; color: #6B7280; }
+    .co-price-discount { color: #CC0000; font-weight: 600; }
+    .co-price-total { border-top: 1.5px solid #E1E5EB; margin-top: 8px; padding-top: 10px; font-size: 1.15rem; font-weight: 800; color: #1A1A2E; }
+    .co-badge { display: inline-block; background: rgba(204,0,0,0.08); color: #CC0000; font-size: 0.67rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-left: 4px; }
 
-    .upload-zone { border: 2px dashed var(--black-2); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; transition: border-color 0.2s; }
-    .upload-zone:hover, .upload-zone.drag { border-color: var(--red); background: var(--red-light); }
-    .upload-zone i { font-size: 2rem; color: var(--gray-light); }
-    .upload-zone p { font-size: 0.85rem; color: var(--gray); margin: 8px 0 0; }
+    /* Botón confirmar */
+    .co-btn-submit {
+      display: block; width: 100%; margin-top: 16px;
+      padding: 15px; background: #C8F135; color: #1A1A2E;
+      border: none; border-radius: 50px;
+      font-size: 0.95rem; font-weight: 800; cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      font-family: inherit;
+    }
+    .co-btn-submit:hover { background: #B5D900; }
+    .co-btn-submit:active { transform: scale(0.98); }
+    .co-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+    .co-security { text-align: center; font-size: 0.72rem; color: #9CA3AF; margin-top: 8px; }
+
+    /* Estado vacío */
+    .co-empty { text-align: center; padding: 80px 20px; color: #6B7280; max-width: 400px; margin: 0 auto; }
+    .co-empty i { font-size: 3rem; color: #D1D5DB; }
+    .co-empty h2 { margin: 16px 0 8px; color: #1A1A2E; font-size: 1.25rem; }
+
+    /* Estado confirmación */
+    .co-confirmation { max-width: 600px; margin: 0 auto; padding: 0 16px; }
+    .co-confirm-header { background: #C8F135; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+    .co-confirm-header h2 { color: #1A1A2E; margin: 0 0 6px; font-size: 1.25rem; }
+    .co-confirm-header p { color: #374151; margin: 0; font-size: 0.9rem; }
+    .co-order-num-box { background: #1B2B8B; color: #fff; border-radius: 10px; padding: 14px 20px; text-align: center; margin-bottom: 12px; }
+    .co-order-num-box small { font-size: 0.78rem; opacity: 0.8; display: block; }
+    .co-order-num-box strong { font-size: 1.4rem; letter-spacing: 1px; }
+    .co-total-box { background: #CC0000; color: #fff; border-radius: 10px; padding: 14px 20px; text-align: center; margin-bottom: 14px; }
+    .co-total-box small { font-size: 0.82rem; opacity: 0.85; display: block; }
+    .co-total-box strong { font-size: 1.5rem; font-weight: 800; }
+    .co-bank-box { background: #fff; border: 1.5px solid #E1E5EB; border-radius: 12px; padding: 18px 20px; margin-bottom: 14px; }
+    .co-bank-box h3 { color: #1B2B8B; font-size: 0.95rem; margin: 0 0 12px; }
+    .co-bank-row { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+    .co-bank-label { font-size: 0.78rem; font-weight: 700; color: #6B7280; min-width: 70px; }
+    .co-bank-val { font-size: 0.93rem; font-weight: 600; color: #1A1A2E; word-break: break-all; flex: 1; }
+    .co-bank-copy { background: none; border: none; cursor: pointer; color: #9CA3AF; font-size: 0.85rem; padding: 2px 6px; border-radius: 4px; transition: color 0.2s; }
+    .co-bank-copy:hover { color: #1B2B8B; }
+    .co-upload-zone { border: 2px dashed #D1D5DB; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #F9FAFB; margin-top: 14px; }
+    .co-upload-zone:hover, .co-upload-zone.drag { border-color: #1B2B8B; background: #EEF2FF; }
+    .co-upload-zone i { font-size: 1.8rem; color: #D1D5DB; }
+    .co-upload-zone p { font-size: 0.84rem; color: #6B7280; margin: 8px 0 0; }
     #proof-preview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-top: 12px; display: none; }
+    .co-btn-upload { display: block; width: 100%; margin-top: 12px; padding: 13px; background: #1B2B8B; color: #fff; border: none; border-radius: 50px; font-size: 0.95rem; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .co-btn-upload:disabled { opacity: 0.5; }
 
-    .step-btns { display: flex; gap: 12px; margin-top: 24px; }
-    .btn-step { flex: 1; padding: 14px; border-radius: 50px; font-size: 0.95rem; font-weight: 700; cursor: pointer; border: none; transition: var(--transition); }
-    .btn-step.primary { background: var(--red); color: #fff; }
-    .btn-step.primary:hover { background: var(--red-dark); }
-    .btn-step.secondary { background: var(--black-2); color: var(--white); }
-    .btn-step.secondary:hover { background: var(--black-4); }
-    .btn-step:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    .cart-empty-checkout { text-align: center; padding: 60px 20px; color: var(--gray); }
-    .cart-empty-checkout i { font-size: 3rem; color: var(--gray-light); }
-    .cart-empty-checkout h2 { margin: 16px 0 8px; color: var(--white); }
-
+    /* Loading */
     .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
     .loading-overlay.show { display: flex; }
     .loading-overlay p { color: #fff; font-weight: 600; }
-
-    .step-panel { display: none; }
-    .step-panel.active { display: block; }
-
-    .checkout-sidebar { position: sticky; top: 80px; }
-    .security-note { display: flex; gap: 8px; align-items: center; font-size: 0.75rem; color: var(--gray); margin-top: 12px; }
-    .security-note i { color: var(--red); }
   </style>
 </head>
 <body>
 
 <div class="topbar">
-  
   <div class="container">
     <span>🔒 Compra 100% segura</span>
     <span>|</span>
@@ -156,75 +243,159 @@
   </nav>
 </header>
 
-<div class="page-hero" style="padding:24px 0;">
-  <div class="container">
-    <h1 style="font-size:1.6rem;text-align:center;">Finalizar <span style="color:var(--red);">compra</span></h1>
-  </div>
-</div>
-
 <div class="checkout-page">
-  <div class="container">
 
-    <div class="checkout-steps" id="checkout-steps">
-      <div class="checkout-step active" id="step-label-1">Resumen</div>
-      <div class="checkout-step" id="step-label-2">Tus datos</div>
-      <div class="checkout-step" id="step-label-3">Pagar</div>
+  <!-- Estado vacío -->
+  <div id="empty-state" style="display:none;" class="co-empty">
+    <i class="fa-solid fa-cart-shopping"></i>
+    <h2>Tu carrito está vacío</h2>
+    <p>Agregá productos antes de continuar con la compra.</p>
+    <a href="productos.html" style="display:inline-block;margin-top:20px;padding:12px 28px;background:#1B2B8B;color:#fff;border-radius:50px;font-weight:700;text-decoration:none;font-size:0.95rem;">Ver productos →</a>
+  </div>
+
+  <!-- Estado confirmación (después del pedido) -->
+  <div id="confirmation-state" style="display:none;" class="co-confirmation">
+    <div class="co-confirm-header">
+      <h2><i class="fa-solid fa-circle-check"></i> ¡Pedido recibido!</h2>
+      <p>Te mandamos un email con el resumen de tu compra.</p>
+    </div>
+    <div class="co-order-num-box">
+      <small>Número de pedido</small>
+      <strong id="result-order-number">—</strong>
+    </div>
+    <div class="co-total-box">
+      <small id="total-box-label">Total a pagar</small>
+      <strong id="result-total">—</strong>
     </div>
 
-    <div class="cart-empty-checkout" id="empty-state" style="display:none;">
-      <i class="fa-solid fa-cart-shopping"></i>
-      <h2>Tu carrito está vacío</h2>
-      <p>Agregá productos antes de continuar.</p>
-      <a href="productos.html" class="btn-primary" style="display:inline-block;margin-top:16px;">Ver productos →</a>
+    <!-- Pago en efectivo -->
+    <div id="cash-section" style="display:none;" class="co-bank-box">
+      <h3><i class="fa-solid fa-money-bill-wave" style="color:#166534;margin-right:6px;"></i>Pago en efectivo al retirar</h3>
+      <p style="font-size:0.9rem;color:#374151;margin:0 0 8px;">Abonás cuando retirás el pedido en nuestro depósito.</p>
+      <p style="font-size:0.85rem;color:#6B7280;margin:0;"><i class="fa-solid fa-location-dot" style="color:#1B2B8B;margin-right:4px;"></i>Marcelo Gamboa 6306, Versalles, CABA</p>
+      <p style="font-size:0.82rem;color:#6B7280;margin:6px 0 0;"><i class="fa-solid fa-clock" style="color:#1B2B8B;margin-right:4px;"></i>Lunes a viernes · 9 a 17 hs · Coordiná el retiro por WhatsApp</p>
     </div>
 
-    <div class="checkout-grid" id="checkout-main" style="display:none;">
+    <!-- Transferencia bancaria -->
+    <div id="bank-transfer-section" class="co-bank-box">
+      <h3><i class="fa-solid fa-building-columns" style="margin-right:6px;"></i>Datos para la transferencia</h3>
+      <div class="co-bank-row"><span class="co-bank-label">Titular</span><span class="co-bank-val" id="bank-holder">—</span><button class="co-bank-copy" onclick="copyVal('bank-holder')"><i class="fa-solid fa-copy"></i></button></div>
+      <div class="co-bank-row"><span class="co-bank-label">CUIT</span><span class="co-bank-val" id="bank-cuit">—</span><button class="co-bank-copy" onclick="copyVal('bank-cuit')"><i class="fa-solid fa-copy"></i></button></div>
+      <div class="co-bank-row"><span class="co-bank-label">CVU</span><span class="co-bank-val" id="bank-cbu">—</span><button class="co-bank-copy" onclick="copyVal('bank-cbu')"><i class="fa-solid fa-copy"></i></button></div>
+      <div class="co-bank-row"><span class="co-bank-label">Alias</span><span class="co-bank-val" id="bank-alias">—</span><button class="co-bank-copy" onclick="copyVal('bank-alias')"><i class="fa-solid fa-copy"></i></button></div>
+      <div class="co-bank-row"><span class="co-bank-label">Banco</span><span class="co-bank-val" id="bank-bank">—</span></div>
 
-      <div>
-        <!-- Paso 1: Resumen -->
-        <div class="checkout-card step-panel active" id="panel-1">
-          <h2><i class="fa-solid fa-cart-shopping"></i> Tu pedido</h2>
-          <div class="co-items-scroll"><div id="co-items-list"></div></div>
-          <div class="price-summary" id="co-price-summary"></div>
-          <div class="step-btns">
-            <button class="btn-step primary" onclick="goToStep(2)">Continuar con la compra →</button>
-          </div>
-          <div class="security-note"><i class="fa-solid fa-lock"></i> Tus datos son privados y seguros</div>
+      <p style="font-size:0.83rem;color:#374151;margin:16px 0 0;"><i class="fa-solid fa-upload" style="color:#1B2B8B;margin-right:6px;"></i><strong>Subí el comprobante</strong> para que procesemos tu pedido más rápido.</p>
+      <div id="upload-zone" class="co-upload-zone" onclick="document.getElementById('proof-file').click()">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <p>Tocá o arrastrá el comprobante acá<br><small style="font-size:0.72rem;color:#9CA3AF;">JPG, PNG o PDF · máx. 10MB</small></p>
+        <input type="file" id="proof-file" accept="image/*,application/pdf" style="display:none;" onchange="previewProof(this)" />
+        <img id="proof-preview" src="" alt="Comprobante" />
+      </div>
+      <button id="btn-upload" class="co-btn-upload" onclick="uploadProof()">
+        <i class="fa-solid fa-paper-plane" style="margin-right:6px;"></i>Enviar comprobante
+      </button>
+      <div id="upload-success" style="display:none;margin-top:12px;padding:12px 16px;background:#F0FFF4;border:1px solid #86EFAC;border-radius:8px;text-align:center;color:#166534;font-weight:600;font-size:0.88rem;">
+        <i class="fa-solid fa-check-circle"></i> Comprobante recibido. ¡Gracias! Te avisaremos por email.
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:14px;">
+      <a href="order-status.html" id="link-track-order" style="font-size:0.85rem;color:#1B2B8B;font-weight:600;">
+        <i class="fa-solid fa-magnifying-glass" style="margin-right:4px;"></i>Seguir el estado de mi pedido
+      </a>
+    </div>
+  </div>
+
+  <!-- Checkout principal -->
+  <div id="checkout-main" style="display:none;">
+    <div class="co-layout">
+
+      <!-- IZQUIERDA: Formulario -->
+      <div class="co-form-col">
+
+        <!-- Medio de pago -->
+        <div class="co-card">
+          <h3 class="co-card-title">Medio de pago</h3>
+
+          <label class="co-payment-option">
+            <input type="radio" name="metodoPago" value="transferencia" checked onchange="onPaymentChange()" />
+            <div>
+              <div class="co-pay-main">Transferencia bancaria <span class="co-pay-badge">10% OFF</span></div>
+              <span class="co-pay-sub">Enviás el comprobante por WhatsApp. Precio con descuento.</span>
+            </div>
+          </label>
+
+          <label class="co-payment-option">
+            <input type="radio" name="metodoPago" value="mercadopago" onchange="onPaymentChange()" />
+            <div>
+              <div class="co-pay-main" style="color:#009EE3;">Mercado Pago</div>
+              <span class="co-pay-sub">débito · crédito · cuotas · plata en cuenta</span>
+            </div>
+          </label>
+
+          <label id="efectivo-option" class="co-payment-option" style="display:none;">
+            <input type="radio" name="metodoPago" value="efectivo" onchange="onPaymentChange()" />
+            <div>
+              <div class="co-pay-main">Efectivo en el depósito <span class="co-pay-badge">10% OFF</span></div>
+              <span class="co-pay-sub">Solo disponible para retiro en persona</span>
+            </div>
+          </label>
         </div>
 
-        <!-- Paso 2: Formulario -->
-        <div class="checkout-card step-panel" id="panel-2">
-          <h2><i class="fa-solid fa-user"></i> Tus datos</h2>
-
-          <div class="form-section-title">Datos personales</div>
-          <div class="form-2col">
-            <div class="form-row required">
-              <label>Nombre</label>
-              <input type="text" id="f-nombre" placeholder="Juan" autocomplete="given-name" />
+        <!-- Datos de contacto -->
+        <div class="co-card">
+          <h3 class="co-card-title">Datos de contacto</h3>
+          <div class="co-2col">
+            <div class="co-form-row required">
+              <label for="f-nombre">Nombre</label>
+              <input class="co-input" type="text" id="f-nombre" placeholder="Juan" autocomplete="given-name" />
             </div>
-            <div class="form-row required">
-              <label>Apellido</label>
-              <input type="text" id="f-apellido" placeholder="Pérez" autocomplete="family-name" />
+            <div class="co-form-row required">
+              <label for="f-apellido">Apellido</label>
+              <input class="co-input" type="text" id="f-apellido" placeholder="García" autocomplete="family-name" />
             </div>
           </div>
-          <div class="form-row required">
-            <label>Email</label>
-            <input type="email" id="f-email" placeholder="juan@ejemplo.com" autocomplete="email" />
+          <div class="co-form-row required">
+            <label for="f-email">Email</label>
+            <input class="co-input" type="email" id="f-email" placeholder="juan@email.com" autocomplete="email" />
           </div>
-          <div class="form-row required">
-            <label>Teléfono / WhatsApp</label>
-            <input type="tel" id="f-phone" placeholder="11 1234-5678" autocomplete="tel" />
+          <div class="co-2col">
+            <div class="co-form-row required">
+              <label for="f-phone">Teléfono / WhatsApp</label>
+              <input class="co-input" type="tel" id="f-phone" placeholder="11 2345 6789" autocomplete="tel" inputmode="tel" />
+            </div>
+            <div class="co-form-row required">
+              <label for="f-dni">DNI / CUIT</label>
+              <input class="co-input" type="text" id="f-dni" placeholder="12345678" autocomplete="off" inputmode="numeric" />
+            </div>
           </div>
-          <div class="form-row required">
-            <label>DNI / CUIT</label>
-            <input type="text" id="f-dni" placeholder="12345678" autocomplete="off" inputmode="numeric" />
+        </div>
+
+        <!-- Entrega y dirección -->
+        <div class="co-card">
+          <h3 class="co-card-title">Entrega</h3>
+
+          <div class="co-form-row required">
+            <label for="f-entrega">Método de entrega</label>
+            <select class="co-input" id="f-entrega" onchange="toggleAddressFields()">
+              <option value="">— Seleccioná —</option>
+              <option value="retiro">Retiro en persona (CABA - Versalles)</option>
+              <option value="envio">Envío a domicilio</option>
+            </select>
           </div>
 
-          <div class="form-section-title">Dirección</div>
-          <div class="form-2col">
-            <div class="form-row required">
-              <label>Provincia</label>
-              <select id="f-provincia">
+          <div id="retiro-info" class="co-retiro-box" style="display:none;">
+            <div><i class="fa-solid fa-location-dot"></i><strong>Dirección del local:</strong> Marcelo Gamboa 6306, Versalles, CABA</div>
+            <div style="margin-top:3px;"><i class="fa-solid fa-clock"></i><strong>Horario:</strong> Lunes a viernes de 9 a 17 hs</div>
+            <div style="margin-top:3px;"><i class="fa-brands fa-whatsapp"></i>Coordiná el retiro por WhatsApp antes de venir</div>
+          </div>
+
+          <div class="co-section-label">Dirección</div>
+          <div class="co-2col">
+            <div class="co-form-row required">
+              <label for="f-provincia">Provincia</label>
+              <select class="co-input" id="f-provincia">
                 <option value="">— Seleccioná —</option>
                 <option>Buenos Aires</option><option>CABA</option><option>Catamarca</option>
                 <option>Chaco</option><option>Chubut</option><option>Córdoba</option>
@@ -236,174 +407,60 @@
                 <option>Santiago del Estero</option><option>Tierra del Fuego</option><option>Tucumán</option>
               </select>
             </div>
-            <div class="form-row required">
-              <label>Localidad</label>
-              <input type="text" id="f-localidad" placeholder="Ciudad o localidad" autocomplete="address-level2" />
+            <div class="co-form-row required">
+              <label for="f-localidad">Localidad</label>
+              <input class="co-input" type="text" id="f-localidad" placeholder="Ciudad o localidad" autocomplete="address-level2" />
             </div>
           </div>
-          <div class="form-2col">
-            <div class="form-row required">
-              <label>Calle</label>
-              <input type="text" id="f-calle" placeholder="Nombre de la calle" autocomplete="street-address" />
+          <div class="co-2col">
+            <div class="co-form-row required">
+              <label for="f-calle">Calle</label>
+              <input class="co-input" type="text" id="f-calle" placeholder="Nombre de la calle" autocomplete="street-address" />
             </div>
-            <div class="form-row required">
-              <label>Número</label>
-              <input type="text" id="f-numero-calle" placeholder="1234" autocomplete="off" />
+            <div class="co-form-row required">
+              <label for="f-numero-calle">Número</label>
+              <input class="co-input" type="text" id="f-numero-calle" placeholder="1234" autocomplete="off" />
             </div>
           </div>
-          <div class="form-2col">
-            <div class="form-row">
-              <label>Piso / Dpto (opcional)</label>
-              <input type="text" id="f-piso" placeholder="2° B" autocomplete="off" />
+          <div class="co-2col">
+            <div class="co-form-row">
+              <label for="f-piso">Piso / Dpto (opcional)</label>
+              <input class="co-input" type="text" id="f-piso" placeholder="2° B" autocomplete="off" />
             </div>
-            <div class="form-row required">
-              <label>Código postal</label>
-              <input type="text" id="f-cp" placeholder="1234" autocomplete="postal-code" inputmode="numeric" />
+            <div class="co-form-row required">
+              <label for="f-cp">Código postal</label>
+              <input class="co-input" type="text" id="f-cp" placeholder="1234" autocomplete="postal-code" inputmode="numeric" />
             </div>
           </div>
 
-          <div class="form-section-title">Entrega</div>
-          <div class="form-row required">
-            <label>Método de entrega</label>
-            <select id="f-entrega" onchange="toggleAddressFields()">
-              <option value="">— Seleccioná —</option>
-              <option value="retiro">Retiro en persona (CABA - Versalles)</option>
-              <option value="envio">Envío a domicilio</option>
-            </select>
-          </div>
-          <div id="retiro-info" style="display:none; background:rgba(27,43,75,0.07); border-radius:8px; padding:12px 14px; font-size:0.83rem; color:var(--white); margin-top:-10px; margin-bottom:18px; line-height:1.6;">
-            <div><i class="fa-solid fa-location-dot" style="color:var(--red);margin-right:6px;"></i><strong>Dirección del local:</strong> Marcelo Gamboa 6306, Versalles, CABA</div>
-            <div style="margin-top:4px;"><i class="fa-solid fa-clock" style="color:var(--red);margin-right:6px;"></i><strong>Horario:</strong> Lunes a viernes de 9 a 17 hs</div>
-            <div style="margin-top:4px;"><i class="fa-brands fa-whatsapp" style="color:var(--red);margin-right:6px;"></i><strong>Importante:</strong> Coordiná el retiro por WhatsApp antes de venir así te lo preparamos antes de que llegues</div>
-            <div style="margin-top:4px;"><i class="fa-solid fa-circle-info" style="color:var(--red);margin-right:6px;"></i>Por cualquier consulta escribinos por WhatsApp, respondemos todas tus dudas</div>
-          </div>
-
-          <div class="form-section-title">Método de pago</div>
-          <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px;">
-            <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
-              <input type="radio" name="metodoPago" value="transferencia" checked onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
-              <span><i class="fa-solid fa-building-columns" style="color:var(--red);margin-right:6px;"></i>Transferencia bancaria <span style="background:rgba(204,18,18,0.12);color:var(--red);font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:4px;">10% OFF</span></span>
-            </label>
-            <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
-              <input type="radio" name="metodoPago" value="mercadopago" onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
-              <span>
-                <span style="color:#009EE3;">Mercado Pago</span>
-                <span style="display:block;font-size:0.72rem;color:var(--gray);font-weight:400;margin-top:2px;">débito · crédito · cuotas · plata en cuenta</span>
-              </span>
-            </label>
-            <label id="efectivo-option" style="display:none;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
-              <input type="radio" name="metodoPago" value="efectivo" onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
-              <span><i class="fa-solid fa-money-bill-wave" style="color:var(--red);margin-right:6px;"></i>Efectivo en el depósito <span style="background:rgba(204,18,18,0.12);color:var(--red);font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:4px;">10% OFF</span> <span style="font-size:0.75rem;color:var(--gray);font-weight:400;">(solo retiro)</span></span>
-            </label>
-          </div>
-
-          <div class="form-section-title">Observaciones</div>
-          <div class="form-row">
-            <label>Observaciones (opcional)</label>
-            <textarea id="f-notes" placeholder="........"></textarea>
-          </div>
-
-          <div class="step-btns">
-            <button class="btn-step secondary" onclick="goToStep(1)">← Volver</button>
-            <button class="btn-step primary" id="btn-submit" onclick="submitOrder()"><i class="fa-solid fa-lock" style="margin-right:6px;"></i>Pago seguro · Confirmar pedido →</button>
+          <div class="co-form-row" style="margin-top:4px;">
+            <label for="f-notes">Observaciones (opcional)</label>
+            <textarea class="co-input" id="f-notes" placeholder="Alguna indicación adicional..."></textarea>
           </div>
         </div>
 
-        <!-- Paso 3: Transferencia -->
-        <div class="checkout-card step-panel" id="panel-3">
-          <h2><i class="fa-solid fa-building-columns"></i> Realizá la transferencia</h2>
-
-          <div class="order-num-box">
-            <div class="olabel">Número de pedido</div>
-            <div class="onum" id="result-order-number">—</div>
-          </div>
-          <div class="total-box">
-            <div class="tlabel" id="total-box-label">Total a transferir (10% OFF por transferencia bancaria)</div>
-            <div class="tval" id="result-total">—</div>
-          </div>
-
-          <!-- Pago en efectivo -->
-          <div id="cash-section" style="display:none;">
-            <div style="background:rgba(27,43,75,0.08);border:2px solid var(--accent);border-radius:var(--radius);padding:20px;margin:0 0 16px;text-align:center;">
-              <i class="fa-solid fa-money-bill-wave" style="font-size:2rem;color:var(--accent);margin-bottom:10px;"></i>
-              <h3 style="color:var(--white);margin:0 0 8px;font-size:1rem;">Pagás al retirar en el depósito</h3>
-              <p style="color:var(--gray);font-size:0.85rem;margin:0 0 6px;">Marcelo Gamboa 6306, Versalles, CABA</p>
-              <p style="color:var(--gray);font-size:0.82rem;margin:0;">Lunes a viernes · 9 a 17 hs · Coordiná el retiro por WhatsApp</p>
-            </div>
-          </div>
-
-          <!-- Transferencia bancaria -->
-          <div id="bank-transfer-section">
-            <div class="bank-box">
-              <h3><i class="fa-solid fa-building-columns"></i> Datos bancarios</h3>
-              <div class="bank-row">
-                <span class="bank-label">Alias</span>
-                <span class="bank-val" id="bank-alias">—</span>
-                <button class="bank-copy" onclick="copyVal('bank-alias')" title="Copiar"><i class="fa-solid fa-copy"></i></button>
-              </div>
-              <div class="bank-row">
-                <span class="bank-label">CBU</span>
-                <span class="bank-val" id="bank-cbu">—</span>
-                <button class="bank-copy" onclick="copyVal('bank-cbu')" title="Copiar"><i class="fa-solid fa-copy"></i></button>
-              </div>
-              <div class="bank-row">
-                <span class="bank-label">Titular</span>
-                <span class="bank-val" id="bank-holder">—</span>
-              </div>
-              <div class="bank-row">
-                <span class="bank-label">Banco</span>
-                <span class="bank-val" id="bank-bank">—</span>
-              </div>
-              <div class="bank-row">
-                <span class="bank-label">CUIT</span>
-                <span class="bank-val" id="bank-cuit">—</span>
-              </div>
-            </div>
-            <div class="expiry-warn">
-              <i class="fa-solid fa-clock"></i>
-              <span id="expiry-text">Realizá la transferencia y subí el comprobante antes de que expire el pedido.</span>
-            </div>
-            <p style="font-size:0.85rem;color:var(--gray);margin:0 0 10px;">Subí tu comprobante de transferencia:</p>
-          </div>
-
-          <div class="upload-zone" id="upload-zone" onclick="document.getElementById('proof-file').click()">
-            <i class="fa-solid fa-cloud-arrow-up"></i>
-            <p>Tocá para seleccionar el comprobante<br><small>JPG, PNG o PDF · máx 10MB</small></p>
-            <input type="file" id="proof-file" accept="image/*,application/pdf" style="display:none;" onchange="previewProof(this)" />
-            <img id="proof-preview" />
-          </div>
-          <div class="step-btns">
-            <button class="btn-step primary" onclick="uploadProof()" id="btn-upload">
-              <i class="fa-solid fa-paper-plane"></i> Enviar comprobante
-            </button>
-          </div>
-          <div id="upload-success" style="display:none;margin-top:16px;padding:14px;background:rgba(27,43,75,0.08);border-radius:10px;text-align:center;color:var(--accent);font-weight:600;">
-            <i class="fa-solid fa-check-circle"></i> Comprobante recibido. ¡Gracias! Te avisaremos por email.
-          </div>
-          <div style="margin-top:20px;text-align:center;">
-            <a href="order-status.html" id="link-track-order" style="font-size:0.85rem;color:var(--red);">
-              <i class="fa-solid fa-magnifying-glass"></i> Seguir el estado de mi pedido
-            </a>
-          </div>
-        </div>
       </div>
+      <!-- FIN columna izquierda -->
 
-      <!-- Sidebar -->
-      <div class="checkout-sidebar">
-        <div class="checkout-card">
-          <h2><i class="fa-solid fa-receipt"></i> Resumen de compra</h2>
-          <div id="sidebar-items" style="font-size:0.85rem;color:var(--gray);"></div>
-          <div id="sidebar-prices" class="price-summary" style="margin-top:12px;"></div>
-        </div>
-        <div style="margin-top:16px;padding:14px 16px;background:rgba(27,43,75,0.06);border-radius:10px;font-size:0.8rem;color:var(--gray);">
-          <i class="fa-solid fa-shield-halved" style="color:var(--accent);margin-right:6px;"></i>
-          Verificamos todos los pagos manualmente antes de preparar tu pedido.
+      <!-- DERECHA: Resumen -->
+      <div class="co-sidebar-col">
+        <div class="co-card co-sticky">
+          <h3 class="co-card-title">Tu pedido</h3>
+          <div id="co-items-list" class="co-items-scroll"></div>
+          <div id="co-price-summary" class="co-prices"></div>
+          <button class="co-btn-submit" id="btn-submit" onclick="submitOrder()">
+            <i class="fa-solid fa-lock" style="margin-right:6px;"></i>Pago seguro · Confirmar pedido
+          </button>
+          <p class="co-security"><i class="fa-solid fa-shield-halved" style="margin-right:3px;"></i>Tus datos son privados y seguros</p>
         </div>
       </div>
 
     </div>
   </div>
+  <!-- FIN checkout-main -->
+
 </div>
+<!-- FIN checkout-page -->
 
 <footer>
   <div class="container">
@@ -432,17 +489,14 @@
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
 <script>
-// REEMPLAZÁ esta URL con la de tu Apps Script (Implementar > Nueva implementación > URL del servicio web)
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec";
 const CRM_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 const DISCOUNT_PCT = 10;
 
 let cartItems = [];
-let currentStep = 1;
 let createdOrder = null;
 let customerEmail = "";
 
-// ⚙️ TIENDA ACTIVA — cambiar a false para bloquear compras
 const TIENDA_ACTIVA = true;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -452,16 +506,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const waMsg = encodeURIComponent("Hola! Me gustaría hacer una compra. ¿Me podés ayudar?");
     document.querySelector(".checkout-page").innerHTML = `
       <div class="container" style="text-align:center;padding:80px 20px;">
-        <i class="fa-solid fa-wrench" style="font-size:3rem;color:var(--red);"></i>
-        <h2 style="margin:20px 0 10px;color:var(--white);">Pagos por transferencia próximamente</h2>
-        <p style="color:var(--gray);max-width:420px;margin:0 auto 24px;">Estamos terminando de configurar el sistema de pagos. ¡Volvé en breve!</p>
-        <p style="color:var(--gray);max-width:420px;margin:0 auto 28px;font-size:0.95rem;">Por ahora podés hacer tu compra directamente por WhatsApp y te respondemos al toque.</p>
+        <i class="fa-solid fa-wrench" style="font-size:3rem;color:#CC0000;"></i>
+        <h2 style="margin:20px 0 10px;color:#1A1A2E;">Pagos por transferencia próximamente</h2>
+        <p style="color:#6B7280;max-width:420px;margin:0 auto 24px;">Estamos terminando de configurar el sistema de pagos. ¡Volvé en breve!</p>
+        <p style="color:#6B7280;max-width:420px;margin:0 auto 28px;font-size:0.95rem;">Por ahora podés hacer tu compra directamente por WhatsApp.</p>
         <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
           <a href="https://wa.me/5491149457266?text=${waMsg}" target="_blank"
             style="display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;font-size:1rem;">
-            <i class="fa-brands fa-whatsapp" style="font-size:1.3rem;"></i> Hacer la compra por WhatsApp
+            <i class="fa-brands fa-whatsapp"></i> Hacer la compra por WhatsApp
           </a>
-          <a href="productos.html" style="display:inline-block;color:var(--gray);font-size:0.88rem;text-decoration:underline;">← Seguir viendo productos</a>
+          <a href="productos.html" style="color:#6B7280;font-size:0.88rem;text-decoration:underline;">← Seguir viendo productos</a>
         </div>
       </div>`;
     return;
@@ -474,47 +528,39 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   document.getElementById("checkout-main").style.display = "block";
   renderItems();
-  renderSidebar();
 
   const zone = document.getElementById("upload-zone");
-  zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
-  zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
-  zone.addEventListener("drop", e => {
-    e.preventDefault(); zone.classList.remove("drag");
-    const f = e.dataTransfer.files[0];
-    if (f) { document.getElementById("proof-file").files = e.dataTransfer.files; previewProof({ files: [f] }); }
-  });
+  if (zone) {
+    zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
+    zone.addEventListener("dragleave", () => zone.classList.remove("drag"));
+    zone.addEventListener("drop", e => {
+      e.preventDefault(); zone.classList.remove("drag");
+      const f = e.dataTransfer.files[0];
+      if (f) { document.getElementById("proof-file").files = e.dataTransfer.files; previewProof({ files: [f] }); }
+    });
+  }
 });
 
 function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
 
 function renderItems() {
+  const esTransf = ["transferencia", "efectivo"].includes(getPaymentMethod());
   document.getElementById("co-items-list").innerHTML = cartItems.map(item => {
-    const varInfo = [item.color, item.talle].filter(Boolean).join(" / ");
-    const varId = `var-${item.cartKey.replace(/[^a-z0-9]/gi, "_")}`;
-    const varHTML = varInfo
-      ? (varInfo.length > 25
-          ? `<div class="co-item-var" id="${varId}" style="display:none;">${varInfo}</div><button class="co-item-ver-mas" onclick="toggleVar('${varId}',this)">Ver más</button>`
-          : `<div class="co-item-var">${varInfo}</div>`)
-      : "";
-    const img = item.imagen
-      ? `<img class="co-item-img" src="${item.imagen}" alt="" onerror="this.style.display='none'">`
-      : `<div class="co-item-img" style="display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="color:var(--gray-light);font-size:1.1rem;"></i></div>`;
     const precioOriginal = item.precio * item.qty;
-    const esTransf = ["transferencia", "efectivo"].includes(getPaymentMethod());
-    const precioConDesc = esTransf ? Math.round(precioOriginal * (1 - DISCOUNT_PCT / 100) * 100) / 100 : precioOriginal;
+    const precioFinal = esTransf ? Math.round(precioOriginal * (1 - DISCOUNT_PCT / 100) * 100) / 100 : precioOriginal;
+    const vars = [item.color, item.talle].filter(Boolean);
     const cartKeyEsc = item.cartKey.replace(/'/g, "\\'");
-    return `<div class="co-item">${img}
-      <div class="co-item-info">
-        <div class="co-item-name">${item.nombre}</div>
-        ${varHTML}
-        <div class="co-item-qty">Cantidad: ${item.qty}</div>
+    return `<div class="co-order-item">
+      <div>
+        <div class="co-order-item-name">${item.nombre}</div>
+        ${vars.length ? `<span class="co-order-item-var">${vars.join(' / ')}</span>` : ''}
+        <span class="co-order-item-qty">x${item.qty}</span>
       </div>
-      <div style="text-align:right;flex-shrink:0;">
-        ${esTransf ? `<div style="font-size:0.72rem;color:var(--gray);text-decoration:line-through;">${fmt(precioOriginal)}</div>` : ""}
-        <div class="co-item-price">${fmt(precioConDesc)}</div>
+      <div class="co-order-item-right">
+        ${esTransf ? `<div class="co-order-item-original">${fmt(precioOriginal)}</div>` : ''}
+        <div class="co-order-item-price">${fmt(precioFinal)}</div>
+        <button class="co-item-remove" onclick="removeFromOrder('${cartKeyEsc}')" title="Quitar"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <button class="co-item-remove" onclick="removeFromOrder('${cartKeyEsc}')" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
     </div>`;
   }).join("");
   renderPrices("co-price-summary");
@@ -529,30 +575,11 @@ function calcPrices() {
 
 function renderPrices(id) {
   const { sub, disc, total } = calcPrices();
+  const qty = cartItems.reduce((s, i) => s + i.qty, 0);
   document.getElementById(id).innerHTML = `
-    <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
-    <div class="price-row discount"><span>Descuento <span class="discount-badge">${DISCOUNT_PCT}% OFF</span></span><span>-${fmt(disc)}</span></div>
-    <div class="price-row total"><span>Total a pagar</span><span>${fmt(total)}</span></div>`;
-}
-
-function renderSidebar() {
-  const { sub, disc, total } = calcPrices();
-  document.getElementById("sidebar-items").innerHTML = cartItems.map(i =>
-    `<div style="display:flex;justify-content:space-between;padding:3px 0;gap:8px;">
-      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${i.nombre} x${i.qty}</span>
-      <span style="color:var(--white);font-weight:600;flex-shrink:0;">${fmt(i.precio * i.qty)}</span>
-    </div>`).join("");
-  document.getElementById("sidebar-prices").innerHTML = `
-    <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
-    <div class="price-row discount"><span>Descuento (${DISCOUNT_PCT}%)</span><span>-${fmt(disc)}</span></div>
-    <div class="price-row total"><span>Total</span><span>${fmt(total)}</span></div>`;
-}
-
-function toggleVar(id, btn) {
-  const el = document.getElementById(id);
-  const hidden = el.style.display === "none";
-  el.style.display = hidden ? "block" : "none";
-  btn.textContent = hidden ? "Ver menos" : "Ver más";
+    <div class="co-price-row"><span>Subtotal (${qty})</span><span>${fmt(sub)}</span></div>
+    ${disc > 0 ? `<div class="co-price-row co-price-discount"><span>Descuento <span class="co-badge">${DISCOUNT_PCT}% OFF</span></span><span>-${fmt(disc)}</span></div>` : ''}
+    <div class="co-price-row co-price-total"><span>Total</span><span>${fmt(total)}</span></div>`;
 }
 
 function removeFromOrder(cartKey) {
@@ -564,7 +591,6 @@ function removeFromOrder(cartKey) {
     return;
   }
   renderItems();
-  renderSidebar();
 }
 
 function getPaymentMethod() {
@@ -574,7 +600,8 @@ function getPaymentMethod() {
 
 function toggleAddressFields() {
   const metodo = document.getElementById("f-entrega").value;
-  document.getElementById("retiro-info").style.display = (metodo === "retiro") ? "block" : "none";
+  const retiroInfo = document.getElementById("retiro-info");
+  if (retiroInfo) retiroInfo.style.display = (metodo === "retiro") ? "block" : "none";
   const efectivoOpt = document.getElementById("efectivo-option");
   if (efectivoOpt) efectivoOpt.style.display = (metodo === "retiro") ? "flex" : "none";
   if (metodo !== "retiro" && getPaymentMethod() === "efectivo") {
@@ -585,25 +612,13 @@ function toggleAddressFields() {
 
 function onPaymentChange() {
   renderItems();
-  renderPrices("co-price-summary");
   const btn = document.getElementById("btn-submit");
   if (!btn) return;
   if (getPaymentMethod() === "mercadopago") {
-    btn.innerHTML = '<i class="fa-solid fa-lock" style="margin-right:6px;"></i>Pago seguro · Ir a pagar con MercadoPago →';
+    btn.innerHTML = '<i class="fa-solid fa-lock" style="margin-right:6px;"></i>Pago seguro · Confirmar con Mercado Pago →';
   } else {
     btn.innerHTML = '<i class="fa-solid fa-lock" style="margin-right:6px;"></i>Pago seguro · Confirmar pedido →';
   }
-}
-
-function goToStep(step) {
-  currentStep = step;
-  document.querySelectorAll(".step-panel").forEach((p, i) => p.classList.toggle("active", i + 1 === step));
-  document.querySelectorAll(".checkout-step").forEach((l, i) => {
-    l.classList.remove("active", "done");
-    if (i + 1 === step) l.classList.add("active");
-    if (i + 1 < step) l.classList.add("done");
-  });
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function v(id) { return document.getElementById(id).value.trim(); }
@@ -696,7 +711,6 @@ async function submitOrder() {
   showLoading("Procesando tu pedido...");
 
   try {
-    // Enviamos al CRM (Google Apps Script)
     const res = await fetch(CRM_URL, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -711,8 +725,7 @@ async function submitOrder() {
     createdOrder = data;
     customerEmail = email;
     Cart.clear();
-    fillStep3(data, email);
-    goToStep(3);
+    showConfirmation(data, email);
   } catch (err) {
     hideLoading();
     btn.disabled = false;
@@ -720,7 +733,14 @@ async function submitOrder() {
   }
 }
 
-function fillStep3(data, email) {
+function showConfirmation(data, email) {
+  document.getElementById("checkout-main").style.display = "none";
+  document.getElementById("confirmation-state").style.display = "block";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  fillConfirmation(data, email);
+}
+
+function fillConfirmation(data, email) {
   document.getElementById("result-order-number").textContent = data.orderNumber || "—";
   document.getElementById("result-total").textContent = fmt(data.total || 0);
   const trackUrl = `order-status.html?order=${data.orderNumber}&email=${encodeURIComponent(email)}`;
@@ -729,7 +749,7 @@ function fillStep3(data, email) {
   const esEfectivo = getPaymentMethod() === "efectivo";
   document.getElementById("total-box-label").textContent = esEfectivo
     ? "Total a pagar en el depósito"
-    : "Total a transferir (10% OFF por transferencia bancaria)";
+    : "Total a transferir (con 10% OFF)";
 
   const bankSection = document.getElementById("bank-transfer-section");
   const cashSection = document.getElementById("cash-section");
@@ -749,7 +769,7 @@ function fillStep3(data, email) {
 
 function copyVal(id) {
   const val = document.getElementById(id).textContent;
-  navigator.clipboard.writeText(val).then(() => showToastCo("Copiado")).catch(() => {});
+  navigator.clipboard.writeText(val).then(() => showToastCo("¡Copiado!")).catch(() => {});
 }
 
 function showToastCo(msg) {
@@ -769,7 +789,8 @@ function previewProof(input) {
     reader.readAsDataURL(file);
   } else {
     preview.style.display = "none";
-    document.querySelector(".upload-zone p").innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${file.name}`;
+    const zoneP = document.querySelector(".co-upload-zone p");
+    if (zoneP) zoneP.innerHTML = `<i class="fa-solid fa-file-pdf"></i> ${file.name}`;
   }
 }
 
@@ -786,8 +807,7 @@ async function uploadProof() {
   if (!createdOrder) return;
   const fileInput = document.getElementById("proof-file");
   if (!fileInput.files?.length) { alert("Por favor seleccioná el comprobante."); return; }
-  const email = customerEmail || v("f-email");
-  if (!email) { alert("Email requerido."); return; }
+  const email = customerEmail;
 
   const file = fileInput.files[0];
   if (file.size > 10 * 1024 * 1024) { alert("El archivo no puede superar 10MB."); return; }
@@ -833,7 +853,6 @@ function showLoading(msg) {
 }
 function hideLoading() { document.getElementById("loading-overlay").classList.remove("show"); }
 
-// JSONP helper para llamar al CRM y leer la respuesta (evita CORS)
 function mpJSONP(params) {
   return new Promise((resolve, reject) => {
     const cbName = '_mpCb' + Date.now();
@@ -870,4 +889,3 @@ if ('serviceWorker' in navigator) {
 </script>
 </body>
 </html>
-

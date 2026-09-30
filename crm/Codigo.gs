@@ -121,8 +121,12 @@ function manejar(e) {
     else if (accion === 'fotos_orden')     out = { ok:true, ordenado: fotosOrdenar(p) };
     else if (accion === 'comprobante_subir') out = { ok:true, url: comprobanteSubir(p) };
     else if (accion === 'mp_preferencia')       out = crearPreferencia(p);
-    else if (accion === 'ext_productos_list')   out = { ok:true, rows: extProductosListar(p) };
-    else if (accion === 'ext_producto_update')  out = extProductoActualizar(p);
+    else if (accion === 'ext_productos_list')    out = { ok:true, rows: extProductosListar(p) };
+    else if (accion === 'ext_producto_update')   out = extProductoActualizar(p);
+    else if (accion === 'ext_producto_agregar')  out = extProductoAgregar(p);
+    else if (accion === 'ext_producto_eliminar') out = extProductoEliminar(p);
+    else if (accion === 'ext_categoria_agregar') out = extCategoriaAgregar(p);
+    else if (accion === 'ext_categoria_eliminar') out = extCategoriaEliminar(p);
     else if (accion === 'ext_pedidos_list')     out = { ok:true, rows: extPedidosListar(p) };
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
@@ -637,12 +641,19 @@ function _headerIdx(headers) {
   return idx;
 }
 
+var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos externos','Pedidos Externos'];
+
 function extProductosListar(p) {
   var filtCat = String(p.categoria||'').trim();
   var ssP = ss();
   var result = [];
 
-  CAT_TABS.forEach(function(tabName) {
+  // Descubrir tabs de categorías dinámicamente (excluye tabs del sistema)
+  var tabNames = ssP.getSheets()
+    .map(function(sh) { return sh.getName(); })
+    .filter(function(n) { return SYSTEM_TABS.indexOf(n) < 0; });
+
+  tabNames.forEach(function(tabName) {
     var catKey = tabName.trim();
     if (filtCat && filtCat !== catKey) return;
     var sh = ssP.getSheetByName(tabName);
@@ -725,6 +736,63 @@ function extProductoActualizar(p) {
   }
 
   sh.getRange(row, colIdx).setValue(valor);
+  return { ok:true };
+}
+
+function extProductoAgregar(p) {
+  var sheetName = String(p.sheet||p.categoria||'').trim();
+  if (!sheetName || !p.nombre) return { ok:false, error:'Faltan nombre o categoría' };
+  var sh = ss().getSheetByName(sheetName);
+  if (!sh) return { ok:false, error:'Categoría no encontrada: ' + sheetName };
+  var headers = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(),1)).getValues()[0];
+  var row = headers.map(function(h) {
+    var hk = String(h||'').trim().toLowerCase();
+    if (hk === 'nombre')                       return String(p.nombre||'').trim();
+    if (hk === 'precio')                       return Number(String(p.precio||0).replace(/[^\d.]/g,''))||0;
+    if (hk === 'stock')                        return Number(String(p.stock||1).replace(/[^\d.]/g,''))||0;
+    if (hk === 'color')                        return String(p.color||'').trim();
+    if (hk === 'marca')                        return String(p.marca||p.color||'').trim();
+    if (hk.indexOf('talle') >= 0 || hk.indexOf('medida') >= 0) return String(p.talle||'').trim();
+    if (hk.indexOf('descripci') >= 0)          return String(p.descripcion||'').trim();
+    if (hk === 'destacado')                    return false;
+    if (hk === 'descuento')                    return 0;
+    if (hk.indexOf('subcategor') >= 0)         return String(p.subcategoria||'').trim();
+    return '';
+  });
+  sh.appendRow(row);
+  return { ok:true, row: sh.getLastRow() };
+}
+
+function extProductoEliminar(p) {
+  var sheetName = String(p.sheet||'').trim();
+  var row = parseInt(p.row, 10);
+  if (!sheetName || !row) return { ok:false, error:'Faltan parámetros' };
+  var sh = ss().getSheetByName(sheetName);
+  if (!sh) return { ok:false, error:'Hoja no encontrada: ' + sheetName };
+  if (row < 2 || row > sh.getLastRow()) return { ok:false, error:'Fila fuera de rango' };
+  sh.deleteRow(row);
+  return { ok:true };
+}
+
+function extCategoriaAgregar(p) {
+  var nombre = String(p.nombre||'').trim();
+  if (!nombre) return { ok:false, error:'Falta el nombre' };
+  var ssP = ss();
+  if (ssP.getSheetByName(nombre)) return { ok:false, error:'Ya existe esa categoría' };
+  var sh = ssP.insertSheet(nombre);
+  sh.appendRow(['Nombre','Precio','Stock','Marca','Descripcion','Destacado']);
+  sh.getRange(1,1,1,6).setFontWeight('bold');
+  sh.setFrozenRows(1);
+  return { ok:true };
+}
+
+function extCategoriaEliminar(p) {
+  var nombre = String(p.nombre||'').trim();
+  if (!nombre) return { ok:false, error:'Falta el nombre' };
+  var ssP = ss();
+  var sh = ssP.getSheetByName(nombre);
+  if (!sh) return { ok:false, error:'Hoja no encontrada' };
+  ssP.deleteSheet(sh);
   return { ok:true };
 }
 

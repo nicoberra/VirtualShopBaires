@@ -91,7 +91,10 @@
 
     <!-- PRODUCTOS -->
     <section id="sec-productos" class="sec">
-      <h1 class="sec-title">Productos</h1>
+      <div class="sec-header">
+        <h1 class="sec-title">Productos</h1>
+        <button class="btn-primary btn-sm" onclick="abrirModalNuevoProd()"><i class="fa-solid fa-plus"></i> Agregar</button>
+      </div>
       <div class="toolbar">
         <input type="search" id="prod-search" placeholder="Buscar producto…" oninput="filtrarProductos()">
         <div id="prod-cats" class="chip-row"></div>
@@ -327,6 +330,64 @@
     <div class="modal-footer">
       <button class="btn-secondary" onclick="hide('modal-confirm')">Cancelar</button>
       <button class="btn-danger" id="confirm-btn" onclick="">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal agregar producto -->
+<div id="modal-nuevo-prod" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-nuevo-prod')">
+  <div class="modal modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Agregar producto</h3>
+      <button class="modal-close" onclick="hide('modal-nuevo-prod')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre *</label>
+        <input type="text" id="np-nombre" placeholder="Nombre del producto">
+      </div>
+      <div class="form-group">
+        <label>Categoría *</label>
+        <select id="np-categoria" class="sel"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Precio ($)</label>
+          <input type="number" id="np-precio" min="0" step="1" value="0">
+        </div>
+        <div class="form-group">
+          <label>Stock (unidades)</label>
+          <input type="number" id="np-stock" min="0" step="1" value="1">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Marca / Color</label>
+        <input type="text" id="np-marca" placeholder="Ej: Sluban, Rojo">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hide('modal-nuevo-prod')">Cancelar</button>
+      <button class="btn-primary" id="np-btn-guardar" onclick="guardarNuevoProd()">Agregar producto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nueva categoría -->
+<div id="modal-nueva-cat" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-nueva-cat')">
+  <div class="modal modal-sm" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Nueva categoría</h3>
+      <button class="modal-close" onclick="hide('modal-nueva-cat')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nombre de la categoría *</label>
+        <input type="text" id="nueva-cat-nombre" placeholder="Ej: Electrónica" onkeydown="if(event.key==='Enter')guardarNuevaCat()">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="hide('modal-nueva-cat')">Cancelar</button>
+      <button class="btn-primary" onclick="guardarNuevaCat()">Crear categoría</button>
     </div>
   </div>
 </div>

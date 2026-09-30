@@ -569,8 +569,16 @@ async function loadProductos(force=false) {
 
 function buildProdCats() {
   const cats = ['Todos', ...new Set(_productos.map(p => p.categoria).filter(Boolean))];
-  $('prod-cats').innerHTML = cats.map(c =>
-    `<span class="chip${c===_prodCatFil?' active':''}" onclick="setProdCat('${c}')">${c}</span>`).join('');
+  const html = cats.map(c => {
+    const active = c === _prodCatFil ? ' active' : '';
+    const catEsc = c.replace(/'/g, "\\'");
+    const del = c !== 'Todos'
+      ? `<span class="chip-del" title="Eliminar categoría" onclick="event.stopPropagation();eliminarCategoria('${catEsc}')">×</span>`
+      : '';
+    return `<span class="chip${active}" onclick="setProdCat('${catEsc}')">${c}${del}</span>`;
+  }).join('');
+  $('prod-cats').innerHTML = html +
+    `<span class="chip chip-add" onclick="abrirModalNuevaCat()" title="Nueva categoría"><i class="fa-solid fa-plus"></i> Cat</span>`;
 }
 
 function setProdCat(cat) {
@@ -651,6 +659,7 @@ function renderProductos(list) {
       <td style="white-space:nowrap">
         <a class="btn-icon" href="https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria||'')}&buscar=${encodeURIComponent(p.nombre||'')}" target="_blank" rel="noopener" title="Ver en tienda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
         <button class="btn-icon btn-edit-prod" title="Ver / editar completo"><i class="fa-solid fa-pen-to-square"></i></button>
+        <button class="btn-icon btn-del-prod" title="Eliminar producto" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
       </td>`;
 
     tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
@@ -670,6 +679,7 @@ function renderProductos(list) {
         .then(() => toast('Destacado actualizado ✓')).catch(() => toast('Error','err'));
     });
     tr.querySelector('.btn-edit-prod').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
+    tr.querySelector('.btn-del-prod').addEventListener('click', () => eliminarProducto(p));
 
     tbody.appendChild(tr);
   });
@@ -1144,6 +1154,78 @@ function _silentRefreshPedidos() {
   loadPedidos(true, true).then(() => {
     if (currentSec === 'panel') loadPanel();
   }).catch(() => {});
+}
+
+// ─── GESTIÓN DE PRODUCTOS Y CATEGORÍAS ───────────────────────
+
+function abrirModalNuevoProd() {
+  const cats = [...new Set(_productos.map(p => p.categoria).filter(Boolean))].sort();
+  const sel = $('np-categoria');
+  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (_prodCatFil !== 'Todos') sel.value = _prodCatFil;
+  $('np-nombre').value = '';
+  $('np-precio').value = '0';
+  $('np-stock').value = '1';
+  $('np-marca').value = '';
+  show('modal-nuevo-prod', 'flex');
+  setTimeout(() => $('np-nombre').focus(), 100);
+}
+
+async function guardarNuevoProd() {
+  const nombre = $('np-nombre').value.trim();
+  const categoria = $('np-categoria').value;
+  if (!nombre || !categoria) { toast('Completá nombre y categoría', 'err'); return; }
+  const btn = $('np-btn-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    await crm({ action:'ext_producto_agregar', sheet: categoria, nombre,
+      precio: Number($('np-precio').value)||0,
+      stock:  Number($('np-stock').value)||1,
+      marca:  $('np-marca').value.trim() });
+    toast('Producto agregado ✓');
+    hide('modal-nuevo-prod');
+    delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
+  } catch(e) { toast('Error al agregar', 'err'); }
+  finally { btn.disabled = false; btn.textContent = 'Agregar producto'; }
+}
+
+function eliminarProducto(p) {
+  confirmar(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`, async () => {
+    try {
+      await crm({ action:'ext_producto_eliminar', sheet: p._sheet, row: p._row });
+      toast('Producto eliminado');
+      delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
+    } catch(e) { toast('Error al eliminar', 'err'); }
+  });
+}
+
+function abrirModalNuevaCat() {
+  $('nueva-cat-nombre').value = '';
+  show('modal-nueva-cat', 'flex');
+  setTimeout(() => $('nueva-cat-nombre').focus(), 100);
+}
+
+async function guardarNuevaCat() {
+  const nombre = $('nueva-cat-nombre').value.trim();
+  if (!nombre) { toast('Escribí un nombre', 'err'); return; }
+  try {
+    const r = await crm({ action:'ext_categoria_agregar', nombre });
+    if (!r.ok) { toast(r.error || 'Error', 'err'); return; }
+    toast('Categoría creada ✓');
+    hide('modal-nueva-cat');
+    delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
+  } catch(e) { toast('Error al crear categoría', 'err'); }
+}
+
+function eliminarCategoria(cat) {
+  confirmar(`¿Eliminar la categoría "${cat}" y TODOS sus productos? Esta acción no se puede deshacer.`, async () => {
+    try {
+      await crm({ action:'ext_categoria_eliminar', nombre: cat });
+      toast('Categoría eliminada');
+      _prodCatFil = 'Todos';
+      delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
+    } catch(e) { toast('Error al eliminar categoría', 'err'); }
+  });
 }
 
 // Cada 30 segundos si la pestaña está visible

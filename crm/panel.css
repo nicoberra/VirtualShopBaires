@@ -297,6 +297,9 @@ textarea { min-height: unset; }
   transition: all var(--trans); min-height: 32px; display: inline-flex; align-items: center;
 }
 .chip.active { background: rgba(204,18,18,0.15); color: var(--red); border-color: var(--red); }
+.chip-del { margin-left: 6px; opacity: 0.5; font-size: 1rem; line-height: 1; transition: opacity var(--trans); }
+.chip-del:hover { opacity: 1; }
+.chip-add { color: var(--text2); gap: 4px; }
 
 /* ─── TABLES ─────────────────────────────────────────────── */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

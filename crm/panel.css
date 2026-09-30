@@ -74,8 +74,8 @@ img { max-width: 100%; }
 .nav-links { flex: 1; padding: 12px 0; }
 .nav-link {
   display: flex; align-items: center; gap: 10px;
-  padding: 11px 20px; font-size: 0.88rem; font-weight: 500;
-  color: var(--text2);
+  padding: 11px 20px; font-size: 0.88rem; font-weight: 700;
+  color: var(--text);
   transition: background var(--trans), color var(--trans);
   cursor: pointer; min-height: 44px;
 }

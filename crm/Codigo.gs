@@ -21,8 +21,7 @@ var CAT_TABS = ['Juguetes','Belleza','Piletas ','Inflables','Bazar, baño y coci
                 'Pilates y Yoga','Fitness y musculacion'];
 
 // Para fotos de productos (GitHub repo de la tienda)
-// Creá un token en: github.com/settings/tokens → Fine-grained → Contents: Read and write
-var GH_TOKEN  = '';   // ← PEGAR TU TOKEN AQUÍ
+var GH_TOKEN  = PropertiesService.getScriptProperties().getProperty('GH_TOKEN') || '';
 var GH_REPO   = 'nicoberra/VirtualShopBaires';
 var GH_BRANCH = 'main';
 

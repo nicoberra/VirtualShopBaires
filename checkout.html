@@ -286,17 +286,14 @@
             </label>
             <label style="display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
               <input type="radio" name="metodoPago" value="mercadopago" onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
-              <span style="display:flex;align-items:center;gap:8px;">
-                <svg width="44" height="18" viewBox="0 0 88 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
-                  <rect width="88" height="36" rx="6" fill="#009EE3"/>
-                  <text x="44" y="24" text-anchor="middle" fill="white" font-weight="900" font-size="16" font-family="Arial, sans-serif" letter-spacing="-0.5">MP</text>
-                </svg>
-                <span>Compra online <span style="display:block;font-size:0.72rem;color:var(--gray);font-weight:400;">débito · crédito · cuotas · plata en cuenta</span></span>
+              <span>
+                <span style="color:#009EE3;">Mercado Pago</span>
+                <span style="display:block;font-size:0.72rem;color:var(--gray);font-weight:400;margin-top:2px;">débito · crédito · cuotas · plata en cuenta</span>
               </span>
             </label>
             <label id="efectivo-option" style="display:none;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--black-2);border-radius:8px;cursor:pointer;font-size:0.9rem;font-weight:600;color:var(--white);">
               <input type="radio" name="metodoPago" value="efectivo" onchange="onPaymentChange()" style="accent-color:var(--red);width:16px;height:16px;" />
-              <span><i class="fa-solid fa-money-bill-wave" style="color:var(--gray);margin-right:6px;"></i>Efectivo en el depósito <span style="font-size:0.75rem;color:var(--gray);font-weight:400;margin-left:4px;">(precio de lista · solo retiro)</span></span>
+              <span><i class="fa-solid fa-money-bill-wave" style="color:var(--red);margin-right:6px;"></i>Efectivo en el depósito <span style="background:rgba(204,18,18,0.12);color:var(--red);font-size:0.72rem;font-weight:700;padding:2px 8px;border-radius:12px;margin-left:4px;">10% OFF</span> <span style="font-size:0.75rem;color:var(--gray);font-weight:400;">(solo retiro)</span></span>
             </label>
           </div>
 
@@ -504,7 +501,7 @@ function renderItems() {
       ? `<img class="co-item-img" src="${item.imagen}" alt="" onerror="this.style.display='none'">`
       : `<div class="co-item-img" style="display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="color:var(--gray-light);font-size:1.1rem;"></i></div>`;
     const precioOriginal = item.precio * item.qty;
-    const esTransf = getPaymentMethod() === "transferencia";
+    const esTransf = ["transferencia", "efectivo"].includes(getPaymentMethod());
     const precioConDesc = esTransf ? Math.round(precioOriginal * (1 - DISCOUNT_PCT / 100) * 100) / 100 : precioOriginal;
     const cartKeyEsc = item.cartKey.replace(/'/g, "\\'");
     return `<div class="co-item">${img}
@@ -525,7 +522,7 @@ function renderItems() {
 
 function calcPrices() {
   const sub = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
-  const esTransferencia = getPaymentMethod() === "transferencia";
+  const esTransferencia = ["transferencia", "efectivo"].includes(getPaymentMethod());
   const disc = esTransferencia ? Math.round(sub * DISCOUNT_PCT / 100 * 100) / 100 : 0;
   return { sub, disc, total: sub - disc };
 }
@@ -534,7 +531,7 @@ function renderPrices(id) {
   const { sub, disc, total } = calcPrices();
   document.getElementById(id).innerHTML = `
     <div class="price-row"><span>Subtotal</span><span>${fmt(sub)}</span></div>
-    <div class="price-row discount"><span>Descuento transferencia <span class="discount-badge">${DISCOUNT_PCT}% OFF</span></span><span>-${fmt(disc)}</span></div>
+    <div class="price-row discount"><span>Descuento <span class="discount-badge">${DISCOUNT_PCT}% OFF</span></span><span>-${fmt(disc)}</span></div>
     <div class="price-row total"><span>Total a pagar</span><span>${fmt(total)}</span></div>`;
 }
 

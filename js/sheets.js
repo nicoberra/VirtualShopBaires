@@ -29,6 +29,8 @@
 //  Luego pegá la URL en APPS_SCRIPT_URL abajo.
 // ============================================================
 
+const STOCK_ACTIVO = false; // false = todos sin stock (pausar ventas sin tocar el Sheet)
+
 const SHEET_ID        = "1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw";
 const DRIVE_FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS-UBfke2GiPSuEwhPTbivnbP4b3S3GAYm22qXPtxe68ORtHdRgaQnTDD13EK-jjgV_w/exec";
@@ -200,7 +202,7 @@ async function fetchHoja(nombreHoja) {
           precio:         descuento !== null ? descuento : precioBase,
           precioOriginal: descuento !== null ? precioBase : null,
           badge:          descuento !== null ? "oferta" : null,
-          stock:          stockVal !== false && String(stockVal).toLowerCase() !== "false",
+          stock:          STOCK_ACTIVO && stockVal !== false && String(stockVal).toLowerCase() !== "false",
           color:          get(3) ? String(get(3)).trim() : null,
           talle:          layoutCompacto ? null : (get(4) ? String(get(4)).trim() : null),
           descripcion:    typeof descripcionRaw === "string" ? descripcionRaw.trim() : "",
@@ -244,7 +246,7 @@ async function fetchHoja(nombreHoja) {
           stock:          row.stock,
         });
       } else {
-        if (!row.stock) grouped[row.nombre].disponible = false;
+        if (!row.stock || !STOCK_ACTIVO) grouped[row.nombre].disponible = false;
       }
     });
 

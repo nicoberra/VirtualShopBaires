@@ -3,9 +3,8 @@
 //  panel.js
 // ============================================================
 
-// ─── CONFIG — CAMBIÁ ESTOS DOS VALORES ───────────────────────
-const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
-const PANEL_PASS = '2208';
+// ─── CONFIG ───────────────────────────────────────────────────
+const CRM_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
 // ─────────────────────────────────────────────────────────────
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────
@@ -79,16 +78,27 @@ function badgeEstado(estado) {
 
 // ─── AUTH ─────────────────────────────────────────────────────
 
-function doLogin() {
+async function doLogin() {
   const pass = val('login-pass');
-  if (pass === PANEL_PASS) {
-    localStorage.setItem('crm_auth', '1');
-    hide('login-wrap');
-    show('app', 'flex');
-    goTo('panel');
-    prefetchAll();
-  } else {
-    $('login-err').textContent = 'Contraseña incorrecta.';
+  if (!pass) return;
+  const btn = document.querySelector('#login-box button');
+  if (btn) btn.disabled = true;
+  $('login-err').textContent = '';
+  try {
+    const data = await crm({ action: 'loginPanel', clave: pass });
+    if (data.ok && data.token) {
+      sessionStorage.setItem('crm_token', data.token);
+      hide('login-wrap');
+      show('app', 'flex');
+      goTo('panel');
+      prefetchAll();
+    } else {
+      $('login-err').textContent = data.error || 'Contraseña incorrecta.';
+    }
+  } catch {
+    $('login-err').textContent = 'Error de conexión. Intentá de nuevo.';
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -105,7 +115,7 @@ function prefetchAll() {
 }
 
 function logout() {
-  localStorage.removeItem('crm_auth');
+  sessionStorage.removeItem('crm_token');
   location.reload();
 }
 
@@ -1145,7 +1155,7 @@ async function loadComprobantes(force=false) {
 // ─── AUTO-REFRESH PEDIDOS ─────────────────────────────────────
 
 function _silentRefreshPedidos() {
-  if (!localStorage.getItem('crm_auth')) return;
+  if (!sessionStorage.getItem('crm_token')) return;
   delete _cache['ext_pedidos_listar'];
   _pedidos = [];
   loadPedidos(true, true).then(() => {
@@ -1248,7 +1258,7 @@ document.addEventListener('visibilitychange', () => {
 // ─── INIT ─────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (localStorage.getItem('crm_auth') === '1') {
+  if (sessionStorage.getItem('crm_token')) {
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');

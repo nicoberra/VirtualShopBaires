@@ -131,6 +131,8 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
     else if (accion === 'version')              out = { ok:true, version: 'v2' };
+    else if (accion === 'loginPanel')           out = loginPanel(p);
+    else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else throw 'Acción desconocida: ' + accion;
 
   } catch(err) {
@@ -976,4 +978,21 @@ function migrarPlanillas() {
 
   Logger.log(log.join('\n'));
   SpreadsheetApp.getUi().alert('Migración completa:\n\n' + log.join('\n'));
+}
+
+// ─── LOGIN DEL PANEL CRM ─────────────────────────────────────
+
+function loginPanel(p) {
+  var stored = PropertiesService.getScriptProperties().getProperty('PANEL_PASS');
+  if (!stored) return { ok:false, error:'Contraseña no configurada. Agregá PANEL_PASS en las propiedades del script.' };
+  if (String(p.clave || '') !== String(stored)) return { ok:false, error:'Contraseña incorrecta.' };
+  var token = Utilities.getUuid();
+  CacheService.getScriptCache().put('panel_' + token, '1', 28800); // 8 horas
+  return { ok:true, token: token };
+}
+
+function verifyPanel(p) {
+  if (!p.token) return { ok:false };
+  var val = CacheService.getScriptCache().get('panel_' + p.token);
+  return { ok: val === '1' };
 }

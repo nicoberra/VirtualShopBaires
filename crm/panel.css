@@ -693,3 +693,100 @@ a:focus-visible {
   outline: 2px solid var(--red);
   outline-offset: 2px;
 }
+
+/* ============================================================
+   MEJORAS-UI CRM — animaciones, shake, toast, skeleton
+   Bloque aislado y reversible. NO editar el código anterior.
+   ============================================================ */
+
+/* --- Tokens de animación del CRM (máx 250ms per brief) --- */
+:root {
+  --crm-dur-fast:   120ms;
+  --crm-dur-normal: 200ms;
+  --crm-ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --crm-ease-move:  cubic-bezier(0.25, 1, 0.5,  1);
+}
+
+/* --- Login: entrada suave --- */
+@keyframes crm-login-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+#login-box {
+  animation: crm-login-in 280ms var(--crm-ease-enter) both;
+}
+
+/* --- Login: shake en contraseña incorrecta --- */
+@keyframes crm-shake {
+  0%,100% { transform: translateX(0);   }
+  15%     { transform: translateX(-8px); }
+  30%     { transform: translateX(7px);  }
+  45%     { transform: translateX(-6px); }
+  60%     { transform: translateX(5px);  }
+  75%     { transform: translateX(-3px); }
+  90%     { transform: translateX(2px);  }
+}
+#login-box.crm-shake {
+  animation: crm-shake 420ms var(--crm-ease-enter);
+}
+
+/* --- Toast: transición explícita (no usar "all") --- */
+.toast {
+  transition:
+    transform var(--crm-dur-normal) var(--crm-ease-move),
+    opacity   var(--crm-dur-normal) ease;
+}
+
+/* --- Modal: entrada animada --- */
+@keyframes crm-modal-in {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);     }
+}
+.modal-backdrop.show .modal,
+.modal-backdrop[style*="flex"] .modal {
+  animation: crm-modal-in var(--crm-dur-normal) var(--crm-ease-enter) both;
+}
+
+/* --- Skeleton loader --- */
+@keyframes crm-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+.crm-skeleton {
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--bg4) 50%, var(--bg3) 75%);
+  background-size: 800px 100%;
+  animation: crm-shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+}
+.crm-skeleton-row {
+  height: 44px;
+  margin-bottom: 6px;
+}
+.crm-skeleton-text {
+  height: 14px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+.crm-skeleton-text.w60 { width: 60%; }
+.crm-skeleton-text.w80 { width: 80%; }
+.crm-skeleton-text.w40 { width: 40%; }
+
+/* --- Transición de secciones (nav) --- */
+.section-panel {
+  animation: crm-login-in var(--crm-dur-normal) var(--crm-ease-enter) both;
+}
+
+/* --- prefers-reduced-motion CRM --- */
+@media (prefers-reduced-motion: reduce) {
+  #login-box, #login-box.crm-shake,
+  .modal-backdrop.show .modal,
+  .modal-backdrop[style*="flex"] .modal,
+  .section-panel {
+    animation: none !important;
+  }
+  .toast, .crm-skeleton {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+/* fin MEJORAS-UI CRM */

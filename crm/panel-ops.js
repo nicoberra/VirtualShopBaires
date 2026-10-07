@@ -109,12 +109,23 @@ async function doLogin() {
       prefetchAll();
     } else {
       $('login-err').textContent = data.error || 'Contraseña incorrecta.';
+      shakeLoginBox();
     }
   } catch {
     $('login-err').textContent = 'Error de conexión. Intentá de nuevo.';
+    shakeLoginBox();
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+
+function shakeLoginBox() {
+  const box = $('login-box');
+  if (!box) return;
+  box.classList.remove('crm-shake');
+  void box.offsetWidth;
+  box.classList.add('crm-shake');
+  box.addEventListener('animationend', () => box.classList.remove('crm-shake'), { once: true });
 }
 
 function prefetchAll() {

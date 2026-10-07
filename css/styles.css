@@ -168,7 +168,7 @@ header {
   height: 2px;
   background: #1A1A1A;
   border-radius: 2px;
-  transition: all 0.3s;
+  transition: transform 0.3s, opacity 0.3s;
 }
 .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .hamburger.open span:nth-child(2) { opacity: 0; transform: scaleX(0); }
@@ -1493,7 +1493,7 @@ header {
   z-index: 200;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s;
+  transition: opacity 0.3s, visibility 0.3s;
   backdrop-filter: blur(4px);
 }
 .cart-overlay.open { opacity: 1; visibility: visible; }
@@ -1984,7 +1984,7 @@ select:focus-visible {
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s, transform 0.2s;
   flex-shrink: 0;
 }
 .mobile-cat-chip.active {
@@ -3107,3 +3107,29 @@ footer {
 }
 /* fin MEJORAS-UI */
 
+
+/* ═════════════════════════════════════════════════════════════════════
+   PULIDO SKILLS (2026-10-07) — review-animations / fixing-motion-performance
+   ═════════════════════════════════════════════════════════════════════ */
+/* --transition era "all 0.25s": animaba cualquier propiedad que cambiara (incluso layout).
+   Ahora lista solo las propiedades visuales; los 25 lugares que la usan quedan cubiertos. */
+:root {
+  --transition: color .25s ease, background-color .25s ease, border-color .25s ease,
+                box-shadow .25s ease, transform .25s ease, opacity .25s ease, filter .25s ease;
+}
+
+/* Carrito: se desliza con transform (fluido en celulares) en vez de mover right/bottom. */
+.cart-panel {
+  right: 0;
+  transform: translateX(calc(100% + 60px));
+  transition: transform .38s cubic-bezier(.32, .72, 0, 1);
+}
+.cart-panel.open { transform: none; }
+@media (max-width: 640px) {
+  .cart-panel { bottom: 0; transform: translateY(calc(100% + 60px)); transition: transform .38s cubic-bezier(.32, .72, 0, 1); }
+  .cart-panel.open { transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cart-panel { transition-duration: .01ms; }
+}
+/* fin PULIDO SKILLS */

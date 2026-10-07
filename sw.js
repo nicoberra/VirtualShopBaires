@@ -1,5 +1,5 @@
 /* Service Worker — Virtual Shop Baires (Tienda) */
-const CACHE_NAME = 'vsb-store-v2';
+const CACHE_NAME = 'vsb-store-v3';
 
 // Recursos estáticos a pre-cachear (app shell)
 const PRECACHE_URLS = [
@@ -8,7 +8,9 @@ const PRECACHE_URLS = [
   '/js/cart.js',
   '/js/productos.js',
   '/js/sheets.js',
+  '/js/mejoras-ui.js',
   '/logo.png',
+  '/logo.webp',
 ];
 
 // Dominios que NUNCA se cachean (datos dinámicos, pagos, APIs)

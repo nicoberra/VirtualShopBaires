@@ -2971,3 +2971,139 @@ footer {
   .newsletter-form input, .newsletter-form button { width: 100%; max-width: 100%; }
 }
 
+/* ============================================================
+   MEJORAS-UI — Tokens de animación, hover premium, accesibilidad
+   Bloque aislado y reversible. NO editar el código anterior.
+   ============================================================ */
+
+/* --- Tokens de animación --- */
+:root {
+  --dur-fast:   150ms;
+  --dur-normal: 250ms;
+  --dur-slow:   350ms;
+  --ease-enter: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-move:  cubic-bezier(0.25, 1, 0.5,  1);
+}
+
+/* --- Focus visible (accesibilidad) --- */
+:focus-visible {
+  outline: 2.5px solid var(--red);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* --- Hover premium: solo mouse, nunca táctil --- */
+@media (hover: hover) and (pointer: fine) {
+
+  .product-card {
+    transition:
+      transform    var(--dur-fast)   var(--ease-enter),
+      box-shadow   var(--dur-fast)   var(--ease-enter),
+      border-color var(--dur-normal) ease;
+  }
+  .product-card:hover {
+    transform: translateY(-6px) scale(1.01);
+    box-shadow: 0 12px 40px rgba(204,18,18,0.13);
+    border-color: var(--red);
+  }
+
+  .feature-item {
+    transition:
+      transform    var(--dur-fast)   var(--ease-enter),
+      box-shadow   var(--dur-fast)   var(--ease-enter),
+      border-color var(--dur-normal) ease;
+  }
+
+  .category-card {
+    transition:
+      transform    var(--dur-fast)   var(--ease-enter),
+      box-shadow   var(--dur-fast)   var(--ease-enter),
+      border-color var(--dur-normal) ease;
+  }
+
+  .social-icon-btn {
+    transition:
+      transform var(--dur-fast) var(--ease-enter),
+      filter    var(--dur-fast) ease;
+  }
+
+  .btn-primary, .btn-secondary, .btn-wa {
+    transition:
+      background-color var(--dur-fast) ease,
+      transform        var(--dur-fast) var(--ease-enter),
+      box-shadow       var(--dur-fast) ease;
+  }
+
+  .cart-action-btn {
+    transition:
+      background-color var(--dur-fast) ease,
+      transform        var(--dur-fast) var(--ease-enter);
+  }
+}
+
+/* --- Estado sin stock: visual limpio --- */
+.product-card.sin-stock .product-img::after {
+  content: 'Sin stock';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+@media (hover: hover) and (pointer: fine) {
+  .product-card.sin-stock:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: rgba(0,0,0,0.08);
+    cursor: default;
+  }
+}
+
+/* --- Feedback de agregar al carrito --- */
+@keyframes vsb-bounce {
+  0%   { transform: scale(1);    }
+  35%  { transform: scale(1.16); }
+  65%  { transform: scale(0.97); }
+  100% { transform: scale(1);    }
+}
+.cart-action-btn.vsb-adding {
+  animation: vsb-bounce var(--dur-slow) var(--ease-enter) forwards;
+}
+
+/* --- Hero: texto visible en móvil --- */
+@media (max-width: 768px) {
+  .hero-slogan   { font-size: clamp(1.6rem, 6vw, 2.2rem); }
+  .hero-subtitle { font-size: 0.9rem; }
+  .hero-buttons  {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .hero-buttons .btn-primary,
+  .hero-buttons .btn-wa {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* --- prefers-reduced-motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration:       0.01ms !important;
+    animation-iteration-count: 1     !important;
+    transition-duration:      0.01ms !important;
+    scroll-behavior:          auto   !important;
+  }
+  .topbar-camion { animation-play-state: paused !important; }
+  .hero-vid      { display: none !important; }
+}
+/* fin MEJORAS-UI */
+

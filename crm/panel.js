@@ -11,12 +11,26 @@ const CRM_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWq
 
 function crm(params) {
   return new Promise((resolve, reject) => {
+    // Inyectar token en todas las llamadas excepto las públicas
+    const PUBLIC = { loginPanel:1, verifyPanel:1, version:1 };
+    const token = !PUBLIC[params.action] ? sessionStorage.getItem('crm_token') : null;
+    const allParams = token ? { token, ...params } : { ...params };
+
     const cb = 'cb_' + Date.now() + Math.floor(Math.random() * 1e6);
-    const qs = new URLSearchParams({ ...params, callback: cb, _: Date.now() });
+    const qs = new URLSearchParams({ ...allParams, callback: cb, _: Date.now() });
     const s  = document.createElement('script');
     const ok = () => { delete window[cb]; s.remove(); };
     const to = setTimeout(() => { ok(); reject(new Error('timeout')); }, 45000);
-    window[cb] = (data) => { clearTimeout(to); ok(); resolve(data); };
+    window[cb] = (data) => {
+      clearTimeout(to); ok();
+      // Token expirado o inválido: volver al login
+      if (data && data.ok === false && data.error === 'auth') {
+        sessionStorage.removeItem('crm_token');
+        location.reload();
+        return;
+      }
+      resolve(data);
+    };
     s.onerror  = () => { clearTimeout(to); ok(); reject(new Error('red')); };
     s.src = CRM_URL + '?' + qs.toString();
     document.body.appendChild(s);

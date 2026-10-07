@@ -4,20 +4,33 @@
 // ============================================================
 
 // ─── CONFIG ──────────────────────────────────────────────────
-const CRM_URL    = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
-const PANEL_PASS = '2208';
+const CRM_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
 // ─────────────────────────────────────────────────────────────
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────
 
 function crm(params) {
   return new Promise((resolve, reject) => {
+    // Inyectar token en todas las llamadas excepto las públicas
+    const PUBLIC = { loginPanel:1, verifyPanel:1, version:1 };
+    const token = !PUBLIC[params.action] ? sessionStorage.getItem('ops_crm_token') : null;
+    const allParams = token ? { token, ...params } : { ...params };
+
     const cb = 'cb_' + Date.now() + Math.floor(Math.random() * 1e6);
-    const qs = new URLSearchParams({ ...params, callback: cb, _: Date.now() });
+    const qs = new URLSearchParams({ ...allParams, callback: cb, _: Date.now() });
     const s  = document.createElement('script');
     const ok = () => { delete window[cb]; s.remove(); };
     const to = setTimeout(() => { ok(); reject(new Error('timeout')); }, 45000);
-    window[cb] = (data) => { clearTimeout(to); ok(); resolve(data); };
+    window[cb] = (data) => {
+      clearTimeout(to); ok();
+      // Token expirado o inválido: volver al login
+      if (data && data.ok === false && data.error === 'auth') {
+        sessionStorage.removeItem('ops_crm_token');
+        location.reload();
+        return;
+      }
+      resolve(data);
+    };
     s.onerror  = () => { clearTimeout(to); ok(); reject(new Error('red')); };
     s.src = CRM_URL + '?' + qs.toString();
     document.body.appendChild(s);
@@ -79,16 +92,28 @@ function badgeEstado(estado) {
 
 // ─── AUTH ─────────────────────────────────────────────────────
 
-function doLogin() {
+async function doLogin() {
   const pass = val('login-pass');
-  if (pass === PANEL_PASS) {
-    localStorage.setItem('ops_auth', '1');
-    hide('login-wrap');
-    show('app', 'flex');
-    goTo('panel');
-    prefetchAll();
-  } else {
-    $('login-err').textContent = 'Contraseña incorrecta.';
+  if (!pass) return;
+  const btn = document.querySelector('#login-box button');
+  if (btn) btn.disabled = true;
+  $('login-err').textContent = '';
+  try {
+    const data = await crm({ action: 'loginPanel', clave: pass });
+    if (data.ok && data.token) {
+      sessionStorage.setItem('ops_crm_token', data.token);
+      localStorage.removeItem('ops_auth'); // limpiar credencial vieja
+      hide('login-wrap');
+      show('app', 'flex');
+      goTo('panel');
+      prefetchAll();
+    } else {
+      $('login-err').textContent = data.error || 'Contraseña incorrecta.';
+    }
+  } catch {
+    $('login-err').textContent = 'Error de conexión. Intentá de nuevo.';
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -104,6 +129,7 @@ function prefetchAll() {
 }
 
 function logout() {
+  sessionStorage.removeItem('ops_crm_token');
   localStorage.removeItem('ops_auth');
   localStorage.removeItem('vsb_nav_from_crm');
   location.reload();
@@ -1042,7 +1068,7 @@ function eliminarCategoria(cat) {
 // ─── AUTO-REFRESH PEDIDOS ─────────────────────────────────────
 
 function _silentRefreshPedidos() {
-  if (!localStorage.getItem('ops_auth') && !localStorage.getItem('crm_auth')) return;
+  if (!sessionStorage.getItem('ops_crm_token')) return;
   delete _cache['ext_pedidos_listar'];
   _pedidos = [];
   loadPedidos(true, true).then(() => {
@@ -1063,7 +1089,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = $('btn-volver-crm');
     if (btn) btn.style.display = 'flex';
   }
-  if (localStorage.getItem('ops_auth') === '1') {
+  if (sessionStorage.getItem('ops_crm_token')) {
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');

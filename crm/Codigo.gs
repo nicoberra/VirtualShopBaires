@@ -104,6 +104,21 @@ function manejar(e) {
     if (['list','add','update','delete'].indexOf(accion) >= 0 && !TABS[tab])
       throw 'Pestaña inválida: ' + tab;
 
+    // Acciones que requieren token de admin
+    var ADMIN_ACTIONS = {
+      'list':1,'add':1,'update':1,'delete':1,
+      'productos_list':1,'productos_save':1,'productos_add':1,
+      'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
+      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,
+      'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
+      'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
+    };
+    if (ADMIN_ACTIONS[accion]) {
+      var tok = String(p.token || '').trim();
+      if (!tok || CacheService.getScriptCache().get('panel_' + tok) !== '1')
+        return responder({ ok:false, error:'auth' }, p.callback);
+    }
+
     if      (accion === 'list')            out = { ok:true, rows:  listar(tab) };
     else if (accion === 'add')             out = { ok:true, id:    agregar(tab, p) };
     else if (accion === 'update')          out = { ok:true, updated: actualizar(tab, p) };
@@ -985,9 +1000,22 @@ function migrarPlanillas() {
 function loginPanel(p) {
   var stored = PropertiesService.getScriptProperties().getProperty('PANEL_PASS');
   if (!stored) return { ok:false, error:'Contraseña no configurada. Agregá PANEL_PASS en las propiedades del script.' };
-  if (String(p.clave || '') !== String(stored)) return { ok:false, error:'Contraseña incorrecta.' };
+
+  // Rate limiting: máx 5 intentos fallidos en 15 minutos por prefijo de clave
+  var cache    = CacheService.getScriptCache();
+  var rateKey  = 'login_fail_' + Utilities.base64Encode(String(p.clave||'').slice(0,4));
+  var fails    = parseInt(cache.get(rateKey) || '0', 10);
+  if (fails >= 5) return { ok:false, error:'Demasiados intentos fallidos. Esperá 15 minutos.' };
+
+  if (String(p.clave || '') !== String(stored)) {
+    cache.put(rateKey, String(fails + 1), 900); // 15 minutos
+    return { ok:false, error:'Contraseña incorrecta.' };
+  }
+
+  // Éxito: limpiar contador y emitir token
+  cache.remove(rateKey);
   var token = Utilities.getUuid();
-  CacheService.getScriptCache().put('panel_' + token, '1', 28800); // 8 horas
+  cache.put('panel_' + token, '1', 28800); // 8 horas
   return { ok:true, token: token };
 }
 

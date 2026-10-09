@@ -31,7 +31,7 @@
 
 const STOCK_ACTIVO = false; // false = todos sin stock (pausar ventas sin tocar el Sheet)
 
-const SHEET_ID        = "1joofIvXtRnU0LcCs320MVIhy44HpaJZ1DqwQ7d2pBTw";
+const SHEET_ID        = "1sufFbmZQzjG8i8FP-XybYReqeQgsHFjhSV2KEMaNTnA";
 const DRIVE_FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS-UBfke2GiPSuEwhPTbivnbP4b3S3GAYm22qXPtxe68ORtHdRgaQnTDD13EK-jjgV_w/exec";
 

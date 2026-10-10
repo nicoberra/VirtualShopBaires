@@ -108,7 +108,7 @@ function getImagenDrive(categoria, nombre) {
   if (!key) return null;
   const val = catMap[key];
   const raw = Array.isArray(val) ? val[0] : (typeof val === "string" ? val : null);
-  return raw ? _encodePath(raw) : null;
+  return raw || null;
 }
 
 // Devuelve un array con todas las URLs de imágenes de un producto.
@@ -119,8 +119,7 @@ function getImagenesDrive(categoria, nombre) {
   const key = _findKey(catMap, nombre);
   if (!key) return [];
   const val = catMap[key];
-  const arr = Array.isArray(val) ? val : (typeof val === "string" ? [val] : []);
-  return arr.map(_encodePath);
+  return Array.isArray(val) ? val : (typeof val === "string" ? [val] : []);
 }
 
 // ---------------------------------------------------------------------------

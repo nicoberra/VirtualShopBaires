@@ -42,7 +42,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v7';
+const _CACHE_DATA   = 'vsb_data_v8';
 const _CACHE_IMAGES = 'vsb_images_v6';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -166,6 +166,10 @@ async function fetchHoja(nombreHoja) {
     // A(0):nombre | B(1):precio | C(2):stock | D(3):color | E(4):talle
     // F(5):descripcion | G(6):destacado (checkbox) | H(7):descuento (precio rebajado)
 
+    // El descuento solo se lee de una columna titulada "descuento" (nunca de SKU_costo)
+    const labels  = (json.table.cols || []).map(c => String(c.label || "").trim().toLowerCase());
+    const idxDesc = labels.indexOf("descuento");
+
     const rawRows = rows
       .filter(row => {
         if (!row.c || !row.c[0] || !row.c[0].v) return false;
@@ -189,7 +193,7 @@ async function fetchHoja(nombreHoja) {
         const layoutCompacto = typeof get(5) === "boolean";
         const descripcionRaw = layoutCompacto ? get(4) : get(5);
         const destacadoVal   = layoutCompacto ? get(5) : get(6);
-        const descuentoRaw   = layoutCompacto ? get(6) : get(8);
+        const descuentoRaw   = idxDesc >= 0 ? get(idxDesc) : null;
         const subcatRaw      = get(7);
 
         const _parseNum = v => v !== null && !isNaN(parseFloat(String(v).replace(",", ".")))

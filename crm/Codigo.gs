@@ -706,6 +706,10 @@ function extProductosListar(p) {
       var subcategoria = '';
       if (idx['subcategorias'] !== undefined) subcategoria = String(data[r][idx['subcategorias']]||'').trim();
 
+      var sku = '';
+      if (idx['sku_costo'] !== undefined) sku = String(data[r][idx['sku_costo']]||'').trim();
+      else if (idx['sku'] !== undefined) sku = String(data[r][idx['sku']]||'').trim();
+
       result.push({
         _sheet:      tabName,
         _row:        r + 1,
@@ -716,10 +720,11 @@ function extProductosListar(p) {
         color:       color,
         marca:       marca,
         talle:       talle,
-        descripcion: descripcion.slice(0, 200),
+        descripcion: descripcion,
         destacado:   destacado,
         descuento:   descuento,
-        subcategoria:subcategoria
+        subcategoria:subcategoria,
+        sku:         sku
       });
     }
   });

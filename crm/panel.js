@@ -38,10 +38,12 @@ function crm(params) {
 }
 
 async function crmPost(params) {
+  const token = sessionStorage.getItem('crm_token');
+  const allParams = token ? { token, ...params } : { ...params };
   await fetch(CRM_URL, {
     method: 'POST', mode: 'no-cors',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams(params).toString()
+    body: new URLSearchParams(allParams).toString()
   });
   return { ok: true };
 }
@@ -626,7 +628,8 @@ function filtrarProductos() {
   if (q) list = list.filter(p =>
     p.nombre.toLowerCase().includes(q) ||
     (p.color||'').toLowerCase().includes(q) ||
-    (p.marca||'').toLowerCase().includes(q));
+    (p.marca||'').toLowerCase().includes(q) ||
+    String(p.sku||'').toLowerCase().includes(q));
   renderProductos(list);
 }
 
@@ -650,6 +653,7 @@ function renderProductos(list) {
     <table>
       <thead><tr>
         <th>Nombre</th>
+        <th>SKU</th>
         ${hayColor ? '<th>Color / Marca</th>' : ''}
         ${hayTalle ? '<th>Talle</th>' : ''}
         <th>Precio</th>
@@ -670,7 +674,7 @@ function renderProductos(list) {
       _sheet: p._sheet, _row: p._row, nombre: p.nombre, categoria: p.categoria,
       color: p.color, marca: p.marca, talle: p.talle, precio: p.precio,
       descuento: p.descuento, stock: p.stock, destacado: p.destacado,
-      descripcion: p.descripcion, subcategoria: p.subcategoria
+      descripcion: p.descripcion, subcategoria: p.subcategoria, sku: p.sku
     }));
 
     let pVal = precioN, dVal = descN, sVal = Number(p.stock) || 0, hVal = !!p.destacado;
@@ -682,6 +686,7 @@ function renderProductos(list) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td class="td-nombre" style="cursor:pointer"><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
+      <td class="td-editable td-sku">${renderSku(p.sku)}</td>
       ${hayColor ? `<td>${colorMarca ? `<span class="badge-color">${colorMarca}</span>` : '—'}</td>` : ''}
       ${hayTalle ? `<td>${p.talle||'—'}</td>` : ''}
       <td class="td-editable td-precio"><strong>${fmtPrecioSheet(p.precio)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
@@ -698,6 +703,7 @@ function renderProductos(list) {
     tr.querySelector('.td-precio').addEventListener('click', function() {
       editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; }, '$');
     });
+    tr.querySelector('.td-sku').addEventListener('click', function() { editarCeldaSku(this, p); });
     tr.querySelector('.td-desc').addEventListener('click', function() {
       editarCeldaNum(this, p, 'descuento', dVal, v => { dVal = v; p.descuento = v; }, '$');
     });
@@ -714,6 +720,40 @@ function renderProductos(list) {
     tr.querySelector('.btn-del-prod').addEventListener('click', () => eliminarProducto(p));
 
     tbody.appendChild(tr);
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderSku(v) {
+  return (v ? `<span>${escHtml(v)}</span>` : '<span class="text-muted">—</span>') + '<i class="fa-solid fa-pen edit-hint"></i>';
+}
+
+function editarCeldaSku(td, p) {
+  if (td.querySelector('input')) return;
+  const actual = String(p.sku || '');
+  td.innerHTML = `<input type="text" class="inline-input" style="width:90px">`;
+  const input = td.querySelector('input');
+  input.value = actual;
+  input.focus(); input.select();
+  let cancelado = false;
+  input.addEventListener('blur', async () => {
+    if (cancelado) return;
+    const nuevo = input.value.trim();
+    td.innerHTML = renderSku(nuevo);
+    if (nuevo === actual) return;
+    try {
+      const r = await crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo:'sku_costo', valor: nuevo });
+      if (r && r.ok === false) throw new Error(r.error || 'error');
+      p.sku = nuevo;
+      toast('SKU guardado ✓');
+    } catch(e) { toast('Error al guardar SKU','err'); td.innerHTML = renderSku(actual); }
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { cancelado = true; td.innerHTML = renderSku(actual); }
   });
 }
 
@@ -753,6 +793,7 @@ function editarProducto(raw) {
   $('mprod-color').value         = p.color || p.marca || '';
   $('mprod-talle').value         = p.talle || p.subcategoria || '';
   $('mprod-descripcion').value   = p.descripcion || '';
+  $('mprod-sku').value           = p.sku || '';
 
   const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
   const descN   = Number(String(p.descuento||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
@@ -841,6 +882,7 @@ async function guardarProducto() {
   const color     = $('mprod-color').value.trim();
   const talle     = $('mprod-talle').value.trim();
   const descripcion = $('mprod-descripcion').value.trim();
+  const sku       = $('mprod-sku').value.trim();
   const precio    = Number($('mprod-precio').value) || 0;
   const descuento = Number($('mprod-descuento').value) || 0;
   const stock     = Number($('mprod-stock-num').value) || 0;
@@ -853,6 +895,7 @@ async function guardarProducto() {
     { campo:'color',       valor: color       },
     { campo:'talle',       valor: talle       },
     { campo:'descripcion', valor: descripcion },
+    { campo:'sku_costo',   valor: sku         },
     { campo:'precio',      valor: precio      },
     { campo:'descuento',   valor: descuento   },
     { campo:'stock',       valor: stock       },
@@ -861,11 +904,13 @@ async function guardarProducto() {
 
   try {
     for (const u of updates) {
-      await crm({ action:'ext_producto_update', sheet: p._sheet, row: p._row, campo: u.campo, valor: u.valor });
+      const params = { action:'ext_producto_update', sheet: p._sheet, row: p._row, campo: u.campo, valor: u.valor };
+      if (String(u.valor).length > 1500) await crmPost(params);
+      else await crm(params);
     }
     const idx = _productos.findIndex(x => x._sheet === p._sheet && x._row === p._row);
     if (idx >= 0) {
-      Object.assign(_productos[idx], { nombre, categoria: catsSel, color, talle, descripcion, precio, descuento, stock, destacado });
+      Object.assign(_productos[idx], { nombre, categoria: catsSel, color, talle, descripcion, sku, precio, descuento, stock, destacado });
     }
     toast('Producto guardado en Sheets ✓');
     hide('modal-producto');

@@ -675,6 +675,7 @@ function extProductosListar(p) {
     var sh = ssP.getSheetByName(tabName);
     if (!sh || sh.getLastRow() < 2) return;
     var data = sh.getDataRange().getValues();
+    var disp = sh.getDataRange().getDisplayValues();
     var idx  = _headerIdx(data[0]);
 
     for (var r = 1; r < data.length; r++) {
@@ -706,9 +707,10 @@ function extProductosListar(p) {
       var subcategoria = '';
       if (idx['subcategorias'] !== undefined) subcategoria = String(data[r][idx['subcategorias']]||'').trim();
 
+      // Display value: Sheets guarda SKUs como "4.6" como fecha
       var sku = '';
-      if (idx['sku_costo'] !== undefined) sku = String(data[r][idx['sku_costo']]||'').trim();
-      else if (idx['sku'] !== undefined) sku = String(data[r][idx['sku']]||'').trim();
+      if (idx['sku_costo'] !== undefined) sku = String(disp[r][idx['sku_costo']]||'').trim();
+      else if (idx['sku'] !== undefined) sku = String(disp[r][idx['sku']]||'').trim();
 
       result.push({
         _sheet:      tabName,
@@ -756,7 +758,12 @@ function extProductoActualizar(p) {
     valor = (valor === true || valor === 'true');
   }
 
-  sh.getRange(row, colIdx).setValue(valor);
+  var celda = sh.getRange(row, colIdx);
+  if (campo === 'sku_costo' || campo === 'sku') {
+    celda.setNumberFormat('@');
+    valor = String(valor == null ? '' : valor).trim();
+  }
+  celda.setValue(valor);
   return { ok:true };
 }
 

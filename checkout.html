@@ -240,8 +240,6 @@
     .co-mapa-btn:hover { text-decoration: underline; }
     .co-mapa-wrap { position: relative; margin-top: 8px; border-radius: 10px; border: 1px solid #E1E5EB; overflow: hidden; background: #fff; }
     .co-mapa-img { display: block; width: 100%; height: auto; }
-    /* tapa el botón de Google Lens que quedó en la captura original */
-    .co-mapa-wrap::after { content: ""; position: absolute; left: 2.5%; top: 66%; width: 15%; height: 30%; background: #fff; border-radius: 50%; }
     @media (max-width: 640px) { .co-zonas { grid-template-columns: repeat(2, 1fr); } }
     @media (prefers-reduced-motion: reduce) { .co-zona, .co-zona-check { transition: none; } .co-zona:hover { transform: none; } }
   </style>
@@ -446,7 +444,7 @@
               <i class="fa-solid fa-map-location-dot"></i> Ver mapa de zonas
             </button>
             <div class="co-mapa-wrap" id="co-mapa-zonas" style="display:none;">
-              <img src="img/mapa-zonas-envio.webp" alt="Mapa de zonas de envío: Capital, GBA 1, GBA 2 y GBA 3" class="co-mapa-img" loading="lazy">
+              <img src="img/mapa-zonas-envio.webp?v=2" alt="Mapa de zonas de envío: Capital, GBA 1, GBA 2 y GBA 3" class="co-mapa-img" width="2400" height="2160" loading="lazy">
             </div>
           </div>
 

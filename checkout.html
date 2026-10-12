@@ -204,6 +204,46 @@
     .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 999; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
     .loading-overlay.show { display: flex; }
     .loading-overlay p { color: #fff; font-weight: 600; }
+
+    /* ─── Envíos por zona ─────────────────────────────────── */
+    .co-envio { margin-top: 14px; border: 1px solid #E1E5EB; border-radius: 12px; padding: 14px; background: #FAFBFC; }
+    .co-envio-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+    .co-envio-head h4 { font-size: 0.92rem; font-weight: 800; color: #1A1A2E; margin: 0; }
+    .co-envio-head span { font-size: 0.74rem; color: #9CA3AF; }
+    .co-zonas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .co-zona {
+      --z: #999; position: relative; text-align: left; cursor: pointer; font-family: inherit;
+      background: #fff; border: 1.5px solid #E1E5EB; border-radius: 10px; padding: 10px 10px 9px 14px;
+      transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    .co-zona::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: var(--z); }
+    .co-zona:hover { border-color: var(--z); transform: translateY(-1px); }
+    .co-zona:focus-visible { outline: 2px solid var(--z); outline-offset: 2px; }
+    .co-zona.activa { border-color: var(--z); box-shadow: 0 0 0 3px color-mix(in srgb, var(--z) 18%, transparent); background: color-mix(in srgb, var(--z) 6%, #fff); }
+    .co-zona-nombre { display: block; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--z); }
+    .co-zona-precio { display: block; font-size: 1.05rem; font-weight: 800; color: #1A1A2E; font-variant-numeric: tabular-nums; margin-top: 2px; }
+    .co-zona-check { position: absolute; top: 8px; right: 8px; color: var(--z); font-size: 0.85rem; opacity: 0; transition: opacity .18s ease; }
+    .co-zona.activa .co-zona-check { opacity: 1; }
+    .co-zona-partidos { margin-top: 10px; font-size: 0.78rem; color: #4B5563; line-height: 1.5; background: #fff; border: 1px dashed #E1E5EB; border-radius: 8px; padding: 8px 10px; }
+    .co-zona-partidos strong { color: #1A1A2E; }
+    .co-envio-result {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
+      padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; background: #fff; border: 1px solid #E1E5EB; color: #4B5563;
+    }
+    .co-envio-result strong { color: #1A1A2E; font-size: 1rem; font-variant-numeric: tabular-nums; }
+    .co-envio-result.ok { border-color: #A7F3D0; background: #ECFDF5; color: #065F46; }
+    .co-envio-result.ok strong { color: #065F46; }
+    .co-envio-result.viacargo { border-color: #FDE68A; background: #FFFBEB; color: #92400E; }
+    .co-envio-result.viacargo strong { color: #92400E; }
+    .co-price-envio { color: #1A1A2E; }
+    .co-mapa-btn { margin-top: 10px; background: none; border: none; padding: 4px 0; color: #1B2B8B; font-weight: 700; font-size: 0.82rem; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+    .co-mapa-btn:hover { text-decoration: underline; }
+    .co-mapa-wrap { position: relative; margin-top: 8px; border-radius: 10px; border: 1px solid #E1E5EB; overflow: hidden; background: #fff; }
+    .co-mapa-img { display: block; width: 100%; height: auto; }
+    /* tapa el botón de Google Lens que quedó en la captura original */
+    .co-mapa-wrap::after { content: ""; position: absolute; left: 2.5%; top: 66%; width: 15%; height: 30%; background: #fff; border-radius: 50%; }
+    @media (max-width: 640px) { .co-zonas { grid-template-columns: repeat(2, 1fr); } }
+    @media (prefers-reduced-motion: reduce) { .co-zona, .co-zona-check { transition: none; } .co-zona:hover { transform: none; } }
   </style>
 </head>
 <body>
@@ -385,6 +425,31 @@
             </select>
           </div>
 
+          <div id="envio-box" class="co-envio" style="display:none;">
+            <div class="co-envio-head">
+              <h4><i class="fa-solid fa-truck-fast" style="color:#CC0000;margin-right:6px;"></i>Costo de envío por zona</h4>
+              <span>Tocá una zona para ver sus partidos</span>
+            </div>
+            <div class="co-zonas" id="co-zonas" role="list"></div>
+            <div class="co-zona-partidos" id="co-zona-partidos" style="display:none;"></div>
+
+            <div class="co-form-row" id="partido-row" style="margin-top:12px;display:none;">
+              <label for="f-partido">¿En qué partido lo recibís?</label>
+              <select class="co-input" id="f-partido" onchange="actualizarEnvio()"></select>
+            </div>
+
+            <div class="co-envio-result" id="co-envio-result" aria-live="polite">
+              <span>Elegí tu provincia más abajo para calcular el envío.</span>
+            </div>
+
+            <button type="button" class="co-mapa-btn" onclick="toggleMapaZonas(this)" aria-expanded="false">
+              <i class="fa-solid fa-map-location-dot"></i> Ver mapa de zonas
+            </button>
+            <div class="co-mapa-wrap" id="co-mapa-zonas" style="display:none;">
+              <img src="img/mapa-zonas-envio.webp" alt="Mapa de zonas de envío: Capital, GBA 1, GBA 2 y GBA 3" class="co-mapa-img" loading="lazy">
+            </div>
+          </div>
+
           <div id="retiro-info" class="co-retiro-box" style="display:none;">
             <div><i class="fa-solid fa-location-dot"></i><strong>Dirección del local:</strong> Marcelo Gamboa 6306, Versalles, CABA</div>
             <div style="margin-top:3px;"><i class="fa-solid fa-clock"></i><strong>Horario:</strong> Lunes a viernes de 9 a 17 hs</div>
@@ -395,7 +460,7 @@
           <div class="co-2col">
             <div class="co-form-row required">
               <label for="f-provincia">Provincia</label>
-              <select class="co-input" id="f-provincia">
+              <select class="co-input" id="f-provincia" onchange="actualizarEnvio()">
                 <option value="">— Seleccioná —</option>
                 <option>Buenos Aires</option><option>CABA</option><option>Catamarca</option>
                 <option>Chaco</option><option>Chubut</option><option>Córdoba</option>
@@ -544,6 +609,101 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
 
+// ─── Envíos por zona (CABA y GBA). Interior: Vía Cargo ───────────────
+const ZONAS_ENVIO = [
+  { id: "capital", nombre: "Capital", precio: 5500, color: "#D946EF",
+    partidos: ["Ciudad Autónoma de Buenos Aires (CABA)"] },
+  { id: "gba1", nombre: "GBA 1", precio: 7000, color: "#0D9488",
+    partidos: ["Avellaneda", "General San Martín", "Hurlingham", "Ituzaingó",
+      "La Matanza Norte (San Justo, Ramos Mejía, Lomas del Mirador, Isidro Casanova, Tapiales)",
+      "Lanús", "Lomas de Zamora", "Morón", "San Fernando", "San Isidro", "Tres de Febrero", "Vicente López"] },
+  { id: "gba2", nombre: "GBA 2", precio: 9000, color: "#1E3A8A",
+    partidos: ["Almirante Brown", "Berazategui", "Esteban Echeverría", "Ezeiza", "Florencio Varela",
+      "José C. Paz", "La Matanza Sur (Laferrere, González Catán, Virrey del Pino)", "Malvinas Argentinas",
+      "Merlo", "Moreno", "Quilmes", "San Miguel", "Tigre"] },
+  { id: "gba3", nombre: "GBA 3", precio: 15000, color: "#DC2626",
+    partidos: ["Berisso", "Cañuelas", "Ensenada", "Escobar (Garín, Maschwitz)", "General Rodríguez",
+      "La Plata", "Marcos Paz", "Pilar (Derqui, Villa Rosa)", "Presidente Perón (Guernica)", "San Vicente"] },
+];
+
+function renderZonasEnvio() {
+  const wrap = document.getElementById("co-zonas");
+  if (!wrap || wrap.dataset.ok) return;
+  wrap.dataset.ok = "1";
+  wrap.innerHTML = ZONAS_ENVIO.map(z => `
+    <button type="button" class="co-zona" role="listitem" data-zona="${z.id}" style="--z:${z.color}" aria-pressed="false">
+      <span class="co-zona-nombre">${z.nombre}</span>
+      <span class="co-zona-precio">${fmt(z.precio)}</span>
+      <i class="fa-solid fa-circle-check co-zona-check" aria-hidden="true"></i>
+    </button>`).join("");
+  wrap.querySelectorAll(".co-zona").forEach(b => b.addEventListener("click", () => verPartidosZona(b.dataset.zona)));
+
+  const sel = document.getElementById("f-partido");
+  sel.innerHTML = '<option value="">— Elegí tu partido —</option>' + ZONAS_ENVIO.filter(z => z.id !== "capital").map(z =>
+    `<optgroup label="${z.nombre} · ${fmt(z.precio)}">${z.partidos.map(p => `<option value="${z.id}|${p}">${p}</option>`).join("")}</optgroup>`
+  ).join("") + '<option value="otro|Otro partido">Mi partido no está en la lista</option>';
+}
+
+function verPartidosZona(id) {
+  const z = ZONAS_ENVIO.find(x => x.id === id);
+  const box = document.getElementById("co-zona-partidos");
+  if (!z || (box.dataset.zona === id && box.style.display !== "none")) { box.style.display = "none"; box.dataset.zona = ""; return; }
+  box.dataset.zona = id;
+  box.innerHTML = `<strong style="color:${z.color}">${z.nombre} · ${fmt(z.precio)}</strong> — ${z.partidos.join(" · ")}`;
+  box.style.display = "block";
+}
+
+function toggleMapaZonas(btn) {
+  const img = document.getElementById("co-mapa-zonas");
+  const abrir = img.style.display === "none";
+  img.style.display = abrir ? "block" : "none";
+  btn.setAttribute("aria-expanded", String(abrir));
+  btn.innerHTML = `<i class="fa-solid fa-map-location-dot"></i> ${abrir ? "Ocultar mapa" : "Ver mapa de zonas"}`;
+}
+
+function calcEnvio() {
+  const entrega = document.getElementById("f-entrega").value;
+  if (entrega !== "envio") return { estado: "retiro", costo: 0 };
+  const prov = document.getElementById("f-provincia").value;
+  if (!prov) return { estado: "pendiente", costo: 0, msg: "Elegí tu provincia más abajo para calcular el envío." };
+  if (prov === "CABA") { const z = ZONAS_ENVIO[0]; return { estado: "zona", costo: z.precio, zona: z, partido: "CABA" }; }
+  if (prov === "Buenos Aires") {
+    const val = document.getElementById("f-partido").value;
+    if (!val) return { estado: "pendiente", costo: 0, msg: "Elegí tu partido para calcular el envío." };
+    const [id, partido] = val.split("|");
+    if (id === "otro") return { estado: "viacargo", costo: 0, partido, msg: "Te contactamos por WhatsApp para coordinar el envío a tu zona." };
+    const z = ZONAS_ENVIO.find(x => x.id === id);
+    return { estado: "zona", costo: z.precio, zona: z, partido };
+  }
+  return { estado: "viacargo", costo: 0, msg: "Enviamos por Vía Cargo a todo el país. El costo lo cotiza Vía Cargo y lo coordinamos por WhatsApp." };
+}
+
+function actualizarEnvio() {
+  const entrega = document.getElementById("f-entrega").value;
+  const box = document.getElementById("envio-box");
+  if (!box) return;
+  box.style.display = entrega === "envio" ? "block" : "none";
+  if (entrega !== "envio") { renderPrices("co-price-summary"); return; }
+  renderZonasEnvio();
+  const prov = document.getElementById("f-provincia").value;
+  document.getElementById("partido-row").style.display = prov === "Buenos Aires" ? "block" : "none";
+
+  const e = calcEnvio();
+  document.querySelectorAll(".co-zona").forEach(b => {
+    const act = e.estado === "zona" && b.dataset.zona === e.zona.id;
+    b.classList.toggle("activa", act);
+    b.setAttribute("aria-pressed", String(act));
+  });
+  const res = document.getElementById("co-envio-result");
+  res.className = "co-envio-result" + (e.estado === "zona" ? " ok" : e.estado === "viacargo" ? " viacargo" : "");
+  res.innerHTML = e.estado === "zona"
+    ? `<span><i class="fa-solid fa-location-dot"></i> Envío a <b>${e.partido}</b> · ${e.zona.nombre}</span><strong>${fmt(e.costo)}</strong>`
+    : e.estado === "viacargo"
+    ? `<span><i class="fa-solid fa-truck"></i> ${e.msg}</span><strong>A coordinar</strong>`
+    : `<span>${e.msg}</span>`;
+  renderPrices("co-price-summary");
+}
+
 function renderItems() {
   const esTransf = ["transferencia", "efectivo"].includes(getPaymentMethod());
   document.getElementById("co-items-list").innerHTML = cartItems.map(item => {
@@ -571,15 +731,25 @@ function calcPrices() {
   const sub = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
   const esTransferencia = ["transferencia", "efectivo"].includes(getPaymentMethod());
   const disc = esTransferencia ? Math.round(sub * DISCOUNT_PCT / 100 * 100) / 100 : 0;
-  return { sub, disc, total: sub - disc };
+  const envio = calcEnvio();
+  return { sub, disc, envio: envio.costo, envioInfo: envio, total: sub - disc + envio.costo };
 }
 
 function renderPrices(id) {
-  const { sub, disc, total } = calcPrices();
+  const { sub, disc, envioInfo: e, total } = calcPrices();
   const qty = cartItems.reduce((s, i) => s + i.qty, 0);
+  const envioRow = e.estado === "zona"
+    ? `<div class="co-price-row co-price-envio"><span>Envío (${e.zona.nombre})</span><span>${fmt(e.costo)}</span></div>`
+    : e.estado === "viacargo"
+    ? `<div class="co-price-row"><span>Envío (Vía Cargo)</span><span>A coordinar</span></div>`
+    : e.estado === "pendiente"
+    ? `<div class="co-price-row"><span>Envío</span><span>Elegí tu zona</span></div>`
+    : document.getElementById("f-entrega").value === "retiro"
+    ? `<div class="co-price-row"><span>Retiro en persona</span><span>Gratis</span></div>` : "";
   document.getElementById(id).innerHTML = `
     <div class="co-price-row"><span>Subtotal (${qty})</span><span>${fmt(sub)}</span></div>
     ${disc > 0 ? `<div class="co-price-row co-price-discount"><span>Descuento <span class="co-badge">${DISCOUNT_PCT}% OFF</span></span><span>-${fmt(disc)}</span></div>` : ''}
+    ${envioRow}
     <div class="co-price-row co-price-total"><span>Total</span><span>${fmt(total)}</span></div>`;
 }
 
@@ -609,6 +779,7 @@ function toggleAddressFields() {
     document.querySelector('input[name="metodoPago"][value="transferencia"]').checked = true;
   }
   onPaymentChange();
+  actualizarEnvio();
 }
 
 function onPaymentChange() {
@@ -640,14 +811,22 @@ async function submitOrder() {
   if (dni.length < 7) return alert("Por favor ingresá tu DNI o CUIT.");
   if (!entrega) return alert("Por favor seleccioná el método de entrega.");
 
+  const envio = calcEnvio();
+  if (entrega === "envio" && envio.estado === "pendiente") return alert(envio.msg);
+  const envioTxt = envio.estado === "zona" ? `Envío ${envio.zona.nombre} (${envio.partido}): ${fmt(envio.costo)}`
+    : envio.estado === "viacargo" ? `Envío a coordinar (Vía Cargo)${envio.partido ? " · " + envio.partido : ""}` : "";
+
   const metodoPago = getPaymentMethod();
 
   const payload = {
     action: "createOrder",
     nombre, apellido, email, telefono, dni,
-    metodoEntrega: entrega,
+    metodoEntrega: entrega === "envio"
+      ? (envio.estado === "zona" ? `Envío ${envio.zona.nombre} · ${envio.partido}` : "Envío Vía Cargo")
+      : entrega,
     metodoPago,
-    observaciones: notes,
+    observaciones: [envioTxt, notes].filter(Boolean).join(" | "),
+    envio: envio.costo,
     productos: cartItems.map(i => ({
       nombre: i.nombre,
       color: i.color || "",
@@ -683,6 +862,7 @@ async function submitOrder() {
       cantidad: i.qty,
       precio:   i.precio
     }));
+    if (envio.costo > 0) mpItems.push({ nombre: `Envío a domicilio · ${envio.zona.nombre}`, cantidad: 1, precio: envio.costo });
     try {
       const data = await mpJSONP({
         action:   'mp_preferencia',

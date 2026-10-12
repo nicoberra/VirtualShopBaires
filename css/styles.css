@@ -2189,6 +2189,26 @@ select:focus-visible {
   background: var(--red);
   color: #fff;
 }
+.variant-select {
+  width: 100%;
+  max-width: 100%;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1.5px solid rgba(0,0,0,0.2);
+  background: transparent;
+  color: var(--white);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.variant-select:hover,
+.variant-select:focus-visible {
+  border-color: var(--red);
+  outline: none;
+}
+.variant-select option {
+  color: #111;
+}
 .btn-add:disabled {
   opacity: 0.5;
   cursor: not-allowed;

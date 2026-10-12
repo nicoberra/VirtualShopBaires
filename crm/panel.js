@@ -666,7 +666,42 @@ function renderProductos(list) {
     </table>`;
 
   const tbody = $('prod-tbody');
+  const ncols = 7 + (hayColor ? 1 : 0) + (hayTalle ? 1 : 0);
+
+  // Filas con el mismo nombre en la misma hoja = un producto con variantes
+  const grupos = [];
+  const porClave = {};
   list.forEach(p => {
+    const k = p._sheet + '|' + String(p.nombre || '').trim();
+    if (!porClave[k]) { porClave[k] = []; grupos.push(porClave[k]); }
+    porClave[k].push(p);
+  });
+
+  grupos.forEach(g => {
+    if (g.length === 1) { tbody.appendChild(buildProdRow(g[0], false)); return; }
+    const precios = g.map(v => Number(String(v.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0);
+    const min = Math.min(...precios), max = Math.max(...precios);
+    const head = document.createElement('tr');
+    head.className = 'prod-group-row';
+    head.innerHTML = `
+      <td colspan="${ncols}" style="cursor:pointer">
+        <i class="fa-solid fa-chevron-right prod-group-chev" style="transition:transform .2s;margin-right:8px"></i>
+        <strong>${escHtml(g[0].nombre)}</strong>
+        <span class="badge" style="margin-left:8px">${g.length} variantes</span>
+        <span class="text-muted" style="margin-left:8px">${min === max ? fmtPrecioSheet(min) : fmtPrecioSheet(min) + ' – ' + fmtPrecioSheet(max)}</span>
+      </td>`;
+    const hijos = g.map(v => buildProdRow(v, true));
+    hijos.forEach(tr => { tr.style.display = 'none'; });
+    head.addEventListener('click', () => {
+      const abrir = hijos[0].style.display === 'none';
+      hijos.forEach(tr => { tr.style.display = abrir ? '' : 'none'; });
+      head.querySelector('.prod-group-chev').style.transform = abrir ? 'rotate(90deg)' : '';
+    });
+    tbody.appendChild(head);
+    hijos.forEach(tr => tbody.appendChild(tr));
+  });
+
+  function buildProdRow(p, esVariante) {
     const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
     const descN   = Number(String(p.descuento||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
     const colorMarca = (p.color || p.marca || '').trim();
@@ -685,7 +720,9 @@ function renderProductos(list) {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="td-nombre" style="cursor:pointer"><strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}</td>
+      <td class="td-nombre" style="cursor:pointer">${esVariante
+        ? `<span style="display:inline-flex;align-items:center;gap:8px;padding-left:22px">↳ ${p.imagen ? `<img src="${escHtml(p.imagen)}" alt="" style="width:28px;height:28px;object-fit:cover;border-radius:4px">` : ''}<strong>${escHtml(p.color || '—')}</strong></span>`
+        : `<strong>${p.nombre}</strong>${p.subcategoria ? `<div class="prod-sub">${p.subcategoria}</div>` : ''}`}</td>
       <td class="td-editable td-sku">${renderSku(p.sku)}</td>
       ${hayColor ? `<td>${colorMarca ? `<span class="badge-color">${colorMarca}</span>` : '—'}</td>` : ''}
       ${hayTalle ? `<td>${p.talle||'—'}</td>` : ''}
@@ -719,8 +756,8 @@ function renderProductos(list) {
     tr.querySelector('.btn-edit-prod').addEventListener('click', () => editarProducto(decodeURIComponent(safe)));
     tr.querySelector('.btn-del-prod').addEventListener('click', () => eliminarProducto(p));
 
-    tbody.appendChild(tr);
-  });
+    return tr;
+  }
 }
 
 function escHtml(s) {

@@ -109,7 +109,7 @@ function manejar(e) {
       'list':1,'add':1,'update':1,'delete':1,
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
-      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,
+      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,'ext_variantes_set':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
     };
@@ -138,6 +138,7 @@ function manejar(e) {
     else if (accion === 'ext_productos_list')    out = { ok:true, rows: extProductosListar(p) };
     else if (accion === 'ext_producto_update')   out = extProductoActualizar(p);
     else if (accion === 'ext_producto_agregar')  out = extProductoAgregar(p);
+    else if (accion === 'ext_variantes_set')     out = extVariantesSet(p);
     else if (accion === 'ext_producto_eliminar') out = extProductoEliminar(p);
     else if (accion === 'ext_categoria_agregar') out = extCategoriaAgregar(p);
     else if (accion === 'ext_categoria_eliminar') out = extCategoriaEliminar(p);
@@ -726,7 +727,8 @@ function extProductosListar(p) {
         destacado:   destacado,
         descuento:   descuento,
         subcategoria:subcategoria,
-        sku:         sku
+        sku:         sku,
+        imagen:      idx['imagen_url'] !== undefined ? String(data[r][idx['imagen_url']]||'').trim() : ''
       });
     }
   });
@@ -765,6 +767,50 @@ function extProductoActualizar(p) {
   }
   celda.setValue(valor);
   return { ok:true };
+}
+
+// Convierte una fila en N variantes: la fila original queda como la primera
+// y debajo se insertan copias con su color e imagen propios.
+function extVariantesSet(p) {
+  var sheetName = String(p.sheet||'').trim();
+  var row = parseInt(p.row, 10);
+  var vars;
+  try { vars = JSON.parse(p.variantes || '[]'); } catch(e) { return { ok:false, error:'variantes inválidas' }; }
+  if (!sheetName || !row || !vars.length) return { ok:false, error:'Faltan parámetros (sheet, row, variantes)' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var sh = ss().getSheetByName(sheetName);
+    if (!sh) return { ok:false, error:'Hoja no encontrada: ' + sheetName };
+    var lastCol = sh.getLastColumn();
+    var headers = sh.getRange(1, 1, 1, lastCol).getValues()[0];
+    var idx = _headerIdx(headers);
+    var cColor = idx['color'], cImg = idx['imagen_url'], cNombre = 0;
+    if (cColor === undefined) return { ok:false, error:'La hoja no tiene columna Color' };
+
+    var nombre = String(sh.getRange(row, cNombre + 1).getValue()).trim();
+    if (p.nombre && String(p.nombre).trim() !== nombre)
+      return { ok:false, error:'La fila ' + row + ' no coincide con "' + p.nombre + '"' };
+
+    var setVar = function(r, v) {
+      sh.getRange(r, cColor + 1).setValue(String(v.color || '').trim());
+      if (cImg !== undefined && v.img) sh.getRange(r, cImg + 1).setValue(String(v.img));
+    };
+
+    setVar(row, vars[0]);
+    if (vars.length > 1) {
+      sh.insertRowsAfter(row, vars.length - 1);
+      var base = sh.getRange(row, 1, 1, lastCol);
+      for (var i = 1; i < vars.length; i++) {
+        base.copyTo(sh.getRange(row + i, 1, 1, lastCol));
+        setVar(row + i, vars[i]);
+      }
+    }
+    return { ok:true, filas: vars.length };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function extProductoAgregar(p) {

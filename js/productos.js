@@ -44,6 +44,45 @@ function getWAText(nombre, color, talle, precio, pid) {
   return encodeURIComponent(msg);
 }
 
+const MAX_BOTONES_VARIANTE = 8;
+
+function escAttrVar(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Con muchas opciones se usa un desplegable en vez de botones
+function variantSelectHTML(pid, type, valores, actual) {
+  return `<select class="variant-select" data-type="${type}" aria-label="Elegí ${type}"
+            onclick="event.stopPropagation()"
+            onchange="event.stopPropagation(); selectVariantSelect(${pid},'${type}',this.value)">
+      <option value="">Elegí una opción (${valores.length})</option>
+      ${valores.map(v => `<option value="${escAttrVar(v)}"${actual === v ? ' selected' : ''}>${escAttrVar(v)}</option>`).join('')}
+    </select>`;
+}
+
+function selectVariantSelect(pid, type, value) {
+  if (!selectedVariants[pid]) selectedVariants[pid] = {};
+  selectedVariants[pid][type] = value || null;
+  document.querySelectorAll(`.product-card[data-id="${pid}"] .variant-select[data-type="${type}"], #product-modal .variant-select[data-type="${type}"]`)
+    .forEach(s => { s.value = value || ''; });
+  updateVariantState(pid);
+  const modal = document.getElementById('product-modal');
+  if (modal && modal.classList.contains('open')) updateModalVariantState(pid);
+}
+
+// Muestra la foto de la variante elegida (si la fila tiene imagen propia)
+function mostrarImagenVariante(pid) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  const sel = selectedVariants[pid] || {};
+  if (!p || !p.tieneVariantes || !sel.color) return;
+  const v = p.variantes.find(x => x.color === sel.color && x.imagen);
+  if (!v) return;
+  const cardImg = document.querySelector(`.product-card[data-id="${pid}"] .product-img img`);
+  if (cardImg) { cardImg.style.display = ''; cardImg.src = v.imagen; }
+  const modalImg = document.getElementById('modal-img-main');
+  if (modalImg && modalImg.tagName === 'IMG') modalImg.src = v.imagen;
+}
+
 function isVariantComplete(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p || !p.tieneVariantes) return true;
@@ -99,6 +138,8 @@ function updateVariantState(pid) {
     (!p.colores.length || v.color === sel.color) &&
     (!p.talles.length  || v.talle === sel.talle)
   ) : null;
+
+  mostrarImagenVariante(pid);
 
   const card = document.querySelector(`.product-card[data-id="${pid}"]`);
   if (!card) return;
@@ -272,7 +313,13 @@ function renderProductCard(p) {
 
   let variantesHTML = "";
   if (hasVariants) {
-    if (p.colores.length > 1) {
+    if (p.colores.length > MAX_BOTONES_VARIANTE) {
+      variantesHTML += `
+        <div class="variant-group" onclick="event.stopPropagation()">
+          <span class="variant-label">Color:</span>
+          ${variantSelectHTML(p.id, 'color', p.colores, sel.color)}
+        </div>`;
+    } else if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
           <span class="variant-label">Color:</span>
@@ -396,11 +443,17 @@ function openProductModal(pid) {
 
   let variantesHTML = "";
   if (p.tieneVariantes) {
-    if (p.colores.length > 1) {
+    if (p.colores.length > MAX_BOTONES_VARIANTE) {
       variantesHTML += `
         <div class="variant-group">
           <span class="variant-label">Color:</span>
-          <div class="variant-options">
+          ${variantSelectHTML(pid, 'color', p.colores, sel.color)}
+        </div>`;
+    } else if (p.colores.length > 1) {
+      variantesHTML += `
+        <div class="variant-group">
+          <span class="variant-label">Color:</span>
+          <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
               <button class="variant-btn${sel.color === c ? ' selected' : ''}"
                       onclick="selectVariantModal(${pid},'color','${c.replace(/'/g,"\\'")}',this)">
@@ -476,6 +529,7 @@ function openProductModal(pid) {
 
   document.getElementById('product-modal').classList.add('open');
   document.body.style.overflow = 'hidden';
+  mostrarImagenVariante(pid);
 }
 
 function selectVariantModal(pid, type, value, btn) {

@@ -42,7 +42,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v9';
+const _CACHE_DATA   = 'vsb_data_v10';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -169,6 +169,7 @@ async function fetchHoja(nombreHoja) {
     // El descuento solo se lee de una columna titulada "descuento" (nunca de SKU_costo)
     const labels  = (json.table.cols || []).map(c => String(c.label || "").trim().toLowerCase());
     const idxDesc = labels.indexOf("descuento");
+    const idxImg  = labels.indexOf("imagen_url");
 
     const rawRows = rows
       .filter(row => {
@@ -211,6 +212,7 @@ async function fetchHoja(nombreHoja) {
           descripcion:    typeof descripcionRaw === "string" ? descripcionRaw.trim() : "",
           destacado:      destacadoVal === true,
           subcategoria:   subcatRaw ? String(subcatRaw).trim() : null,
+          imagenVar:      idxImg >= 0 && get(idxImg) ? String(get(idxImg)).trim() : null,
         };
       });
 
@@ -247,6 +249,7 @@ async function fetchHoja(nombreHoja) {
           precio:         row.precio,
           precioOriginal: row.precioOriginal,
           stock:          row.stock,
+          imagen:         row.imagenVar,
         });
       } else {
         if (!row.stock || !STOCK_ACTIVO) grouped[row.nombre].disponible = false;

@@ -817,3 +817,7 @@ a:focus-visible {
 .sec-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .sec-actions .btn-sm { white-space: nowrap; }
 .editar-cat-row .text-muted { font-weight: 400; }
+.sec-actions .btn-sm,
+.editar-cat-row .btn-sm { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.editar-cat-row > span:first-child { flex: 1; min-width: 0; }
+.editar-cat-row > span:last-child { flex-shrink: 0; }

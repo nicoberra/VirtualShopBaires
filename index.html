@@ -820,7 +820,51 @@
     mostrarToast(userData && userData.nombre ? userData.nombre : null);
   }, 1800);
 
+  // Carrusel de categorías: solo las que tienen productos (+ las externas)
+  const CAT_IMG = {
+    "Bazar, baño y cocina": "Productos/Bazar,%20ba%C3%B1o%20y%20cocina/categoria.png",
+    "Camping": "Productos/Camping/categoria.png",
+    "Fitness y musculacion": "Productos/Fitness%20y%20musculacion/categoria.png",
+    "Herramientas": "Productos/Herramientas/categoria.png",
+    "Inflables": "Productos/Inflables/Categoria.jpg",
+    "Jardin y aire libre": "Productos/Jardin,%20Caza%20y%20Pesca/categoria.png",
+    "Juguetes": "Productos/Juguetes/Categoria.webp",
+    "Mascotas": "Productos/Mascotas/categoria.png",
+    "Muebles para el hogar": "Productos/Muebles%20para%20el%20hogar/categoria.png",
+    "Pilates y Yoga": "Productos/Pilates%20y%20Yoga/categoria.png",
+    "Playa": "Productos/Playa/Categoria.png",
+  };
+  const CAT_NOMBRE_CORTO = {
+    "Bazar, baño y cocina": "Bazar y cocina",
+    "Muebles para el hogar": "Muebles",
+    "Fitness y musculacion": "Fitness",
+    "Jardin y aire libre": "Jardín",
+  };
+  function escAttr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+  function construirCarruselCategorias(productos, categorias) {
+    const track = document.getElementById("cat-track");
+    if (!track) return;
+    const conProductos = categorias.filter(c => c !== "Todos" && productos.some(p => p.categoria === c));
+    const externas = Object.keys(CATS_EXTERNAS).map(k => k.charAt(0).toUpperCase() + k.slice(1));
+    const lista = [...conProductos, ...externas.filter(c => !conProductos.includes(c))];
+    if (!lista.length) return;
+    const slide = (c, lazy) => {
+      const ext = CATS_EXTERNAS[String(c).toLowerCase().trim()];
+      const href = ext || "productos.html?cat=" + encodeURIComponent(c).replace(/%20/g, "+");
+      const img = CAT_IMG[c] || (productos.find(p => p.categoria === c && p.imagen) || {}).imagen || "";
+      const nombre = CAT_NOMBRE_CORTO[c] || c;
+      return `<a href="${escAttr(href)}"${ext ? ' target="_blank" rel="noopener"' : ""} class="cat-slide">
+        <div class="cat-slide-img">${img ? `<img src="${escAttr(img)}" alt="${escAttr(nombre)}"${lazy ? ' loading="lazy"' : ""} />` : ""}</div>
+        <span class="cat-slide-name">${escAttr(nombre)}</span>
+      </a>`;
+    };
+    // Dos copias para el loop infinito del carrusel
+    track.innerHTML = lista.map(c => slide(c, false)).join("") + lista.map(c => slide(c, true)).join("");
+  }
+
   cargarProductos().then(productos => {
+    construirCarruselCategorias(productos, CATEGORIAS);
     // Mostrar productos destacados
     const destacados = productos.filter(p => p.destacado);
     document.getElementById("featured-products").innerHTML = destacados.length

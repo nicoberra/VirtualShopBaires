@@ -110,6 +110,7 @@ function manejar(e) {
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
       'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,'ext_variantes_set':1,
+      'gh_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
     };
@@ -139,6 +140,9 @@ function manejar(e) {
     else if (accion === 'ext_producto_update')   out = extProductoActualizar(p);
     else if (accion === 'ext_producto_agregar')  out = extProductoAgregar(p);
     else if (accion === 'ext_variantes_set')     out = extVariantesSet(p);
+    else if (accion === 'gh_estado')             out = { ok:true, gh: !!GH_TOKEN };
+    else if (accion === 'producto_foto_subir')   out = productoFotoSubir(p);
+    else if (accion === 'producto_fotos_set')    out = productoFotosSet(p);
     else if (accion === 'ext_producto_eliminar') out = extProductoEliminar(p);
     else if (accion === 'ext_categoria_agregar') out = extCategoriaAgregar(p);
     else if (accion === 'ext_categoria_eliminar') out = extCategoriaEliminar(p);
@@ -558,6 +562,111 @@ function fotoBorrar(p) {
   var r = ghApi('delete',path,{ message:'Borrar foto '+fn, sha:g.json.sha, branch:GH_BRANCH });
   if (r.code>=200 && r.code<300) { fotosListar({carpeta:pre}); return true; }
   return false;
+}
+
+// ─── FOTOS DE LA TIENDA (images-manifest.json del repo) ─────
+// La web toma las fotos de images-manifest.json: { categoria: { nombre: [urls] } }
+
+var STORE_MANIFEST = 'images-manifest.json';
+var STORE_IMG_DIR  = 'img/productos';
+var STORE_BASE_URL = 'https://virtualshopbaires.com.ar/';
+
+function _normKey(s) {
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
+}
+function _buscarClave(obj, nombre) {
+  if (!obj) return null;
+  if (obj[nombre] !== undefined) return nombre;
+  var n = _normKey(nombre);
+  var ks = Object.keys(obj);
+  for (var i = 0; i < ks.length; i++) if (_normKey(ks[i]) === n) return ks[i];
+  return null;
+}
+function _slug(s) {
+  return _normKey(s).replace(/\s+/g,'-').slice(0, 60) || 'producto';
+}
+
+function storeManifestLeer() {
+  var r = ghApi('get', 'contents/' + STORE_MANIFEST + '?ref=' + GH_BRANCH);
+  if (r.code !== 200 || !r.json) throw 'No se pudo leer el manifest (' + r.code + ')';
+  var txt = Utilities.newBlob(Utilities.base64Decode(String(r.json.content).replace(/\n/g,''))).getDataAsString('UTF-8');
+  return { data: JSON.parse(txt), sha: r.json.sha };
+}
+
+function storeManifestGuardar(man, mensaje) {
+  var txt = JSON.stringify(man.data, null, 2);
+  var r = ghApi('put', 'contents/' + STORE_MANIFEST, {
+    message: mensaje,
+    content: Utilities.base64Encode(txt, Utilities.Charset.UTF_8),
+    sha: man.sha,
+    branch: GH_BRANCH
+  });
+  if (r.code < 200 || r.code >= 300) throw 'No se pudo guardar el manifest (' + r.code + ')';
+}
+
+function _fotosDe(man, categoria, nombre) {
+  var catKey = _buscarClave(man.data, categoria) || categoria;
+  if (!man.data[catKey]) man.data[catKey] = {};
+  var key = _buscarClave(man.data[catKey], nombre) || nombre;
+  var v = man.data[catKey][key];
+  var urls = Array.isArray(v) ? v.slice() : (v ? [v] : []);
+  return { catKey: catKey, key: key, urls: urls };
+}
+
+// Sube una foto al repo y la agrega a las fotos del producto en la tienda
+function productoFotoSubir(p) {
+  if (!GH_TOKEN) return { ok:false, error:'Falta GH_TOKEN en las propiedades del script' };
+  var categoria = String(p.categoria||'').trim(), nombre = String(p.nombre||'').trim();
+  if (!categoria || !nombre || !p.data) return { ok:false, error:'Faltan categoría, nombre o foto' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var ruta = STORE_IMG_DIR + '/' + _slug(categoria) + '/' + _slug(nombre) + '-' + new Date().getTime() + '.jpg';
+    var up = ghApi('put', 'contents/' + encPath(ruta), {
+      message: 'Foto de producto: ' + nombre,
+      content: String(p.data).replace(/^data:[^,]*,/, ''),
+      branch:  GH_BRANCH
+    });
+    if (up.code < 200 || up.code >= 300) return { ok:false, error:'No se pudo subir la foto (' + up.code + ')' };
+
+    var url = STORE_BASE_URL + ruta;
+    var man = storeManifestLeer();
+    var f = _fotosDe(man, categoria, nombre);
+    f.urls.push(url);
+    man.data[f.catKey][f.key] = f.urls;
+    storeManifestGuardar(man, 'Fotos: ' + nombre);
+    return { ok:true, url: url, fotos: f.urls };
+  } catch (e) {
+    return { ok:false, error: String(e) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Reemplaza la lista de fotos del producto (ordenar, elegir principal o quitar)
+function productoFotosSet(p) {
+  if (!GH_TOKEN) return { ok:false, error:'Falta GH_TOKEN en las propiedades del script' };
+  var categoria = String(p.categoria||'').trim(), nombre = String(p.nombre||'').trim();
+  var urls;
+  try { urls = JSON.parse(p.urls || '[]'); } catch(e) { return { ok:false, error:'urls inválidas' }; }
+  if (!categoria || !nombre || !Array.isArray(urls)) return { ok:false, error:'Faltan parámetros' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var man = storeManifestLeer();
+    var f = _fotosDe(man, categoria, nombre);
+    if (urls.length) man.data[f.catKey][f.key] = urls.length === 1 ? urls[0] : urls;
+    else delete man.data[f.catKey][f.key];
+    storeManifestGuardar(man, 'Fotos: ' + nombre);
+    return { ok:true, fotos: urls };
+  } catch (e) {
+    return { ok:false, error: String(e) };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function manifestCargar() {

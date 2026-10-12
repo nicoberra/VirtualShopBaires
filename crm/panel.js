@@ -612,59 +612,6 @@ function setProdCat(cat) {
 
 let _prodActual = null;
 
-async function cargarFotos(p) {
-  const carpeta = `Productos/${p.categoria||'Sin Categoria'}/${p.nombre}`;
-  try {
-    const r = await crm({ action:'fotos_list', carpeta });
-    renderFotos(r.fotos||[], carpeta);
-  } catch(e) {
-    $('fotos-grid').innerHTML = '<p class="text-muted">No se pudieron cargar las fotos</p>';
-  }
-}
-
-function renderFotos(fotos, carpeta) {
-  const grid = $('fotos-grid');
-  if (!fotos.length) { grid.innerHTML = '<p class="text-muted" style="font-size:0.82rem">Sin fotos</p>'; return; }
-  const base = location.origin + window.location.pathname.replace(/\/crm\/.*$/, '/');
-  grid.innerHTML = fotos.map((fn, i) => {
-    const url = base + carpeta + '/' + fn;
-    return `
-      <div class="foto-item" id="foto-${i}">
-        <img src="${url}" alt="${fn}">
-        ${i===0 ? '<span class="foto-first-badge">Principal</span>' : ''}
-        <button class="foto-del" onclick="borrarFoto('${carpeta}','${fn}')">
-          <i class="fa-solid fa-times"></i>
-        </button>
-      </div>`;
-  }).join('');
-}
-
-async function subirFoto(input) {
-  if (!input.files[0] || !_prodActual) return;
-  const p = _prodActual;
-  const carpeta = `Productos/${p.categoria||'Sin Categoria'}/${p.nombre}`;
-  $('fotos-grid').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo…</div>';
-  try {
-    const data = await fileABase64(input.files[0]);
-    const fn = (await (data.length > 500000
-      ? crmPost({ action:'foto_subir', carpeta, data })
-      : crm({ action:'foto_subir', carpeta, data }))).foto;
-    if (fn) { toast('Foto subida'); cargarFotos(p); }
-    else throw new Error('sin respuesta');
-  } catch(e) { toast('Error al subir foto','err'); cargarFotos(p); }
-  input.value = '';
-}
-
-async function borrarFoto(carpeta, filename) {
-  confirmar(`¿Borrar la foto "${filename}"?`, async () => {
-    try {
-      await crm({ action:'foto_borrar', carpeta, filename });
-      toast('Foto borrada');
-      cargarFotos(_prodActual);
-    } catch(e) { toast('Error','err'); }
-  });
-}
-
 // ─── PEDIDOS ─────────────────────────────────────────────────
 
 let _pedidos = [];

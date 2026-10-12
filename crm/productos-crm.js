@@ -380,3 +380,146 @@ async function guardarProducto() {
     toast('Error al guardar: ' + e.message, 'err');
   }
 }
+
+// ─── FOTOS DEL PRODUCTO (las mismas que muestra la tienda) ──────
+
+let _fotosProd = [];
+let _ghOk = null;
+
+function _normFoto(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+async function _leerManifestTienda() {
+  const r = await fetch('/images-manifest.json?_=' + Date.now(), { cache: 'no-store' });
+  return r.json();
+}
+
+function _fotosDelManifest(man, categoria, nombre) {
+  const nc = _normFoto(categoria), nn = _normFoto(nombre);
+  const catKey = Object.keys(man).find(k => _normFoto(k) === nc);
+  if (!catKey) return [];
+  const key = Object.keys(man[catKey]).find(k => _normFoto(k) === nn);
+  if (!key) return [];
+  const v = man[catKey][key];
+  return Array.isArray(v) ? v.slice() : (v ? [v] : []);
+}
+
+async function cargarFotos(p) {
+  const grid = $('fotos-grid');
+  grid.innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i></div>';
+  try {
+    if (_ghOk === null) {
+      try { _ghOk = !!(await crmEnviar({ action: 'gh_estado' })).gh; } catch (e) { _ghOk = false; }
+    }
+    const man = await _leerManifestTienda();
+    _fotosProd = _fotosDelManifest(man, p._sheet || p.categoria, p.nombre);
+    renderFotos(p);
+  } catch (e) {
+    grid.innerHTML = '<p class="text-muted">No se pudieron cargar las fotos</p>';
+  }
+}
+
+function renderFotos(p) {
+  const grid = $('fotos-grid');
+  const vars = hermanos(p).filter(v => v.imagen);
+  const fotosHTML = _fotosProd.length
+    ? _fotosProd.map((url, i) => `
+        <div class="foto-item">
+          <img src="${escHtml(url)}" alt="Foto ${i + 1}" loading="lazy">
+          ${i === 0 ? '<span class="foto-first-badge">Principal</span>' : ''}
+          <div class="foto-acciones">
+            ${i > 0 ? `<button type="button" class="foto-btn" data-acc="principal" data-i="${i}" title="Hacer principal"><i class="fa-solid fa-star"></i></button>` : ''}
+            <button type="button" class="foto-btn foto-btn-del" data-acc="quitar" data-i="${i}" title="Quitar de la tienda"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>`).join('')
+    : '<p class="text-muted" style="font-size:0.82rem">Este producto todavía no tiene fotos en la tienda.</p>';
+
+  const varsHTML = vars.length > 1 || (vars.length === 1 && !_fotosProd.includes(vars[0].imagen))
+    ? `<div class="fotos-variantes">
+         <span class="text-muted" style="font-size:.75rem">Fotos de cada variante (se cambian desde la planilla, columna imagen_url)</span>
+         <div class="fotos-grid">${vars.map(v => `
+           <div class="foto-item foto-item-sm" title="${escHtml(v.color || '')}">
+             <img src="${escHtml(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy">
+             <span class="foto-var-label">${escHtml(v.color || '')}</span>
+           </div>`).join('')}
+         </div>
+       </div>`
+    : '';
+
+  const aviso = _ghOk === false
+    ? '<p class="text-muted" style="font-size:.75rem;color:var(--red)">Para subir o cambiar fotos falta configurar GH_TOKEN en el Apps Script del CRM.</p>'
+    : '';
+
+  grid.innerHTML = `<div class="fotos-grid">${fotosHTML}</div>${varsHTML}${aviso}`;
+  grid.querySelectorAll('.foto-btn').forEach(b => {
+    b.addEventListener('click', () => accionFoto(p, b.dataset.acc, Number(b.dataset.i)));
+  });
+}
+
+async function guardarFotos(p, urls, msgOk) {
+  const r = await crmEnviar({ action: 'producto_fotos_set', categoria: p._sheet || p.categoria, nombre: p.nombre, urls: JSON.stringify(urls) });
+  if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
+  _fotosProd = urls;
+  renderFotos(p);
+  toast(msgOk);
+}
+
+function accionFoto(p, acc, i) {
+  if (acc === 'principal') {
+    const urls = _fotosProd.slice();
+    const [f] = urls.splice(i, 1); urls.unshift(f);
+    guardarFotos(p, urls, 'Foto principal actualizada ✓').catch(e => toast('Error: ' + e.message, 'err'));
+  } else if (acc === 'quitar') {
+    confirmar('¿Quitar esta foto del producto en la tienda?', () => {
+      const urls = _fotosProd.filter((_, j) => j !== i);
+      guardarFotos(p, urls, 'Foto quitada ✓').catch(e => toast('Error: ' + e.message, 'err'));
+    });
+  }
+}
+
+// Achica la imagen antes de subirla (máx 1600px, JPEG)
+function _prepararFoto(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const max = 1600, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+
+async function subirFoto(input) {
+  const files = [...(input.files || [])];
+  input.value = '';
+  if (!files.length || !_prodActual) return;
+  const p = _prodActual;
+  if (_ghOk === false) { toast('Falta configurar GH_TOKEN para subir fotos', 'err'); return; }
+  const grid = $('fotos-grid');
+  let ok = 0;
+  for (let k = 0; k < files.length; k++) {
+    grid.insertAdjacentHTML('afterbegin', `<div class="loading-row" id="foto-subiendo"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo foto ${k + 1} de ${files.length}…</div>`);
+    try {
+      const data = await _prepararFoto(files[k]);
+      const r = await crmEnviar({ action: 'producto_foto_subir', categoria: p._sheet || p.categoria, nombre: p.nombre, data });
+      if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
+      _fotosProd = r.fotos || _fotosProd.concat(r.url);
+      ok++;
+    } catch (e) {
+      toast('Error al subir foto: ' + e.message, 'err');
+    }
+    renderFotos(p);
+  }
+  if (ok) toast(ok === 1 ? 'Foto subida ✓ (en la tienda aparece en unos minutos)' : `${ok} fotos subidas ✓ (en la tienda aparecen en unos minutos)`);
+}
+

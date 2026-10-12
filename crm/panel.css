@@ -821,3 +821,21 @@ a:focus-visible {
 .editar-cat-row .btn-sm { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .editar-cat-row > span:first-child { flex: 1; min-width: 0; }
 .editar-cat-row > span:last-child { flex-shrink: 0; }
+
+/* Fotos del producto en la ficha */
+#fotos-grid .fotos-grid { margin-top: 4px; }
+.foto-acciones { position: absolute; top: 3px; right: 3px; display: flex; gap: 3px; opacity: 0; transition: opacity var(--trans); }
+.foto-item:hover .foto-acciones, .foto-item:focus-within .foto-acciones { opacity: 1; }
+@media (hover: none) { .foto-acciones { opacity: 1; } }
+.foto-btn {
+  background: rgba(0,0,0,0.65); color: #fff; border: none; border-radius: 50%;
+  width: 24px; height: 24px; font-size: 0.72rem; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.foto-btn:hover { background: rgba(0,0,0,0.85); }
+.foto-btn-del:hover { background: var(--red); }
+.fotos-variantes { margin-top: 14px; }
+.foto-item-sm { width: 64px; height: 64px; }
+.foto-var-label {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 1px 3px;
+  background: rgba(0,0,0,0.6); color: #fff; font-size: 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}

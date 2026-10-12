@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB CRM">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="manifest" href="/crm/manifest.webmanifest">
-  <link rel="stylesheet" href="panel.css?v=12">
+  <link rel="stylesheet" href="panel.css?v=13">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -334,13 +334,13 @@
       </div>
       <div class="form-group">
         <label>Fotos</label>
-        <div id="fotos-grid" class="fotos-grid"></div>
+        <div id="fotos-grid"></div>
         <div style="margin-top:10px">
           <label class="btn-secondary btn-sm" style="cursor:pointer">
-            <i class="fa-solid fa-upload"></i> Subir foto
-            <input type="file" id="foto-input" accept="image/*" style="display:none" onchange="subirFoto(this)">
+            <i class="fa-solid fa-upload"></i> Subir fotos
+            <input type="file" id="foto-input" accept="image/*" multiple style="display:none" onchange="subirFoto(this)">
           </label>
-          <small class="text-muted" style="margin-left:10px">La primera foto es la principal</small>
+          <small class="text-muted" style="margin-left:10px">La primera foto es la principal. Con ★ elegís otra.</small>
         </div>
       </div>
     </div>
@@ -442,8 +442,8 @@
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<script src="panel.js?v=10"></script>
-<script src="productos-crm.js?v=2"></script>
+<script src="panel.js?v=11"></script>
+<script src="productos-crm.js?v=3"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

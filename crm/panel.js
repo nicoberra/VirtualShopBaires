@@ -604,17 +604,6 @@ async function loadProductos(force=false) {
   }
 }
 
-function buildProdCats() {
-  const cats = ['Todos', ...new Set(_productos.map(p => p.categoria).filter(Boolean))];
-  const html = cats.map(c => {
-    const active = c === _prodCatFil ? ' active' : '';
-    const catEsc = c.replace(/'/g, "\\'");
-    return `<span class="chip${active}" onclick="setProdCat('${catEsc}')">${c}</span>`;
-  }).join('');
-  $('prod-cats').innerHTML = html +
-    `<button class="btn-danger btn-sm" style="margin-left:4px" onclick="abrirModalEditarCats()"><i class="fa-solid fa-pen"></i> Editar categorías</button>`;
-}
-
 function setProdCat(cat) {
   _prodCatFil = cat;
   buildProdCats();
@@ -1030,23 +1019,6 @@ function eliminarProducto(p) {
       delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
     } catch(e) { toast('Error al eliminar', 'err'); }
   });
-}
-
-function abrirModalEditarCats() {
-  const cats = [...new Set(_productos.map(p => p.categoria).filter(Boolean))].sort();
-  const lista = $('editar-cats-lista');
-  lista.innerHTML = cats.length
-    ? cats.map(c => `
-        <div class="editar-cat-row">
-          <span>${c}</span>
-          <button class="btn-danger btn-sm btn-del-cat" data-cat="${c}"><i class="fa-solid fa-trash"></i> Eliminar</button>
-        </div>`).join('')
-    : '<p class="text-muted">No hay categorías todavía.</p>';
-  lista.querySelectorAll('.btn-del-cat').forEach(btn => {
-    btn.addEventListener('click', () => eliminarCategoria(btn.dataset.cat));
-  });
-  $('nueva-cat-nombre').value = '';
-  show('modal-editar-cats', 'flex');
 }
 
 async function guardarNuevaCat() {

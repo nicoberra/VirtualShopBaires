@@ -812,3 +812,8 @@ a:focus-visible {
 .mprod-var { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 4px 6px; border-radius: 6px; }
 .mprod-var.actual { background: rgba(204,18,18,0.08); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .prod-group-chev { transition: none; } }
+
+/* Acciones del encabezado de secciones (Categorías + Agregar producto) */
+.sec-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.sec-actions .btn-sm { white-space: nowrap; }
+.editar-cat-row .text-muted { font-weight: 400; }

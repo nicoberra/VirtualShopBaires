@@ -49,6 +49,51 @@ function hermanos(p) {
   return _productos.filter(x => x._sheet === p._sheet && String(x.nombre || '').trim() === nom);
 }
 
+function categoriasProductos() {
+  return [...new Set(_productos
+    .filter(p => !HOJAS_NO_PRODUCTO.includes(p._sheet))
+    .map(p => p.categoria).filter(Boolean))];
+}
+
+function buildProdCats() {
+  const cats = ['Todos', ...categoriasProductos()];
+  $('prod-cats').innerHTML = cats.map(c => {
+    const active = c === _prodCatFil ? ' active' : '';
+    return `<span class="chip${active}" data-cat="${escHtml(c)}">${escHtml(c)}</span>`;
+  }).join('');
+  $('prod-cats').querySelectorAll('.chip').forEach(ch => {
+    ch.addEventListener('click', () => setProdCat(ch.dataset.cat));
+  });
+}
+
+// Lista de categorías: cuántos productos tiene cada una, ver, agregar y eliminar
+function abrirModalEditarCats() {
+  const cats = categoriasProductos().sort((a, b) => a.localeCompare(b, 'es'));
+  const contar = c => {
+    const nombres = new Set(_productos.filter(p => p.categoria === c).map(p => String(p.nombre || '').trim()));
+    return nombres.size;
+  };
+  const lista = $('editar-cats-lista');
+  lista.innerHTML = cats.length
+    ? cats.map(c => `
+        <div class="editar-cat-row">
+          <span><strong>${escHtml(c)}</strong> <span class="text-muted" style="font-size:.78rem">· ${contar(c)} productos</span></span>
+          <span style="display:flex;gap:6px">
+            <button class="btn-secondary btn-sm btn-ver-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-eye"></i> Ver</button>
+            <button class="btn-danger btn-sm btn-del-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-trash"></i> Eliminar</button>
+          </span>
+        </div>`).join('')
+    : '<p class="text-muted">No hay categorías todavía.</p>';
+  lista.querySelectorAll('.btn-ver-cat').forEach(btn => {
+    btn.addEventListener('click', () => { hide('modal-editar-cats'); setProdCat(btn.dataset.cat); });
+  });
+  lista.querySelectorAll('.btn-del-cat').forEach(btn => {
+    btn.addEventListener('click', () => eliminarCategoria(btn.dataset.cat));
+  });
+  $('nueva-cat-nombre').value = '';
+  show('modal-editar-cats', 'flex');
+}
+
 function filtrarProductos() {
   const q = val('prod-search').toLowerCase();
   let list = _productos.filter(p => !HOJAS_NO_PRODUCTO.includes(p._sheet));

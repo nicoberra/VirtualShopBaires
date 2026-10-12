@@ -86,10 +86,15 @@ function confirmar(msg, fn) {
   show('modal-confirm', 'flex');
 }
 
+// Escapa texto que viene de clientes/pedidos antes de meterlo en innerHTML (evita XSS)
+function hx(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 function badgeEstado(estado) {
   const map = { Pendiente:'badge-pend', Confirmado:'badge-conf', 'En camino':'badge-camino', Entregado:'badge-entre', Cancelado:'badge-cancel' };
   const cls = map[estado] || 'badge-pend';
-  return `<span class="badge ${cls}">${estado || 'Pendiente'}</span>`;
+  return `<span class="badge ${cls}">${hx(estado || 'Pendiente')}</span>`;
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────
@@ -247,8 +252,8 @@ async function loadPanel() {
       const total  = p.total ? fmtMoney(p.total) : p.monto ? fmtMoney(p.monto) : '—';
       return `<div class="panel-rec-item">
         <div class="panel-rec-left">
-          <div class="panel-rec-name">${nombre}</div>
-          <div class="panel-rec-sub">${fmtFecha(p.timestamp||p.fecha||'')} · ${p.metodoPago||p.metodo||''}</div>
+          <div class="panel-rec-name">${hx(nombre)}</div>
+          <div class="panel-rec-sub">${fmtFecha(p.timestamp||p.fecha||'')} · ${hx(p.metodoPago||p.metodo||'')}</div>
         </div>
         <div class="panel-rec-right">
           <div class="panel-rec-total">${total}</div>
@@ -265,7 +270,7 @@ async function loadPanel() {
       recCli.forEach(c => {
         const item = document.createElement('div');
         item.className = 'panel-rec-item panel-rec-clickable';
-        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${c.nombre||'—'}</div><div class="panel-rec-sub">${c.email||c.telefono||''}</div></div><div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${c.ciudad||''}</div>`;
+        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${hx(c.nombre||'—')}</div><div class="panel-rec-sub">${hx(c.email||c.telefono||'')}</div></div><div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${hx(c.ciudad||'')}</div>`;
         item.addEventListener('click', () => { goTo('clientes'); verHistorialCliente(c); });
         recCliWrap.appendChild(item);
       });
@@ -274,7 +279,7 @@ async function loadPanel() {
     }
 
   } catch(e) {
-    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${e.message}</p>
+    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${hx(e.message)}</p>
       <button class="btn-secondary" style="margin-top:10px" onclick="loadPanel()"><i class="fa-solid fa-rotate-right"></i> Reintentar</button></div>`;
   }
 }
@@ -338,7 +343,7 @@ async function loadFacturacion(force=false) {
     _factData = agruparFacturacion(pedidos, productos);
     renderFact();
   } catch(e) {
-    el.innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
+    el.innerHTML = `<p class="text-muted" style="padding:20px">Error: ${hx(e.message)}</p>`;
   }
 }
 
@@ -390,7 +395,7 @@ function toggleFactDetail(rid, b) {
     inner.innerHTML = prods.length ? `
       <table style="font-size:0.82rem">
         <thead><tr><th>Producto</th><th>Cantidad vendida</th></tr></thead>
-        <tbody>${prods.map(([n,c])=>`<tr><td>${n}</td><td>${c}</td></tr>`).join('')}</tbody>
+        <tbody>${prods.map(([n,c])=>`<tr><td>${hx(n)}</td><td>${hx(c)}</td></tr>`).join('')}</tbody>
       </table>` : '<p class="text-muted">Sin detalle de productos</p>';
   } else {
     row.style.display = 'none';
@@ -456,10 +461,10 @@ function renderClientes(list) {
     const nombreCompleto = [c.nombre, c.apellido].filter(Boolean).join(' ');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="td-nombre" style="cursor:pointer"><strong>${nombreCompleto||'—'}</strong>${c.ciudad ? `<div class="prod-sub">${c.ciudad}</div>` : ''}</td>
-      <td>${c.email||'—'}</td>
-      <td>${c.telefono||'—'}</td>
-      <td class="hide-mobile">${c.ciudad||'—'}</td>
+      <td class="td-nombre" style="cursor:pointer"><strong>${hx(nombreCompleto||'—')}</strong>${c.ciudad ? `<div class="prod-sub">${hx(c.ciudad)}</div>` : ''}</td>
+      <td>${hx(c.email||'—')}</td>
+      <td>${hx(c.telefono||'—')}</td>
+      <td class="hide-mobile">${hx(c.ciudad||'—')}</td>
       <td style="text-align:center">
         <span class="badge ${numPedidos > 0 ? 'badge-conf' : ''}" style="cursor:${numPedidos>0?'pointer':'default'}">${numPedidos}</span>
       </td>
@@ -500,14 +505,14 @@ function verHistorialCliente(cli) {
       const estadoCls = {'pendiente':'badge-pend','confirmado':'badge-conf','en camino':'badge-cam','entregado':'badge-entr','cancelado':'badge-cancel'}[(p.estado||'').toLowerCase()] || '';
       return `<div class="hist-item">
         <div class="hist-header">
-          <span class="hist-num">${p.orderNumber||'Pedido'}</span>
+          <span class="hist-num">${hx(p.orderNumber||'Pedido')}</span>
           <span class="hist-fecha">${fecha}</span>
-          <span class="badge ${estadoCls}">${p.estado||'—'}</span>
+          <span class="badge ${estadoCls}">${hx(p.estado||'—')}</span>
         </div>
-        <div class="hist-productos">${p.productos||'—'}</div>
+        <div class="hist-productos">${hx(p.productos||'—')}</div>
         <div class="hist-meta">
           <span><i class="fa-solid fa-${esEnvio?'truck':'store-alt'}" style="margin-right:4px;color:var(--text2)"></i>${esEnvio?'Envío a domicilio':'Retiro en local'}</span>
-          <span><i class="fa-solid fa-credit-card" style="margin-right:4px;color:var(--text2)"></i>${p.metodoPago||'—'}</span>
+          <span><i class="fa-solid fa-credit-card" style="margin-right:4px;color:var(--text2)"></i>${hx(p.metodoPago||'—')}</span>
           <span class="hist-total">$${Number(p.total||0).toLocaleString('es-AR')}</span>
         </div>
       </div>`;
@@ -723,7 +728,7 @@ function renderPedidos(list) {
     tdNum.textContent = orderNum;
 
     const tdCli = tr.insertCell();
-    tdCli.innerHTML = `<strong>${nombre}</strong>${telefono ? `<div style="font-size:0.78rem;color:var(--text2)">${telefono}</div>` : ''}`;
+    tdCli.innerHTML = `<strong>${hx(nombre)}</strong>${telefono ? `<div style="font-size:0.78rem;color:var(--text2)">${hx(telefono)}</div>` : ''}`;
 
     const tdEmail = tr.insertCell(); tdEmail.style.fontSize = '0.82rem';
     tdEmail.textContent = email;
@@ -758,10 +763,10 @@ function renderPedidos(list) {
     }
 
     dc.innerHTML = `<div class="ped-detail-box">
-      ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${p.dni}</div>` : ''}
-      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${dir}</div>` : ''}
-      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${p.productos}</div>` : ''}
-      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${p.observaciones}</div>` : ''}
+      ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
+      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}
+      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
+      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${hx(p.observaciones)}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>
@@ -898,11 +903,11 @@ async function loadComprobantes(force=false) {
           ${[...conComp].reverse().map(p => `
             <tr>
               <td>${fmtFecha(p.fecha)}</td>
-              <td><strong>${p.cliente||'—'}</strong></td>
+              <td><strong>${hx(p.cliente||'—')}</strong></td>
               <td>${fmtMoney(p.monto)}</td>
               <td>${badgeEstado(p.estado)}</td>
               <td>
-                <a href="${p.comprobante}" target="_blank" class="btn-secondary btn-sm" style="text-decoration:none">
+                <a href="${/^https?:\/\//i.test(p.comprobante||'') ? hx(p.comprobante) : '#'}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none">
                   <i class="fa-solid fa-eye"></i> Ver
                 </a>
               </td>
@@ -910,7 +915,7 @@ async function loadComprobantes(force=false) {
         </tbody>
       </table>`;
   } catch(e) {
-    $('comp-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${e.message}</p>`;
+    $('comp-table').innerHTML = `<p class="text-muted" style="padding:20px">Error: ${hx(e.message)}</p>`;
   }
 }
 
@@ -930,7 +935,7 @@ function _silentRefreshPedidos() {
 function abrirModalNuevoProd() {
   const cats = [...new Set(_productos.map(p => p.categoria).filter(Boolean))].sort();
   const sel = $('np-categoria');
-  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.innerHTML = cats.map(c => `<option value="${hx(c)}">${hx(c)}</option>`).join('');
   if (_prodCatFil !== 'Todos') sel.value = _prodCatFil;
   $('np-nombre').value = '';
   $('np-precio').value = '0';

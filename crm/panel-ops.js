@@ -84,10 +84,15 @@ function confirmar(msg, fn) {
   show('modal-confirm', 'flex');
 }
 
+// Escapa texto que viene de clientes/pedidos antes de meterlo en innerHTML (evita XSS)
+function hx(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+
 function badgeEstado(estado) {
   const map = { Pendiente:'badge-pend', Confirmado:'badge-conf', 'En camino':'badge-camino', Entregado:'badge-entre', Cancelado:'badge-cancel' };
   const cls = map[estado] || 'badge-pend';
-  return `<span class="badge ${cls}">${estado || 'Pendiente'}</span>`;
+  return `<span class="badge ${cls}">${hx(estado || 'Pendiente')}</span>`;
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────
@@ -207,7 +212,7 @@ async function loadPanel() {
         const cls    = est === 'Entregado' ? 'badge-entre' : est === 'En camino' ? 'badge-camino' : 'badge-pend';
         const item   = document.createElement('div');
         item.className = 'panel-rec-item panel-rec-clickable';
-        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${nombre}</div><div class="panel-rec-sub">${p.productos||p.producto||p.detalle||''}</div></div><span class="badge ${cls}">${est}</span>`;
+        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${hx(nombre)}</div><div class="panel-rec-sub">${hx(p.productos||p.producto||p.detalle||'')}</div></div><span class="badge ${cls}">${hx(est)}</span>`;
         item.addEventListener('click', () => goTo('pedidos'));
         pedWrap.appendChild(item);
       });
@@ -223,7 +228,7 @@ async function loadPanel() {
       recCli.forEach(c => {
         const item = document.createElement('div');
         item.className = 'panel-rec-item panel-rec-clickable';
-        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${c.nombre||'—'}</div><div class="panel-rec-sub">${c.email||c.telefono||''}</div></div><div style="font-size:0.78rem;color:var(--text2)">${c.ciudad||''}</div>`;
+        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${hx(c.nombre||'—')}</div><div class="panel-rec-sub">${hx(c.email||c.telefono||'')}</div></div><div style="font-size:0.78rem;color:var(--text2)">${hx(c.ciudad||'')}</div>`;
         item.addEventListener('click', () => { goTo('clientes'); verHistorialCliente(c); });
         cliWrap.appendChild(item);
       });
@@ -231,7 +236,7 @@ async function loadPanel() {
       cliWrap.innerHTML = '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
     }
   } catch(e) {
-    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${e.message}</p></div>`;
+    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${hx(e.message)}</p></div>`;
   }
 }
 
@@ -310,10 +315,10 @@ function renderClientes(list) {
     const nombreCompleto = [c.nombre, c.apellido].filter(Boolean).join(' ');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="td-nombre" style="cursor:pointer"><strong>${nombreCompleto||'—'}</strong>${c.ciudad ? `<div class="prod-sub">${c.ciudad}</div>` : ''}</td>
-      <td>${c.email||'—'}</td>
-      <td>${c.telefono||'—'}</td>
-      <td class="hide-mobile">${c.ciudad||'—'}</td>
+      <td class="td-nombre" style="cursor:pointer"><strong>${hx(nombreCompleto||'—')}</strong>${c.ciudad ? `<div class="prod-sub">${hx(c.ciudad)}</div>` : ''}</td>
+      <td>${hx(c.email||'—')}</td>
+      <td>${hx(c.telefono||'—')}</td>
+      <td class="hide-mobile">${hx(c.ciudad||'—')}</td>
       <td style="text-align:center">
         <span class="badge ${numPedidos > 0 ? 'badge-conf' : ''}" style="cursor:${numPedidos>0?'pointer':'default'}">${numPedidos}</span>
       </td>
@@ -354,14 +359,14 @@ function verHistorialCliente(cli) {
       const estadoCls = {'pendiente':'badge-pend','confirmado':'badge-conf','en camino':'badge-cam','entregado':'badge-entr','cancelado':'badge-cancel'}[(p.estado||'').toLowerCase()] || '';
       return `<div class="hist-item">
         <div class="hist-header">
-          <span class="hist-num">${p.orderNumber||'Pedido'}</span>
+          <span class="hist-num">${hx(p.orderNumber||'Pedido')}</span>
           <span class="hist-fecha">${fecha}</span>
-          <span class="badge ${estadoCls}">${p.estado||'—'}</span>
+          <span class="badge ${estadoCls}">${hx(p.estado||'—')}</span>
         </div>
-        <div class="hist-productos">${p.productos||'—'}</div>
+        <div class="hist-productos">${hx(p.productos||'—')}</div>
         <div class="hist-meta">
           <span><i class="fa-solid fa-${esEnvio?'truck':'store-alt'}" style="margin-right:4px;color:var(--text2)"></i>${esEnvio?'Envío a domicilio':'Retiro en local'}</span>
-          <span><i class="fa-solid fa-credit-card" style="margin-right:4px;color:var(--text2)"></i>${p.metodoPago||'—'}</span>
+          <span><i class="fa-solid fa-credit-card" style="margin-right:4px;color:var(--text2)"></i>${hx(p.metodoPago||'—')}</span>
           <span class="hist-total">$${Number(p.total||0).toLocaleString('es-AR')}</span>
         </div>
       </div>`;
@@ -574,7 +579,7 @@ function renderPedidos(list) {
     tdNum.textContent = orderNum;
 
     const tdCli = tr.insertCell();
-    tdCli.innerHTML = `<strong>${nombre}</strong>${telefono ? `<div style="font-size:0.78rem;color:var(--text2)">${telefono}</div>` : ''}`;
+    tdCli.innerHTML = `<strong>${hx(nombre)}</strong>${telefono ? `<div style="font-size:0.78rem;color:var(--text2)">${hx(telefono)}</div>` : ''}`;
 
     const tdEmail = tr.insertCell(); tdEmail.style.fontSize = '0.82rem';
     tdEmail.textContent = email;
@@ -609,10 +614,10 @@ function renderPedidos(list) {
     }
 
     dc.innerHTML = `<div class="ped-detail-box">
-      ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${p.dni}</div>` : ''}
-      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${dir}</div>` : ''}
-      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${p.productos}</div>` : ''}
-      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${p.observaciones}</div>` : ''}
+      ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
+      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}
+      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
+      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${hx(p.observaciones)}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>
@@ -733,7 +738,7 @@ function borrarPedido(id) {
 function abrirModalNuevoProd() {
   const cats = [...new Set(_productos.map(p => p.categoria).filter(Boolean))].sort();
   const sel = $('np-categoria');
-  sel.innerHTML = cats.map(c => `<option value="${c}">${c}</option>`).join('');
+  sel.innerHTML = cats.map(c => `<option value="${hx(c)}">${hx(c)}</option>`).join('');
   if (_prodCatFil !== 'Todos') sel.value = _prodCatFil;
   $('np-nombre').value = '';
   $('np-precio').value = '0';

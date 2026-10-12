@@ -75,6 +75,7 @@ const Cart = (() => {
         id:       p.id,
         cartKey,
         nombre:   p.nombre,
+        categoria: p.categoria || null,   // el servidor busca el precio real por categoría + nombre + variante
         precio:   finalPrecio,
         imagen:   p.imagen || null,
         color,

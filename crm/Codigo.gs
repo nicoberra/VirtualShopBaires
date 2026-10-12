@@ -758,6 +758,126 @@ function manifestGuardarKey(man, key, names) {
 
 // ─── MERCADO PAGO ────────────────────────────────────────────
 
+// ─── PRECIOS EN EL SERVIDOR ──────────────────────────────────
+// Nunca se confía en el precio que manda el navegador: el precio de cada
+// producto se busca en la planilla (misma regla que la tienda: columna
+// "descuento" si tiene un número > 0, si no la columna Precio) y el envío
+// se calcula con la tabla de zonas del servidor.
+
+var ZONAS_ENVIO_SRV = {
+  capital: { nombre:'Capital', precio:5500 },
+  gba1:    { nombre:'GBA 1',   precio:7000 },
+  gba2:    { nombre:'GBA 2',   precio:9000 },
+  gba3:    { nombre:'GBA 3',   precio:15000 }
+};
+var DESCUENTO_TRANSFERENCIA_PCT = 10;   // mismo valor que DISCOUNT_PCT en checkout.html
+
+// Acepta números y texto en formato argentino: "12.500", "$ 12.500,50", "12500.5"
+function _numPrecio(v) {
+  if (v === null || v === undefined || v === '') return null;
+  if (typeof v === 'number') return isNaN(v) ? null : v;
+  var s = String(v).replace(/[^\d.,]/g,'');
+  if (s.indexOf(',') >= 0)                 s = s.replace(/\./g,'').replace(',','.');  // 12.500,50 → 12500.50
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s))  s = s.replace(/\./g,'');                  // 12.500    → 12500
+  var n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+// Pestañas de catálogo (todas menos las del sistema). Se lee una vez por ejecución.
+function _nuevoCacheCatalogo() {
+  var tabs = {};
+  ss().getSheets().forEach(function(sh) {
+    var n = sh.getName();
+    if (SYSTEM_TABS.indexOf(n) < 0) tabs[n] = true;
+  });
+  return { _tabs: tabs };
+}
+
+// Filas {nombre, color, talle, precio} de una pestaña, leídas una sola vez por ejecución.
+function _catalogoHoja(cache, tabName) {
+  if (cache[tabName]) return cache[tabName];
+  var rows = [];
+  var sh = ss().getSheetByName(tabName);
+  if (sh && sh.getLastRow() >= 2) {
+    var data = sh.getDataRange().getValues();
+    var idx  = _headerIdx(data[0]);
+    var hD   = String(data[0][3]||'').trim().toLowerCase();
+    var hE   = String(data[0][4]||'').trim().toLowerCase();
+    for (var r = 1; r < data.length; r++) {
+      var nombre = String(data[r][0]||'').trim();
+      if (!nombre) continue;
+      var base = _numPrecio(data[r][1]);
+      var desc = idx['descuento'] !== undefined ? _numPrecio(data[r][idx['descuento']]) : null;
+      rows.push({
+        nombre: nombre,
+        n:      _normKey(nombre),
+        color:  hD === 'color' ? String(data[r][3]||'').trim().toLowerCase() : '',
+        talle:  hE.indexOf('talle') >= 0 ? String(data[r][4]||'').trim().toLowerCase() : '',
+        precio: (desc !== null && desc > 0) ? desc : base
+      });
+    }
+  }
+  cache[tabName] = rows;
+  return rows;
+}
+
+// Busca el precio real de un producto (y variante). Si no viene categoría, recorre todas las pestañas.
+function _precioCatalogo(cache, categoria, nombre, color, talle) {
+  var n = _normKey(nombre);
+  var c = String(color||'').trim().toLowerCase();
+  var t = String(talle||'').trim().toLowerCase();
+  var tabs = [];
+  if (categoria) {
+    var real = _buscarClave(cache._tabs, String(categoria).trim());
+    if (real) tabs.push(real);
+  }
+  if (!tabs.length) tabs = Object.keys(cache._tabs);
+
+  for (var i = 0; i < tabs.length; i++) {
+    var rows = _catalogoHoja(cache, tabs[i]).filter(function(r) { return r.n === n; });
+    if (!rows.length) continue;
+    var exactas = rows.filter(function(r) { return (!c || r.color === c) && (!t || r.talle === t); });
+    var row = exactas[0] || rows[0];
+    if (row.precio !== null && row.precio > 0) return { precio: row.precio, categoria: tabs[i] };
+  }
+  return null;
+}
+
+// Recalcula un pedido completo con precios del servidor.
+// items: [{nombre, categoria?, color?, talle?, cantidad|qty}]  envioId: capital|gba1|gba2|gba3|''  descuentoPct: 0 o 10
+function _calcularPedidoServidor(items, envioId, descuentoPct) {
+  var cache = _nuevoCacheCatalogo();
+  var out = { items:[], subtotal:0, noVerificados:[], envio:0, envioNombre:'' };
+
+  (items || []).forEach(function(i) {
+    var nombre = String(i.nombre || i.title || '').trim();
+    if (!nombre) return;
+    var qty = parseInt(i.cantidad || i.quantity || i.qty || 1, 10);
+    if (isNaN(qty) || qty < 1) qty = 1;
+    if (qty > 99) qty = 99;
+    var hit = _precioCatalogo(cache, i.categoria, nombre, i.color, i.talle);
+    if (!hit) { out.noVerificados.push(nombre); return; }
+    out.items.push({ nombre:nombre, color:String(i.color||''), talle:String(i.talle||''), qty:qty, precio:hit.precio });
+    out.subtotal += hit.precio * qty;
+  });
+
+  var z = ZONAS_ENVIO_SRV[String(envioId||'').trim().toLowerCase()];
+  if (z) { out.envio = z.precio; out.envioNombre = z.nombre; }
+
+  // misma fórmula de redondeo que el checkout
+  out.descuento = Math.round(out.subtotal * (descuentoPct||0) / 100 * 100) / 100;
+  out.total     = Math.round((out.subtotal - out.descuento + out.envio) * 100) / 100;
+  return out;
+}
+
+function _detalleItems(items) {
+  return items.map(function(i) {
+    return i.qty + 'x ' + i.nombre + (i.color ? ' · ' + i.color : '') + (i.talle ? ' / ' + i.talle : '');
+  }).join(', ');
+}
+
+// ─── MERCADO PAGO ────────────────────────────────────────────
+
 function crearPreferencia(p) {
   if (!MP_ACCESS_TOKEN) return { ok:false, error:'MP_ACCESS_TOKEN no configurado en Codigo.gs' };
 
@@ -765,16 +885,24 @@ function crearPreferencia(p) {
   try { items = JSON.parse(p.items || '[]'); } catch(e) { return { ok:false, error:'items inválidos' }; }
   if (!items.length) return { ok:false, error:'Carrito vacío' };
 
-  var itemsMP = items.map(function(i) {
+  // Precios y envío calculados en el servidor; el precio del navegador se ignora.
+  var calc = _calcularPedidoServidor(items, p.envio, 0);
+  if (calc.noVerificados.length)
+    return { ok:false, error:'Estos productos ya no están disponibles: ' + calc.noVerificados.join(', ') + '. Quitalos del carrito e intentá de nuevo.' };
+  if (!calc.items.length || calc.total <= 0) return { ok:false, error:'Carrito vacío' };
+
+  var itemsMP = calc.items.map(function(i) {
     return {
-      title:       String(i.nombre || i.title || 'Producto').slice(0, 256),
-      quantity:    Math.max(1, parseInt(i.cantidad || i.quantity || 1, 10)),
-      unit_price:  parseFloat((String(i.precio || i.unit_price || 0)).replace(',','.')),
+      title:       (i.nombre + (i.color ? ' · ' + i.color : '') + (i.talle ? ' / ' + i.talle : '')).slice(0, 256),
+      quantity:    i.qty,
+      unit_price:  i.precio,
       currency_id: 'ARS'
     };
   });
+  if (calc.envio > 0)
+    itemsMP.push({ title:'Envío a domicilio · ' + calc.envioNombre, quantity:1, unit_price:calc.envio, currency_id:'ARS' });
 
-  var ref = String(p.ref || ('vsb-' + Date.now()));
+  var ref = String(p.ref || ('vsb-' + Date.now())).replace(/[^\w\-]/g,'').slice(0, 60) || ('vsb-' + Date.now());
 
   var payload = {
     items: itemsMP,
@@ -802,12 +930,12 @@ function crearPreferencia(p) {
   if (res.getResponseCode() !== 201 || !json || !json.init_point)
     return { ok:false, error: (json && json.message) || 'Error MP (' + res.getResponseCode() + ')' };
 
-  // Guardar pedido como Pendiente en Sheets
-  var total   = itemsMP.reduce(function(s,i){ return s + i.unit_price * i.quantity; }, 0);
-  var detalle = itemsMP.map(function(i){ return i.quantity + 'x ' + i.title; }).join(', ');
+  // Guardar pedido como Pendiente en Sheets (con el total calculado en el servidor)
+  var total   = calc.total;
+  var detalle = _detalleItems(calc.items) + (calc.envio > 0 ? ', Envío ' + calc.envioNombre : '');
   agregar('Pedidos', {
-    cliente:  String(p.nombre  || ''),
-    telefono: String(p.telefono || ''),
+    cliente:  String(p.nombre  || '').slice(0, 120),
+    telefono: String(p.telefono || '').slice(0, 40),
     detalle:  detalle,
     monto:    total,
     estado:   'Pendiente',
@@ -815,7 +943,7 @@ function crearPreferencia(p) {
   });
 
   avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref);
-  return { ok:true, url: json.init_point, ref: ref };
+  return { ok:true, url: json.init_point, ref: ref, total: total };
 }
 
 // ─── COMPROBANTES DE PAGO (Google Drive) ─────────────────────
@@ -1084,15 +1212,28 @@ function crearPedido(p) {
     var orderNum = 'VSB-' + new Date().getTime();
     var now = Utilities.formatDate(new Date(), 'GMT-3', 'yyyy-MM-dd HH:mm');
 
+    // Subtotal, descuento, envío y total se recalculan con precios del servidor.
+    // Si algún producto no se encuentra en el catálogo, se conservan los valores
+    // del navegador y el pedido queda marcado para revisar a mano.
     var productosStr = '';
     try {
       var prods = (typeof p.productos === 'string') ? JSON.parse(p.productos) : p.productos;
-      if (Array.isArray(prods)) {
-        productosStr = prods.map(function(i) {
-          return i.qty + 'x ' + i.nombre +
-            (i.color ? ' · ' + i.color : '') +
-            (i.talle ? ' / ' + i.talle : '');
-        }).join(', ');
+      if (Array.isArray(prods) && prods.length) {
+        var esTransf = ['transferencia','efectivo'].indexOf(String(p.metodoPago||'').toLowerCase()) >= 0;
+        var calc = _calcularPedidoServidor(prods, p.envioZona, esTransf ? DESCUENTO_TRANSFERENCIA_PCT : 0);
+        if (calc.items.length && !calc.noVerificados.length) {
+          productosStr = _detalleItems(calc.items);
+          p.subtotal   = calc.subtotal;
+          p.descuento  = calc.descuento;
+          p.total      = calc.total;
+        } else {
+          productosStr = prods.map(function(i) {
+            return i.qty + 'x ' + i.nombre +
+              (i.color ? ' · ' + i.color : '') +
+              (i.talle ? ' / ' + i.talle : '');
+          }).join(', ');
+          p.observaciones = '⚠ PRECIOS SIN VERIFICAR (' + (calc.noVerificados.join(', ') || 'sin productos') + ') | ' + (p.observaciones || '');
+        }
       }
     } catch(ex) {}
 

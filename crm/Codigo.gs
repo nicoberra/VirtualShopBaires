@@ -110,7 +110,7 @@ function manejar(e) {
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
       'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,'ext_variantes_set':1,
-      'gh_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,
+      'gh_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
     };
@@ -143,6 +143,7 @@ function manejar(e) {
     else if (accion === 'gh_estado')             out = { ok:true, gh: !!GH_TOKEN };
     else if (accion === 'producto_foto_subir')   out = productoFotoSubir(p);
     else if (accion === 'producto_fotos_set')    out = productoFotosSet(p);
+    else if (accion === 'ext_variante_agregar')  out = extVarianteAgregar(p);
     else if (accion === 'ext_producto_eliminar') out = extProductoEliminar(p);
     else if (accion === 'ext_categoria_agregar') out = extCategoriaAgregar(p);
     else if (accion === 'ext_categoria_eliminar') out = extCategoriaEliminar(p);
@@ -638,6 +639,66 @@ function productoFotoSubir(p) {
     man.data[f.catKey][f.key] = f.urls;
     storeManifestGuardar(man, 'Fotos: ' + nombre);
     return { ok:true, url: url, fotos: f.urls };
+  } catch (e) {
+    return { ok:false, error: String(e) };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Agrega una variante nueva debajo de una fila del producto (copia esa fila)
+function extVarianteAgregar(p) {
+  var sheetName = String(p.sheet||'').trim();
+  var row = parseInt(p.row, 10);
+  var color = String(p.color||'').trim();
+  if (!sheetName || !row || !color) return { ok:false, error:'Faltan parámetros (sheet, row, color)' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var sh = ss().getSheetByName(sheetName);
+    if (!sh) return { ok:false, error:'Hoja no encontrada: ' + sheetName };
+    var lastCol = sh.getLastColumn();
+    var idx = _headerIdx(sh.getRange(1, 1, 1, lastCol).getValues()[0]);
+    if (idx['color'] === undefined) return { ok:false, error:'La hoja no tiene columna Color' };
+
+    var nombre = String(sh.getRange(row, 1).getValue()).trim();
+    if (p.nombre && String(p.nombre).trim() !== nombre)
+      return { ok:false, error:'La fila ' + row + ' no coincide con "' + p.nombre + '". Recargá los productos.' };
+
+    // Mismo color ya cargado en el producto
+    var data = sh.getRange(2, 1, sh.getLastRow() - 1, lastCol).getValues();
+    for (var i = 0; i < data.length; i++) {
+      if (String(data[i][0]).trim() === nombre && String(data[i][idx['color']]).trim().toLowerCase() === color.toLowerCase())
+        return { ok:false, error:'Ya existe la variante "' + color + '"' };
+    }
+
+    var img = '';
+    if (p.data) {
+      if (!GH_TOKEN) return { ok:false, error:'Falta GH_TOKEN para subir la foto' };
+      var ruta = STORE_IMG_DIR + '/' + _slug(sheetName) + '/' + _slug(nombre + ' ' + color) + '-' + new Date().getTime() + '.jpg';
+      var up = ghApi('put', 'contents/' + encPath(ruta), {
+        message: 'Foto de variante: ' + nombre + ' - ' + color,
+        content: String(p.data).replace(/^data:[^,]*,/, ''),
+        branch:  GH_BRANCH
+      });
+      if (up.code < 200 || up.code >= 300) return { ok:false, error:'No se pudo subir la foto (' + up.code + ')' };
+      img = STORE_BASE_URL + ruta;
+    }
+
+    sh.insertRowsAfter(row, 1);
+    sh.getRange(row, 1, 1, lastCol).copyTo(sh.getRange(row + 1, 1, 1, lastCol));
+    var nueva = row + 1;
+    sh.getRange(nueva, idx['color'] + 1).setValue(color);
+    if (idx['imagen_url'] !== undefined) sh.getRange(nueva, idx['imagen_url'] + 1).setValue(img);
+    if (p.precio !== undefined && p.precio !== '' && idx['precio'] !== undefined)
+      sh.getRange(nueva, idx['precio'] + 1).setValue(Number(String(p.precio).replace(/[^\d.,]/g,'').replace(',','.')) || 0);
+    if (p.sku !== undefined && idx['sku_costo'] !== undefined) {
+      var c = sh.getRange(nueva, idx['sku_costo'] + 1);
+      c.setNumberFormat('@'); c.setValue(String(p.sku).trim());
+    }
+    if (idx['stock'] !== undefined) sh.getRange(nueva, idx['stock'] + 1).setValue(true);
+    return { ok:true, row: nueva, imagen: img };
   } catch (e) {
     return { ok:false, error: String(e) };
   } finally {

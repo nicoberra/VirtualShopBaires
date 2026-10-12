@@ -163,16 +163,144 @@ function renderProductos(list) {
         </div>
       </td>`;
     const hijos = g.map(v => buildProdRow(v, true));
-    hijos.forEach(tr => { tr.hidden = true; });
+    const add = document.createElement('tr');
+    add.className = 'prod-var-add';
+    add.innerHTML = `<td colspan="${NCOLS}"><button type="button" class="btn-var-add"><i class="fa-solid fa-plus"></i> Agregar variante</button></td>`;
+    add.querySelector('button').addEventListener('click', () => abrirAgregarVariante(g));
+    hijos.push(add);
+
+    const clave = grupoClave(g[0]);
+    const abierto = _gruposAbiertos.has(clave);
+    hijos.forEach(tr => { tr.hidden = !abierto; });
+    head.classList.toggle('abierto', abierto);
     head.addEventListener('click', () => {
       const abrir = hijos[0].hidden;
       hijos.forEach(tr => { tr.hidden = !abrir; });
       head.classList.toggle('abierto', abrir);
+      if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
     });
     frag.appendChild(head);
     hijos.forEach(tr => frag.appendChild(tr));
   });
   tbody.appendChild(frag);
+}
+
+const _gruposAbiertos = new Set();
+
+function grupoClave(p) {
+  return p._sheet + '|' + String(p.nombre || '').trim();
+}
+
+// Formulario para sumar una variante (color, modelo, medida…) a un producto
+function abrirAgregarVariante(grupo) {
+  const ult = grupo[grupo.length - 1];
+  const esUnico = grupo.length === 1;
+  const precioN = Number(String(ult.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+  document.getElementById('modal-nueva-var')?.remove();
+
+  const m = document.createElement('div');
+  m.id = 'modal-nueva-var';
+  m.className = 'modal-backdrop';
+  m.style.display = 'flex';
+  m.innerHTML = `
+    <div class="modal modal-sm" role="dialog" aria-modal="true" aria-labelledby="nv-titulo">
+      <div class="modal-header">
+        <h3 id="nv-titulo">Agregar variante</h3>
+        <button class="modal-close" type="button" aria-label="Cerrar">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:.82rem;margin-bottom:12px"><strong>${escHtml(ult.nombre)}</strong><br>
+          Variantes actuales: ${grupo.map(v => escHtml(v.color || '—')).join(', ')}</p>
+        ${esUnico ? `
+        <div class="form-group">
+          <label for="nv-actual">Nombre de la variante que ya existe</label>
+          <input type="text" id="nv-actual" value="${escHtml(ult.color || '')}" placeholder="Ej: Rojo">
+          <small class="text-muted">Si dice "Único", cambialo por el color o modelo real.</small>
+        </div>` : ''}
+        <div class="form-group">
+          <label for="nv-color">Nueva variante (color, modelo, medida…)</label>
+          <input type="text" id="nv-color" placeholder="Ej: Azul" autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="nv-precio">Precio ($)</label>
+            <input type="number" id="nv-precio" min="0" step="1" value="${precioN}">
+          </div>
+          <div class="form-group">
+            <label for="nv-sku">SKU</label>
+            <input type="text" id="nv-sku" value="${escHtml(ult.sku || '')}">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Foto de la variante (opcional)</label>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="nv-prev">${prodThumb('', 56)}</span>
+            <label class="btn-secondary btn-sm" style="cursor:pointer">
+              <i class="fa-solid fa-image"></i> Elegir foto
+              <input type="file" id="nv-foto" accept="image/*" style="display:none">
+            </label>
+          </div>
+        </div>
+        <p id="nv-err" class="err-msg" role="alert"></p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" type="button" data-cerrar>Cancelar</button>
+        <button class="btn-primary" type="button" id="nv-guardar"><i class="fa-solid fa-plus"></i> Agregar variante</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+
+  let fotoData = null;
+  const cerrar = () => m.remove();
+  m.addEventListener('click', e => { if (e.target === m) cerrar(); });
+  m.querySelector('.modal-close').addEventListener('click', cerrar);
+  m.querySelector('[data-cerrar]').addEventListener('click', cerrar);
+  m.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); });
+  m.querySelector('#nv-foto').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      fotoData = await _prepararFoto(f);
+      m.querySelector('#nv-prev').innerHTML = prodThumb(fotoData, 56);
+    } catch (err) { m.querySelector('#nv-err').textContent = err.message; }
+  });
+  m.querySelector('#nv-color').addEventListener('keydown', e => { if (e.key === 'Enter') m.querySelector('#nv-guardar').click(); });
+  m.querySelector('#nv-color').focus();
+
+  m.querySelector('#nv-guardar').addEventListener('click', async () => {
+    const btn = m.querySelector('#nv-guardar');
+    const err = m.querySelector('#nv-err');
+    const color = m.querySelector('#nv-color').value.trim();
+    const actual = esUnico ? m.querySelector('#nv-actual').value.trim() : null;
+    err.textContent = '';
+    if (!color) { err.textContent = 'Escribí el nombre de la nueva variante.'; return; }
+    if (grupo.some(v => String(v.color || '').trim().toLowerCase() === color.toLowerCase()) ||
+        (actual && actual.toLowerCase() === color.toLowerCase())) {
+      err.textContent = 'Esa variante ya existe.'; return;
+    }
+    if (fotoData && _ghOk === false) { err.textContent = 'Para subir la foto falta configurar GH_TOKEN. Podés agregarla sin foto.'; return; }
+
+    btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Agregando…';
+    try {
+      if (esUnico && actual && actual !== String(ult.color || '').trim()) {
+        const r0 = await actualizarCampo(ult, 'color', actual);
+        if (r0 && r0.ok === false) throw new Error(r0.error);
+      }
+      const params = {
+        action: 'ext_variante_agregar', sheet: ult._sheet, row: String(ult._row), nombre: ult.nombre,
+        color, precio: m.querySelector('#nv-precio').value, sku: m.querySelector('#nv-sku').value.trim()
+      };
+      if (fotoData) params.data = fotoData;
+      const r = await crmEnviar(params);
+      if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
+      _gruposAbiertos.add(grupoClave(ult));
+      cerrar();
+      toast(`Variante "${color}" agregada ✓`);
+      delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
+    } catch (e) {
+      err.textContent = 'No se pudo agregar: ' + e.message;
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-plus"></i> Agregar variante';
+    }
+  });
 }
 
 function buildProdRow(p, esVariante) {
@@ -204,6 +332,7 @@ function buildProdRow(p, esVariante) {
     <td class="td-center td-toggle td-dest">${hVal ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
     <td style="white-space:nowrap">
       <a class="btn-icon" href="https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria||'')}&buscar=${encodeURIComponent(p.nombre||'')}" target="_blank" rel="noopener" title="Ver en tienda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
+      ${esVariante ? '' : '<button class="btn-icon btn-add-var" title="Agregar variante (color, modelo…)"><i class="fa-solid fa-layer-group"></i></button>'}
       <button class="btn-icon btn-edit-prod" title="Ver / editar completo"><i class="fa-solid fa-pen-to-square"></i></button>
       <button class="btn-icon btn-del-prod" title="Eliminar producto" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
     </td>`;
@@ -227,6 +356,8 @@ function buildProdRow(p, esVariante) {
       .then(() => toast('Destacado actualizado ✓')).catch(() => toast('Error', 'err'));
   });
   tr.querySelector('.btn-edit-prod').addEventListener('click', () => editarProducto(p));
+  const btnVar = tr.querySelector('.btn-add-var');
+  if (btnVar) btnVar.addEventListener('click', () => abrirAgregarVariante([p]));
   tr.querySelector('.btn-del-prod').addEventListener('click', () => eliminarProducto(p));
   return tr;
 }

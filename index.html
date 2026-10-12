@@ -755,7 +755,7 @@
 
     try {
       const hash = await hashPass(pass, email);
-      const res  = await fetch(`${APPS_SCRIPT_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: 'follow' });
+      const res  = await fetch(`${STORE_API_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: 'follow' });
       const data = await res.json();
       if (!data.ok) {
         if (data.error === 'email_taken') errEl.textContent = 'Ese email ya está registrado. ¿Querés iniciar sesión?';
@@ -831,7 +831,7 @@
   });
 </script>
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec";
+const STORE_API_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec";
 
 async function suscribirse(e) {
   e.preventDefault();
@@ -845,7 +845,7 @@ async function suscribirse(e) {
   msg.style.display = "none";
 
   try {
-    const res  = await fetch(`${APPS_SCRIPT_URL}?action=subscribe&email=${encodeURIComponent(email)}&nombre=${encodeURIComponent(nombre)}`, { redirect: "follow" });
+    const res  = await fetch(`${STORE_API_URL}?action=subscribe&email=${encodeURIComponent(email)}&nombre=${encodeURIComponent(nombre)}`, { redirect: "follow" });
     const data = await res.json();
     if (data.ok) {
       if (data.already) {

@@ -42,7 +42,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v11';
+const _CACHE_DATA   = 'vsb_data_v12';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -203,6 +203,10 @@ async function fetchHoja(nombreHoja) {
         // Ignorar filas donde el precio (col B) es 0 o vacío y no hay descripción (son encabezados)
         const tieneContenido = row.c[1]?.v || row.c[5]?.v || row.c[4]?.v;
         if (!tieneContenido) return false;
+        // Sin stock en la planilla (casilla Stock destildada) → no se muestra en la tienda.
+        // Si un producto queda sin ninguna variante con stock, desaparece entero.
+        const st = row.c[2] ? row.c[2].v : null;
+        if (st === false || String(st).trim().toLowerCase() === 'false') return false;
         return true;
       })
       .map(row => {

@@ -112,6 +112,7 @@ function renderProductos(list) {
     el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i>Sin productos</div>';
     return;
   }
+  if (esCelular()) { renderProductosCards(list); return; }
 
   el.innerHTML = `
     <table>
@@ -160,8 +161,10 @@ function renderProductos(list) {
               ${skus.length ? ` · SKU ${escHtml(skus.join(', '))}` : ''}
             </div>
           </div>
+          <button type="button" class="btn-icon btn-del-grupo" title="Eliminar el producto completo (todas las variantes)" style="color:var(--red);margin-left:auto"><i class="fa-solid fa-trash"></i></button>
         </div>
       </td>`;
+    head.querySelector('.btn-del-grupo').addEventListener('click', (ev) => { ev.stopPropagation(); eliminarGrupo(g); });
     const hijos = g.map(v => buildProdRow(v, true));
     const add = document.createElement('tr');
     add.className = 'prod-var-add';
@@ -654,3 +657,144 @@ async function subirFoto(input) {
   if (ok) toast(ok === 1 ? 'Foto subida ✓ (en la tienda aparece en unos minutos)' : `${ok} fotos subidas ✓ (en la tienda aparecen en unos minutos)`);
 }
 
+// ─── CELULAR: productos como tarjetas ─────────────────────────
+function esCelular() { return window.matchMedia('(max-width: 768px)').matches; }
+(function() {
+  let antes = null;
+  window.addEventListener('resize', () => {
+    const ahora = esCelular();
+    if (antes !== null && ahora !== antes && typeof currentSec !== 'undefined' && currentSec === 'productos' && _productos.length) filtrarProductos();
+    antes = ahora;
+  });
+})();
+
+function _precioNum(v) { return Number(String(v || 0).replace(/[^\d.,]/g, '').replace(',', '.')) || 0; }
+
+function renderProductosCards(list) {
+  const el = $('prod-table');
+  const grupos = [], porClave = {};
+  list.forEach(p => {
+    const k = grupoClave(p);
+    if (!porClave[k]) { porClave[k] = []; grupos.push(porClave[k]); }
+    porClave[k].push(p);
+  });
+  const wrap = document.createElement('div');
+  wrap.className = 'pcards';
+  // Se dibujan de a 40 para que la lista aparezca enseguida aunque haya cientos
+  let i = 0;
+  const tanda = () => {
+    const frag = document.createDocumentFragment();
+    grupos.slice(i, i + 40).forEach(g => frag.appendChild(buildProdCard(g)));
+    wrap.appendChild(frag);
+    i += 40;
+    if (i < grupos.length) requestAnimationFrame(tanda);
+  };
+  el.innerHTML = '';
+  el.appendChild(wrap);
+  tanda();
+}
+
+function buildProdCard(g) {
+  const p0 = g[0], varios = g.length > 1;
+  const precios = g.map(v => _precioNum(v.precio));
+  const min = Math.min(...precios), max = Math.max(...precios);
+  const conStock = g.filter(v => v.stock).length;
+  const clave = grupoClave(p0);
+  const card = document.createElement('div');
+  card.className = 'pcard';
+  card.innerHTML = `
+    <div class="pcard-top">
+      ${prodThumb((g.find(v => v.imagen) || {}).imagen, 60)}
+      <div class="pcard-info">
+        <div class="pcard-nombre">${escHtml(p0.nombre)}</div>
+        <div class="pcard-meta">
+          <b>${min === max ? fmtPrecioSheet(min) : fmtPrecioSheet(min) + ' – ' + fmtPrecioSheet(max)}</b>
+          ${varios ? `<span class="badge">${g.length} variantes</span>` : (String(p0.color || '').trim() ? `<span class="badge-color">${escHtml(p0.color)}</span>` : '')}
+          <span class="badge ${conStock ? 'badge-conf' : 'badge-cancel'}">${conStock ? (varios ? conStock + ' con stock' : 'Con stock') : 'Sin stock'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="pcard-acts">
+      <button type="button" class="pact" data-a="editar"><i class="fa-solid fa-pen-to-square"></i><span>Editar</span></button>
+      <button type="button" class="pact" data-a="variante"><i class="fa-solid fa-layer-group"></i><span>Variante</span></button>
+      ${varios ? '<button type="button" class="pact" data-a="variantes"><i class="fa-solid fa-chevron-down"></i><span>Ver variantes</span></button>' : '<button type="button" class="pact" data-a="stock"><i class="fa-solid fa-box"></i><span>Stock</span></button>'}
+      <button type="button" class="pact pact-del" data-a="eliminar"><i class="fa-solid fa-trash"></i><span>Eliminar</span></button>
+    </div>
+    ${varios ? '<div class="pcard-vars" hidden></div>' : ''}`;
+
+  const vars = card.querySelector('.pcard-vars');
+  const pintarVariantes = () => {
+    vars.innerHTML = '';
+    g.forEach(v => {
+      const fila = document.createElement('div');
+      fila.className = 'pvar';
+      fila.innerHTML = `
+        ${prodThumb(v.imagen, 40)}
+        <div class="pvar-info"><b>${escHtml(String(v.color || v.talle || '—'))}</b><span>${fmtPrecioSheet(v.precio)}</span></div>
+        <button type="button" class="pvar-btn pvar-stock ${v.stock ? 'on' : ''}" title="Stock">${v.stock ? 'Con stock' : 'Sin stock'}</button>
+        <button type="button" class="pvar-btn" data-a="editar" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button type="button" class="pvar-btn pvar-del" data-a="eliminar" title="Eliminar esta variante"><i class="fa-solid fa-trash"></i></button>`;
+      fila.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(v));
+      fila.querySelector('[data-a="eliminar"]').addEventListener('click', () => eliminarProducto(v));
+      const bs = fila.querySelector('.pvar-stock');
+      bs.addEventListener('click', () => cambiarStockTarjeta(v, bs));
+      vars.appendChild(fila);
+    });
+  };
+  if (vars && _gruposAbiertos.has(clave)) { pintarVariantes(); vars.hidden = false; card.classList.add('abierta'); }
+
+  card.querySelector('.pcard-top').addEventListener('click', () => editarProducto(p0));
+  card.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(p0));
+  card.querySelector('[data-a="variante"]').addEventListener('click', () => abrirAgregarVariante(g));
+  card.querySelector('[data-a="eliminar"]').addEventListener('click', () => varios ? eliminarGrupo(g) : eliminarProducto(p0));
+  const bVars = card.querySelector('[data-a="variantes"]');
+  if (bVars) bVars.addEventListener('click', () => {
+    const abrir = vars.hidden;
+    if (abrir && !vars.children.length) pintarVariantes();
+    vars.hidden = !abrir;
+    card.classList.toggle('abierta', abrir);
+    if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
+  });
+  const bStock = card.querySelector('[data-a="stock"]');
+  if (bStock) bStock.addEventListener('click', () => cambiarStockTarjeta(p0, null));
+  return card;
+}
+
+function cambiarStockTarjeta(p, boton) {
+  const nuevo = !p.stock;
+  p.stock = nuevo;
+  if (boton) { boton.classList.toggle('on', nuevo); boton.textContent = nuevo ? 'Con stock' : 'Sin stock'; }
+  actualizarCampo(p, 'stock', nuevo)
+    .then(r => {
+      if (r && r.ok === false) throw new Error(r.error);
+      toast(nuevo ? 'Con stock ✓' : 'Sin stock ✓');
+      lsGuardar('productos', _productos);
+      if (!boton) filtrarProductos();
+    })
+    .catch(() => {
+      p.stock = !nuevo;
+      if (boton) { boton.classList.toggle('on', !nuevo); boton.textContent = !nuevo ? 'Con stock' : 'Sin stock'; }
+      toast('No se pudo cambiar el stock', 'err');
+    });
+}
+
+// Eliminar un producto con TODAS sus variantes. Se borra de la última fila hacia arriba
+// para que los números de fila de las que faltan no cambien; el backend además
+// confirma que cada fila siga siendo ese producto.
+function eliminarGrupo(g) {
+  const nombre = g[0].nombre;
+  confirmar(`¿Eliminar "${nombre}" con sus ${g.length} variantes? No se puede deshacer.`, () => unaVez('eliminar-grupo-' + grupoClave(g[0]), async () => {
+    const filas = [...g].sort((a, b) => Number(b._row) - Number(a._row));
+    let hechas = 0;
+    try {
+      for (const v of filas) {
+        await crmOk({ action: 'ext_producto_eliminar', sheet: v._sheet, row: v._row, nombre: v.nombre });
+        hechas++;
+      }
+      toast(`"${nombre}" eliminado ✓`);
+    } catch (e) {
+      toast(`Se eliminaron ${hechas} de ${filas.length}: ${e.message}`, 'err');
+    }
+    delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
+  }));
+}

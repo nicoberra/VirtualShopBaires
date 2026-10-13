@@ -212,6 +212,8 @@ def productos_de(tab, tabla, manifest):
             "descripcion": descripcion.strip() if isinstance(descripcion, str) else "",
             "variantes": [], "imagenes": [],
         })
+        if get(2) is False or str(get(2)).strip().lower() == "false":   # sin stock: no se publica (igual que la tienda)
+            continue
         if color or talle:
             p["variantes"].append({"color": color, "talle": talle, "precio": precio,
                                    "stock": get(2) is not False and str(get(2)).lower() != "false",

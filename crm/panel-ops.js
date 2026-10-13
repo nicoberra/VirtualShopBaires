@@ -142,6 +142,7 @@ function prefetchAll() {
   crm({ action: 'ext_productos_list' }).then(r => {
     _productos = r.rows || [];
     _cache['ext_productos_list'] = _productos;
+    lsGuardar('productos', _productos);
   }).catch(() => {});
 }
 
@@ -491,16 +492,24 @@ let _productos = [], _prodCatFil = 'Todos';
 
 async function loadProductos(force=false) {
   if (!force && _productos.length) { buildProdCats(); filtrarProductos(); return; }
-  $('prod-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos…</div>';
+  const key = 'ext_productos_list';
+  // Al instante desde la caché local; se actualiza en segundo plano si tiene más de 40 s
+  const local = !force && lsLeer('productos');
+  if (local) {
+    _productos = local.d; _cache[key] = _productos; buildProdCats(); filtrarProductos();
+    if (Date.now() - local.t < LS_TTL) return;
+  } else {
+    $('prod-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos…</div>';
+  }
   try {
-    const key = 'ext_productos_list';
     if (force) delete _cache[key];
-    const r = _cache[key] ? { rows: _cache[key] } : await crm({ action:'ext_productos_list' });
+    const r = (!force && _cache[key] && !local) ? { rows: _cache[key] } : await crm({ action:'ext_productos_list' });
     _productos = r.rows || [];
     _cache[key] = _productos;
-    buildProdCats();
-    filtrarProductos();
+    lsGuardar('productos', _productos);
+    if (currentSec === 'productos') { buildProdCats(); filtrarProductos(); }
   } catch(e) {
+    if (local) return;
     $('prod-table').innerHTML = `<div style="padding:20px;text-align:center">
       <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
       <button class="btn-secondary" onclick="loadProductos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>

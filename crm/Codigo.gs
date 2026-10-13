@@ -120,7 +120,7 @@ function manejar(e) {
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
       'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,'ext_variantes_set':1,
-      'gh_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
+      'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
     };
@@ -151,6 +151,7 @@ function manejar(e) {
     else if (accion === 'ext_producto_agregar')  out = extProductoAgregar(p);
     else if (accion === 'ext_variantes_set')     out = extVariantesSet(p);
     else if (accion === 'gh_estado')             out = { ok:true, gh: !!GH_TOKEN };
+    else if (accion === 'sb_estado')             out = sbEstado();
     else if (accion === 'producto_foto_subir')   out = productoFotoSubir(p);
     else if (accion === 'producto_fotos_set')    out = productoFotosSet(p);
     else if (accion === 'ext_variante_agregar')  out = extVarianteAgregar(p);
@@ -161,7 +162,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v3-crm' };
+    else if (accion === 'version')              out = { ok:true, version: 'v4-supabase1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
@@ -1138,6 +1139,107 @@ function _catalogoArmar() {
 }
 
 // Respuesta cacheada 5 min en trozos (CacheService admite 100 KB por clave).
+// ─── SUPABASE (base de datos rápida) ─────────────────────────
+// Claves en Propiedades del script: SUPABASE_URL y SUPABASE_SECRET (sb_secret_… o la
+// service_role vieja eyJ…). La clave secreta NUNCA va al navegador ni al repo.
+var SB_URL = (PropertiesService.getScriptProperties().getProperty('SUPABASE_URL') || '').replace(/\/+$/, '');
+var SB_KEY = PropertiesService.getScriptProperties().getProperty('SUPABASE_SECRET') || '';
+
+function _sb(metodo, ruta, cuerpo, prefer) {
+  if (!SB_URL || !SB_KEY) throw 'Faltan SUPABASE_URL / SUPABASE_SECRET en Propiedades del script';
+  var headers = { apikey: SB_KEY };
+  if (/^eyJ/.test(SB_KEY)) headers.Authorization = 'Bearer ' + SB_KEY;   // clave vieja (JWT)
+  if (prefer) headers.Prefer = prefer;
+  var opt = { method: metodo, muteHttpExceptions: true, headers: headers, contentType: 'application/json' };
+  if (cuerpo !== undefined) opt.payload = JSON.stringify(cuerpo);
+  var r = UrlFetchApp.fetch(SB_URL + '/rest/v1/' + ruta, opt);
+  var txt = r.getContentText(), j = null;
+  try { j = txt ? JSON.parse(txt) : null; } catch(e) {}
+  return { code: r.getResponseCode(), json: j, text: txt };
+}
+function _sbOk(r, que) {
+  if (r.code < 200 || r.code >= 300) throw (que || 'Supabase') + ' (' + r.code + '): ' + String(r.text).slice(0, 300);
+  return r.json;
+}
+
+function sbEstado() {
+  if (!SB_URL || !SB_KEY) return { ok:false, error:'Faltan SUPABASE_URL / SUPABASE_SECRET en Propiedades del script' };
+  var r = _sb('get', 'productos?select=id');
+  return { ok: r.code === 200, codigo: r.code, productos: Array.isArray(r.json) ? r.json.length : null,
+           error: r.code === 200 ? '' : String(r.text).slice(0, 200) };
+}
+
+// Copia TODOS los productos de la planilla a Supabase. Ejecutar a mano desde el editor
+// (elegir migrarProductosASupabase → Ejecutar). Se puede repetir: reemplaza lo que haya.
+function migrarProductosASupabase() {
+  var lock = LockService.getScriptLock(); lock.waitLock(30000);
+  try {
+    var cat = _catalogoArmar();                       // pestañas listadas en "Categorias"
+    var permitidas = {}; cat.categorias.forEach(function(c, i) { permitidas[c] = i; });
+    var filas = extProductosListar({}).filter(function(p) { return permitidas[p._sheet] !== undefined || permitidas[p.categoria] !== undefined; });
+
+    // Fotos de la tienda (images-manifest.json público del sitio)
+    var manifest = {};
+    try { manifest = JSON.parse(UrlFetchApp.fetch('https://virtualshopbaires.com.ar/images-manifest.json', { muteHttpExceptions: true }).getContentText()); } catch(e) {}
+    var fotosDe = function(categoria, nombre) {
+      var ck = _buscarClave(manifest, categoria); if (!ck) return [];
+      var k = _buscarClave(manifest[ck], nombre); if (!k) return [];
+      var v = manifest[ck][k]; return (Array.isArray(v) ? v : [v]).filter(function(u) { return /^https?:/.test(String(u)); });
+    };
+
+    // 1) Categorías (con el orden de la pestaña Categorias)
+    var cats = cat.categorias.map(function(c, i) { return { nombre: c, orden: i, visible: true }; });
+    _sbOk(_sb('post', 'categorias?on_conflict=nombre', cats, 'resolution=merge-duplicates,return=minimal'), 'categorías');
+
+    // 2) Agrupar filas en productos con variantes
+    var grupos = {}, orden = [];
+    filas.forEach(function(p) {
+      var categoria = String(p.categoria || p._sheet).trim(), nombre = String(p.nombre).trim();
+      var k = categoria + '|' + nombre;
+      if (!grupos[k]) { grupos[k] = { categoria: categoria, nombre: nombre, filas: [] }; orden.push(k); }
+      grupos[k].filas.push(p);
+    });
+
+    // 3) Empezar de cero (borra productos y, en cascada, sus variantes)
+    _sbOk(_sb('delete', 'productos?id=gt.0', undefined, 'return=minimal'), 'borrar productos');
+
+    // 4) Productos
+    var ids = {}, cuerpo = orden.map(function(k, i) {
+      var g = grupos[k], f0 = g.filas[0];
+      return {
+        categoria: g.categoria, nombre: g.nombre,
+        descripcion: (g.filas.filter(function(x) { return x.descripcion; })[0] || {}).descripcion || '',
+        subcategoria: f0.subcategoria || null,
+        destacado: g.filas.some(function(x) { return x.destacado; }),
+        imagenes: fotosDe(g.categoria, g.nombre), orden: i
+      };
+    });
+    for (var i = 0; i < cuerpo.length; i += 200) {
+      var res = _sbOk(_sb('post', 'productos?select=id,categoria,nombre', cuerpo.slice(i, i + 200), 'return=representation'), 'productos');
+      res.forEach(function(r) { ids[r.categoria + '|' + r.nombre] = r.id; });
+    }
+
+    // 5) Variantes
+    var vars = [];
+    orden.forEach(function(k) {
+      grupos[k].filas.forEach(function(f, j) {
+        var precio = _numPrecio(f.precio) || 0, desc = _numPrecio(f.descuento);
+        vars.push({
+          producto_id: ids[k], color: String(f.color || f.marca || '').trim(), talle: String(f.talle || '').trim(),
+          precio: precio, precio_descuento: (desc && desc > 0) ? desc : null, stock: !!f.stock,
+          sku_costo: f.sku ? String(f.sku) : null, imagen_url: f.imagen || null, orden: j
+        });
+      });
+    });
+    for (var v = 0; v < vars.length; v += 300)
+      _sbOk(_sb('post', 'variantes', vars.slice(v, v + 300), 'return=minimal'), 'variantes');
+
+    var resumen = 'Listo: ' + cats.length + ' categorías, ' + orden.length + ' productos, ' + vars.length + ' variantes copiados a Supabase.';
+    Logger.log(resumen);
+    return resumen;
+  } finally { lock.releaseLock(); }
+}
+
 function catalogoPublico() {
   var cache = CacheService.getScriptCache();
   try {

@@ -378,3 +378,53 @@ console.log("Cuentas de la tienda y seguimiento");
 }
 
 console.log(`\n${n} pruebas OK`);
+
+// ── Migración a Supabase (con Supabase simulado) ─────────────────────────────
+console.log("Migración a Supabase");
+{
+  const HOJAS = {
+    Categorias: [["Camping"], ["Playa"]],
+    Camping: [["Producto", "Precio", "Stock", "Color", "Talle/Medida", "Descripcion", "destacado", "Subcategoria", "SKU_costo", "", "imagen_url", "descuento"],
+              ["Silla", 30000, true, "Azul", "", "Linda silla", false, "", "C-12", "", "", ""],
+              ["Silla", 30000, false, "Rojo", "", "", true, "", "C-13", "", "https://img/r.jpg", 25000],
+              ["Carpa", 50000, true, "Verde", "", "Carpa", false, "", "", "", "", ""]],
+    Playa: [["Producto", "Precio", "Stock", "Color", "Talle/Medida", "Descripcion"], ["Reposera", "$ 12.500", true, "Negro", "", "R"]],
+    Errores: [["Fecha", "Acción", "Error"], ["x", "y", "z"]],
+  };
+  const sheet = (name) => ({ getName: () => name, getLastRow: () => HOJAS[name].length, getLastColumn: () => HOJAS[name][0].length,
+    getDataRange: () => ({ getValues: () => HOJAS[name].map(r => r.slice()), getDisplayValues: () => HOJAS[name].map(r => r.map(String)) }),
+    getRange: (r, c, nr, nc) => ({ getValues: () => HOJAS[name].slice(r - 1, r - 1 + nr).map(x => x.slice(c - 1, c - 1 + nc)) }) });
+  const ssFake = { getSheetByName: (n) => HOJAS[n] ? sheet(n) : null, getSheets: () => Object.keys(HOJAS).map(sheet) };
+  const llamadas = []; let nextId = 1;
+  const stubs = {
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => ({ SUPABASE_URL: "https://x.supabase.co/", SUPABASE_SECRET: "sb_secret_test" })[k] || "" }) },
+    SpreadsheetApp: { openById: () => ssFake }, CacheService: { getScriptCache: () => ({ get: () => null, put() {}, remove() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    UrlFetchApp: { fetch: (url, opt = {}) => {
+      if (url.includes("images-manifest")) return { getContentText: () => JSON.stringify({ Camping: { Silla: ["https://img/s1.jpg", "https://img/s2.jpg"] } }), getResponseCode: () => 200 };
+      const body = opt.payload ? JSON.parse(opt.payload) : undefined;
+      llamadas.push({ url, method: opt.method, headers: opt.headers, body });
+      let res = null;
+      if (url.includes("/productos?select=id,categoria,nombre")) res = body.map(b => ({ id: nextId++, categoria: b.categoria, nombre: b.nombre }));
+      return { getResponseCode: () => (opt.method === "post" ? 201 : 200), getContentText: () => res ? JSON.stringify(res) : "" };
+    } },
+    Utilities: { formatDate: () => "" }, ContentService: {}, DriveApp: {}, Logger: { log() {} }, MailApp: {}, ScriptApp: {},
+  };
+  const gs = new Function(...Object.keys(stubs), readFileSync(join(root, "crm/Codigo.gs"), "utf8") + "\nreturn { migrarProductosASupabase };")(...Object.values(stubs));
+  const r = gs.migrarProductosASupabase();
+  assert.match(r, /2 categorías, 3 productos, 4 variantes/);
+  ok("migra 2 categorías, 3 productos y 4 variantes (ignora pestañas que no son de productos)");
+  const prods = llamadas.find(l => l.url.includes("/productos?select")).body;
+  const silla = prods.find(p => p.nombre === "Silla");
+  assert.deepEqual(silla.imagenes, ["https://img/s1.jpg", "https://img/s2.jpg"]); assert.equal(silla.destacado, true); assert.equal(silla.descripcion, "Linda silla");
+  ok("producto con fotos del manifest, destacado si alguna fila lo está y la primera descripción no vacía");
+  const vars = llamadas.find(l => l.url.endsWith("/rest/v1/variantes")).body;
+  const roja = vars.find(v => v.color === "Rojo");
+  assert.equal(roja.stock, false); assert.equal(roja.precio_descuento, 25000); assert.equal(roja.sku_costo, "C-13"); assert.equal(roja.imagen_url, "https://img/r.jpg");
+  assert.equal(vars.find(v => v.color === "Negro").precio, 12500);
+  ok("variantes con stock, descuento, SKU interno, imagen y precio '$ 12.500' bien leído");
+  assert.ok(llamadas.every(l => l.headers.apikey === "sb_secret_test" && !l.headers.Authorization));
+  assert.ok(llamadas.some(l => l.method === "delete" && l.url.includes("productos?id=gt.0")));
+  ok("usa la clave secreta solo en el header apikey y reemplaza lo anterior (se puede repetir)");
+}
+console.log(`\n${n} pruebas OK (total)`);

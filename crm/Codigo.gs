@@ -130,7 +130,8 @@ function manejar(e) {
         return responder({ ok:false, error:'auth' }, p.callback);
     }
 
-    if      (accion === 'list')            out = { ok:true, rows:  listar(tab) };
+    if      (SBP[accion] && _productosEnSupabase()) out = SBP[accion](p);   // productos en Supabase
+    else if (accion === 'list')            out = { ok:true, rows:  listar(tab) };
     else if (accion === 'add')             out = { ok:true, id:    agregar(tab, p) };
     else if (accion === 'update')          out = { ok:true, updated: actualizar(tab, p) };
     else if (accion === 'delete')          out = { ok:true, deleted: borrar(tab, p.id) };
@@ -162,7 +163,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v5-supabase2' };
+    else if (accion === 'version')              out = { ok:true, version: 'v6-supabase3' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
@@ -1171,11 +1172,11 @@ function _catalogoArmar() {
 // ─── SUPABASE (base de datos rápida) ─────────────────────────
 // Claves en Propiedades del script: SUPABASE_URL y SUPABASE_SECRET (sb_secret_… o la
 // service_role vieja eyJ…). La clave secreta NUNCA va al navegador ni al repo.
-var SB_URL = (PropertiesService.getScriptProperties().getProperty('SUPABASE_URL') || '').replace(/\/+$/, '');
+var SB_URL = (PropertiesService.getScriptProperties().getProperty('SUPABASE_URL') || 'https://dtsixnqwwrbwybulpuxo.supabase.co').replace(/\/+$/, '');
 var SB_KEY = PropertiesService.getScriptProperties().getProperty('SUPABASE_SECRET') || '';
 
 function _sb(metodo, ruta, cuerpo, prefer) {
-  if (!SB_URL || !SB_KEY) throw 'Faltan SUPABASE_URL / SUPABASE_SECRET en Propiedades del script';
+  if (!SB_URL || !SB_KEY) throw 'Falta SUPABASE_SECRET en Propiedades del script';
   var headers = { apikey: SB_KEY };
   if (/^eyJ/.test(SB_KEY)) headers.Authorization = 'Bearer ' + SB_KEY;   // clave vieja (JWT)
   if (prefer) headers.Prefer = prefer;
@@ -1198,11 +1199,157 @@ function sbEstado() {
            error: r.code === 200 ? '' : String(r.text).slice(0, 200) };
 }
 
+// ─── PRODUCTOS DEL CRM EN SUPABASE (con FUENTE_PRODUCTOS=supabase) ──────
+// El CRM entra solo con su clave de siempre: este script guarda en Supabase con
+// SUPABASE_SECRET, que nunca sale del servidor. Mismas acciones y mismo formato de
+// filas que con la planilla, así la pantalla del CRM no cambia.
+// Cada fila se identifica como "v<id de variante>": una lista vieja de la planilla
+// (números de fila) se rechaza en vez de tocar otro producto.
+function _sbVid(row) {
+  var m = /^v(\d+)$/.exec(String(row || '').trim());
+  if (!m) throw 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.';
+  return Number(m[1]);
+}
+function _sbR(r, que) {
+  if (r.code >= 200 && r.code < 300) return r.json;
+  if (/duplicate key|unique/i.test(r.text)) throw 'Ya existe un producto con ese nombre en esa categoría';
+  throw que + ' (' + r.code + '): ' + String(r.text).slice(0, 200);
+}
+function _sbVariante(vid) {
+  var v = _sbR(_sb('get', 'variantes?select=id,producto_id,orden,productos(categoria,nombre)&id=eq.' + vid), 'Variante');
+  if (!v || !v.length) throw 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.';
+  return v[0];
+}
+function _sbFotoGH(categoria, nombre, data) {   // las fotos se siguen guardando en el repo de la tienda
+  if (!GH_TOKEN) throw 'Falta GH_TOKEN para subir la foto';
+  var ruta = STORE_IMG_DIR + '/' + _slug(categoria) + '/' + _slug(nombre) + '-' + new Date().getTime() + '.jpg';
+  var up = ghApi('put', 'contents/' + encPath(ruta), { message: 'Foto de producto: ' + nombre,
+    content: String(data).replace(/^data:[^,]*,/, ''), branch: GH_BRANCH });
+  if (up.code < 200 || up.code >= 300) throw 'No se pudo subir la foto (' + up.code + ')';
+  return STORE_BASE_URL + ruta;
+}
+function _sbImagenesSet(categoria, nombre, urls) {
+  _sbR(_sb('patch', 'productos?categoria=eq.' + encodeURIComponent(categoria) + '&nombre=eq.' + encodeURIComponent(nombre),
+    { imagenes: urls }, 'return=minimal'), 'Fotos');
+}
+var _SB_CAMPOS_VARIANTE = { precio:'precio', descuento:'precio_descuento', stock:'stock', color:'color', marca:'color',
+  'talle/medida':'talle', talle:'talle', sku_costo:'sku_costo', sku:'sku_costo', imagen_url:'imagen_url' };
+var _SB_CAMPOS_PRODUCTO = { descripcion:'descripcion', destacado:'destacado', producto:'nombre', nombre:'nombre', subcategoria:'subcategoria' };
+
+var SBP = {
+  ext_productos_list: function() {
+    var sel = 'id,categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,' +
+              'variantes(id,color,talle,precio,precio_descuento,stock,sku_costo,imagen_url,orden)';
+    var prods = [];
+    for (var desde = 0; ; desde += 1000) {   // Supabase entrega hasta 1000 por pedido
+      var pag = _sbR(_sb('get', 'productos?select=' + encodeURIComponent(sel) + '&order=orden,id&offset=' + desde + '&limit=1000'), 'Productos');
+      prods = prods.concat(pag);
+      if (pag.length < 1000) break;
+    }
+    var filas = [];
+    prods.forEach(function(p) {
+      (p.variantes || []).sort(function(a, b) { return a.orden - b.orden || a.id - b.id; }).forEach(function(v) {
+        filas.push({ _sheet: p.categoria, _row: 'v' + v.id, categoria: p.categoria, nombre: p.nombre,
+          precio: Number(v.precio), stock: !!v.stock, color: v.color || '', marca: '', talle: v.talle || '',
+          descripcion: p.descripcion || '', destacado: !!p.destacado,
+          descuento: v.precio_descuento === null ? '' : Number(v.precio_descuento),
+          subcategoria: p.subcategoria || '', sku: v.sku_costo || '', imagen: v.imagen_url || (p.imagenes || [])[0] || '' });
+      });
+    });
+    return { ok: true, rows: filas };
+  },
+
+  ext_producto_update: function(p) {
+    var campo = String(p.campo || '').trim().toLowerCase(), v = _sbVariante(_sbVid(p.row)), valor = p.valor;
+    if (campo === 'stock' || campo === 'destacado') valor = esVerdadero(valor);
+    else if (campo === 'precio') valor = _numPrecio(valor) || 0;
+    else if (campo === 'descuento') { valor = _numPrecio(valor); if (!(valor > 0)) valor = null; }
+    else valor = String(valor === undefined || valor === null ? '' : valor).trim();
+    var cuerpo = {};
+    if (_SB_CAMPOS_VARIANTE[campo]) {
+      cuerpo[_SB_CAMPOS_VARIANTE[campo]] = (valor === '' && _SB_CAMPOS_VARIANTE[campo] === 'sku_costo') ? null : valor;
+      _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cuerpo, 'return=minimal'), 'Guardar');
+    } else if (_SB_CAMPOS_PRODUCTO[campo]) {
+      if (_SB_CAMPOS_PRODUCTO[campo] === 'nombre' && !valor) throw 'El nombre no puede quedar vacío';
+      cuerpo[_SB_CAMPOS_PRODUCTO[campo]] = valor;
+      _sbR(_sb('patch', 'productos?id=eq.' + v.producto_id, cuerpo, 'return=minimal'), 'Guardar');
+    } else return { ok: false, error: 'Campo no encontrado: ' + campo };
+    return { ok: true };
+  },
+
+  ext_producto_agregar: function(p) {
+    var categoria = String(p.sheet || '').trim(), nombre = String(p.nombre || '').trim();
+    if (!categoria || !nombre) return { ok: false, error: 'Faltan categoría o nombre' };
+    var nuevo = _sbR(_sb('post', 'productos?select=id', { categoria: categoria, nombre: nombre, orden: 999999 }, 'return=representation'), 'Agregar producto')[0];
+    _sbR(_sb('post', 'variantes', { producto_id: nuevo.id, color: String(p.marca || p.color || '').trim(),
+      precio: _numPrecio(p.precio) || 0, stock: (_numPrecio(p.stock) || 0) > 0 || esVerdadero(p.stock) }, 'return=minimal'), 'Agregar producto');
+    return { ok: true, id: nuevo.id };
+  },
+
+  ext_variante_agregar: function(p) {
+    var v = _sbVariante(_sbVid(p.row)), color = String(p.color || '').trim();
+    if (!color) return { ok: false, error: 'Falta el color' };
+    if (p.nombre && v.productos && v.productos.nombre !== String(p.nombre).trim())
+      throw 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.';
+    var hermanas = _sbR(_sb('get', 'variantes?select=color,orden&producto_id=eq.' + v.producto_id), 'Variantes');
+    if (hermanas.some(function(h) { return String(h.color).trim().toLowerCase() === color.toLowerCase(); }))
+      return { ok: false, error: 'Ya existe la variante "' + color + '"' };
+    var img = p.data ? _sbFotoGH(v.productos.categoria, v.productos.nombre + ' ' + color, p.data) : null;
+    var orden = hermanas.reduce(function(m, h) { return Math.max(m, h.orden); }, -1) + 1;
+    _sbR(_sb('post', 'variantes', { producto_id: v.producto_id, color: color, precio: _numPrecio(p.precio) || 0, stock: true,
+      sku_costo: String(p.sku || '').trim() || null, imagen_url: img, orden: orden }, 'return=minimal'), 'Agregar variante');
+    return { ok: true, imagen: img || '' };
+  },
+
+  ext_producto_eliminar: function(p) {
+    var v = _sbVariante(_sbVid(p.row));
+    if (p.nombre && v.productos && v.productos.nombre !== String(p.nombre).trim())
+      return { ok: false, error: 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.' };
+    _sbR(_sb('delete', 'variantes?id=eq.' + v.id, undefined, 'return=minimal'), 'Eliminar');
+    var quedan = _sbR(_sb('get', 'variantes?select=id&producto_id=eq.' + v.producto_id), 'Eliminar');
+    if (!quedan.length) _sbR(_sb('delete', 'productos?id=eq.' + v.producto_id, undefined, 'return=minimal'), 'Eliminar');
+    return { ok: true };
+  },
+
+  ext_categoria_agregar: function(p) {
+    var nombre = String(p.nombre || '').trim();
+    if (!nombre) return { ok: false, error: 'Falta el nombre' };
+    _sbR(_sb('post', 'categorias', { nombre: nombre, orden: 999, visible: true }, 'return=minimal'), 'Crear categoría');
+    return { ok: true };
+  },
+
+  ext_categoria_eliminar: function(p) {
+    var nombre = String(p.nombre || '').trim();
+    if (!nombre) return { ok: false, error: 'Falta el nombre' };
+    _sbR(_sb('delete', 'productos?categoria=eq.' + encodeURIComponent(nombre), undefined, 'return=minimal'), 'Eliminar categoría');
+    _sbR(_sb('delete', 'categorias?nombre=eq.' + encodeURIComponent(nombre), undefined, 'return=minimal'), 'Eliminar categoría');
+    return { ok: true };
+  },
+
+  // Fotos: se guardan en el repo y en el manifest como siempre, y además en Supabase
+  producto_foto_subir: function(p) {
+    var r = productoFotoSubir(p);
+    if (r.ok) _sbImagenesSet(String(p.categoria).trim(), String(p.nombre).trim(), r.fotos);
+    return r;
+  },
+  ext_variantes_set: function() {   // ya no se usa desde el CRM: que no escriba en la planilla vieja
+    return { ok: false, error: 'Acción no disponible con los productos en Supabase' };
+  },
+  producto_fotos_set: function(p) {
+    var r = productoFotosSet(p);
+    if (r.ok) _sbImagenesSet(String(p.categoria).trim(), String(p.nombre).trim(), r.fotos);
+    return r;
+  }
+};
+
 // Copia TODOS los productos de la planilla a Supabase. Ejecutar a mano desde el editor
 // (elegir migrarProductosASupabase → Ejecutar). Se puede repetir: reemplaza lo que haya.
 function migrarProductosASupabase() {
   // Una vez que los productos viven en Supabase, la planilla queda vieja: no se copia encima.
   if (_productosEnSupabase()) throw 'Los productos ya se editan en Supabase: no se vuelven a copiar desde la planilla.';
+  // Supabase ya tiene productos (unificados, con SKU): copiar encima los borraría.
+  var hay = _sb('get', 'productos?limit=1&select=id');
+  if (hay.code === 200 && hay.json && hay.json.length) throw 'Supabase ya tiene los productos cargados: no se copia encima desde la planilla.';
   var lock = LockService.getScriptLock(); lock.waitLock(30000);
   try {
     var cat = _catalogoArmar();                       // pestañas listadas en "Categorias"

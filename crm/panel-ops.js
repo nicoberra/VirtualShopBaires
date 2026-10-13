@@ -26,6 +26,7 @@ function crm(params) {
       // Token expirado o inválido: volver al login
       if (data && data.ok === false && data.error === 'auth') {
         sessionStorage.removeItem('ops_crm_token');
+        lsBorrarTodo();
         location.reload();
         return;
       }
@@ -145,6 +146,7 @@ function prefetchAll() {
 }
 
 function logout() {
+  lsBorrarTodo();
   sessionStorage.removeItem('ops_crm_token');
   localStorage.removeItem('ops_auth');
   localStorage.removeItem('vsb_nav_from_crm');
@@ -184,9 +186,9 @@ async function loadPanel() {
   cards.innerHTML = '<div class="stat-card" style="grid-column:1/-1"><div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div></div>';
   try {
     const [clientes, productos, pedidos] = await Promise.all([
-      getData('ext_clientes_listar', null, false).catch(() => []),
-      getData('ext_productos_listar', null, false).catch(() => []),
-      getData('ext_pedidos_listar',   null, false).catch(() => []),
+      getData('list', 'Clientes', false).catch(() => []),
+      getData('ext_productos_list', null, false).catch(() => []),
+      (_pedidos.length ? Promise.resolve(_pedidos) : crm({ action: 'ext_pedidos_listar' }).then(r => Array.isArray(r) ? [...r].reverse() : [])).catch(() => []),
     ]);
     if (!_clientes.length  && clientes.length)  _clientes  = clientes;
     if (!_productos.length && productos.length) _productos = productos;
@@ -257,6 +259,29 @@ function invalidate(...keys) {
   keys.forEach(k => delete _cache[k]);
 }
 
+// ─── ESCRITURAS SEGURAS Y CACHÉ LOCAL ─────────────────────────
+// crmOk: falla si el backend responde ok:false (antes se mostraba "guardado" aunque fallara).
+async function crmOk(params) {
+  const r = await crm(params);
+  if (!r || r.ok === false) throw new Error((r && r.error) || 'No se pudo guardar');
+  return r;
+}
+// unaVez: evita que un doble clic mande dos veces la misma acción.
+const _ocupado = {};
+async function unaVez(clave, fn) {
+  if (_ocupado[clave]) return;
+  _ocupado[clave] = true;
+  try { return await fn(); } finally { _ocupado[clave] = false; }
+}
+// Caché en localStorage: cada sección pinta al instante y se actualiza en segundo plano.
+const _LS = location.pathname.includes('panel-ops') ? 'vsbops_' : 'vsbcrm_';
+const LS_TTL = 40000;
+function lsGuardar(k, data) { try { localStorage.setItem(_LS + k, JSON.stringify({ t: Date.now(), d: data })); } catch {} }
+function lsLeer(k) { try { const o = JSON.parse(localStorage.getItem(_LS + k) || 'null'); return o && Array.isArray(o.d) ? o : null; } catch { return null; } }
+function lsBorrarTodo() { try { Object.keys(localStorage).filter(k => k.startsWith(_LS)).forEach(k => localStorage.removeItem(k)); } catch {} }
+// Campos de cliente que el backend guarda hoy (pestaña Clientes)
+const CLI_CAMPOS_GUARDADOS = ['nombre','apellido','telefono','email','dni','direccion','cp','ciudad','provincia','cuit','iva','razon','notas'];
+
 // ─── CLIENTES ────────────────────────────────────────────────
 
 let _clientes = [];
@@ -277,11 +302,19 @@ function pedidosDeCliente(cli) {
 
 async function loadClientes(force=false) {
   if (!force && _clientes.length) { filtrarClientes(); return; }
-  $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  const local = !force && lsLeer('clientes');
+  if (local) {
+    _clientes = local.d; _cache['list:Clientes'] = _clientes; filtrarClientes();
+    if (Date.now() - local.t < LS_TTL) return;
+  } else {
+    $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  }
   try {
-    _clientes = await getData('list','Clientes',force);
-    filtrarClientes();
+    _clientes = await getData('list','Clientes',true);
+    lsGuardar('clientes', _clientes);
+    if (currentSec === 'clientes') filtrarClientes();
   } catch(e) {
+    if (local) return;
     $('cli-table').innerHTML = `<div style="padding:20px;text-align:center">
       <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
       <button class="btn-secondary" onclick="loadClientes(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
@@ -406,38 +439,50 @@ function editarCliente(c) {
 }
 
 async function guardarCliente() {
-  const nombre = val('mcli-nombre');
-  if (!nombre) { toast('El nombre es obligatorio','err'); return; }
-  const id = val('mcli-id');
-  const params = {
-    action: id ? 'update' : 'add', tab: 'Clientes',
-    nombre, apellido: val('mcli-apellido'), telefono: val('mcli-telefono'),
-    dni: val('mcli-dni'), email: val('mcli-email'),
-    direccion: val('mcli-direccion'), cp: val('mcli-cp'),
-    ciudad: val('mcli-ciudad'), provincia: val('mcli-provincia'),
-    cuit: val('mcli-cuit'), iva: val('mcli-iva'), razon: val('mcli-razon'),
-    notas: val('mcli-notas')
-  };
-  if (id) params.id = id;
-  try {
-    const r = await crm(params);
-    if (!r.ok) throw new Error(r.error || 'error');
-    toast(id ? 'Cliente actualizado' : 'Cliente guardado');
-    hide('modal-cliente');
-    invalidate('list:Clientes');
-    loadClientes(true);
-  } catch(e) { toast('Error: ' + e.message, 'err'); }
+  return unaVez('cliente', async () => {
+    const nombre = val('mcli-nombre');
+    if (!nombre) { toast('El nombre es obligatorio','err'); return; }
+    const id = val('mcli-id');
+    const params = {
+      action: id ? 'update' : 'add', tab: 'Clientes',
+      nombre, apellido: val('mcli-apellido'), telefono: val('mcli-telefono'),
+      dni: val('mcli-dni'), email: val('mcli-email'),
+      direccion: val('mcli-direccion'), cp: val('mcli-cp'),
+      ciudad: val('mcli-ciudad'), provincia: val('mcli-provincia'),
+      cuit: val('mcli-cuit'), iva: val('mcli-iva'), razon: val('mcli-razon'),
+      notas: val('mcli-notas')
+    };
+    if (id) params.id = id;
+    try {
+      const r = await crmOk(params);
+      if (id && r.updated === false) throw new Error('No se encontró el cliente (¿lo borraron?)');
+      toast(id ? 'Cliente actualizado' : 'Cliente guardado');
+      hide('modal-cliente');
+      // Actualizar en memoria (sin volver a descargar toda la tabla)
+      const nuevoId = id || r.id;
+      const datos = {};
+      CLI_CAMPOS_GUARDADOS.forEach(k => { if (params[k] !== undefined) datos[k] = params[k]; });
+      const i = _clientes.findIndex(c => String(c.id) === String(nuevoId));
+      if (i >= 0) _clientes[i] = { ..._clientes[i], ...datos };
+      else _clientes.push({ ...datos, id: nuevoId, origen: 'crm' });
+      _cache['list:Clientes'] = _clientes; lsGuardar('clientes', _clientes);
+      filtrarClientes();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+  });
 }
 
 function borrarCliente(id, nombre) {
-  confirmar(`¿Borrar al cliente "${nombre}"?`, async () => {
+  if (!String(id || '').trim()) { toast('Este cliente no tiene ID: borralo desde la planilla', 'err'); return; }
+  confirmar(`¿Borrar al cliente "${nombre}"?`, () => unaVez('borrar-cli-' + id, async () => {
     try {
-      await crm({ action:'delete', tab:'Clientes', id });
+      const r = await crmOk({ action:'delete', tab:'Clientes', id });
+      if (r.deleted === false) throw new Error('No se encontró el cliente (¿ya estaba borrado?)');
+      _clientes = _clientes.filter(c => String(c.id) !== String(id));
+      _cache['list:Clientes'] = _clientes; lsGuardar('clientes', _clientes);
       toast('Cliente borrado');
-      invalidate('list:Clientes');
-      loadClientes(true);
+      filtrarClientes();
     } catch(e) { toast('Error: '+e.message,'err'); }
-  });
+  }));
 }
 
 // ─── PRODUCTOS (Sheet externo por categorías) ────────────────
@@ -501,8 +546,8 @@ function refreshCurrent() {
   const btn = $('btn-refresh-global');
   if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 700); }
   if (currentSec === 'pedidos')   { delete _cache['ext_pedidos_listar'];   _pedidos   = []; loadPedidos(true);   return; }
-  if (currentSec === 'clientes')  { delete _cache['ext_clientes_listar'];  _clientes  = []; loadClientes(true);  return; }
-  if (currentSec === 'productos') { delete _cache['ext_productos_listar']; _productos = []; loadProductos(true); return; }
+  if (currentSec === 'clientes')  { delete _cache['list:Clientes'];  _clientes  = []; loadClientes(true);  return; }
+  if (currentSec === 'productos') { delete _cache['ext_productos_list']; _productos = []; loadProductos(true); return; }
   if (currentSec === 'panel')     { Object.keys(_cache).forEach(k => delete _cache[k]); _clientes = []; _pedidos = []; _productos = []; loadPanel(); return; }
 }
 
@@ -516,12 +561,20 @@ async function refreshPedidos() {
 
 async function loadPedidos(force=false, silent=false) {
   if (!force && _pedidos.length) { filtrarPedidos(); return; }
-  if (!silent) $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  const local = !force && lsLeer('pedidos');
+  if (local) {
+    _pedidos = local.d; filtrarPedidos();
+    if (Date.now() - local.t < LS_TTL) return;
+  } else if (!silent) {
+    $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  }
   try {
     const raw = await crm({ action: 'ext_pedidos_listar' });
     _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+    lsGuardar('pedidos', _pedidos);
     filtrarPedidos();
   } catch(e) {
+    if (local || silent) return;
     $('ped-table').innerHTML = `<div style="padding:20px;text-align:center">
       <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
       <button class="btn-secondary" onclick="loadPedidos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
@@ -621,7 +674,7 @@ function renderPedidos(list) {
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>
-        <select class="sel sel-sm" onchange="cambiarEstadoPedido(this,${p._row||0})">
+        <select class="sel sel-sm" onchange="cambiarEstadoPedido(this,'${hx(p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0))}')">
           ${['Pendiente','Confirmado','En camino','Entregado','Cancelado'].map(e =>
             `<option${e===estado?' selected':''}>${e}</option>`).join('')}
         </select>
@@ -640,15 +693,25 @@ function renderPedidos(list) {
   el.appendChild(t);
 }
 
-async function cambiarEstadoPedido(sel, row) {
+async function cambiarEstadoPedido(sel, clave) {
   const estado = sel.value;
+  const m = String(clave).match(/^(mp|row):(.*)$/);
+  const tipo = m ? m[1] : 'row', ref = m ? m[2] : String(clave);
+  const p = _pedidos.find(x => tipo === 'mp' ? String(x._mpId) === ref : String(x._row) === ref);
+  const anterior = p ? (p.estado || 'Pendiente') : null;
   try {
-    await crm({ action: 'ext_pedido_update', row, campo: 'estado', valor: estado });
-    const p = _pedidos.find(x => String(x._row) === String(row));
+    if (tipo === 'mp') {
+      const r = await crmOk({ action: 'update', tab: 'Pedidos', id: ref, estado });
+      if (r.updated === false) throw new Error('No se encontró el pedido');
+    } else {
+      await crmOk({ action: 'ext_pedido_update', row: ref, campo: 'estado', valor: estado, orderNumber: (p && p.orderNumber) || '' });
+    }
     if (p) p.estado = estado;
+    lsGuardar('pedidos', _pedidos);
     toast('Estado actualizado');
   } catch(e) {
-    toast('Error al actualizar', 'err');
+    if (anterior) sel.value = anterior;
+    toast('Error: ' + e.message, 'err');
   }
 }
 
@@ -755,24 +818,24 @@ async function guardarNuevoProd() {
   const btn = $('np-btn-guardar');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await crm({ action:'ext_producto_agregar', sheet: categoria, nombre,
+    await crmOk({ action:'ext_producto_agregar', sheet: categoria, nombre,
       precio: Number($('np-precio').value)||0,
       stock:  Number($('np-stock').value)||1,
       marca:  $('np-marca').value.trim() });
     toast('Producto agregado ✓');
     hide('modal-nuevo-prod');
     delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
-  } catch(e) { toast('Error al agregar', 'err'); }
+  } catch(e) { toast('Error al agregar: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = 'Agregar producto'; }
 }
 
 function eliminarProducto(p) {
   confirmar(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`, async () => {
     try {
-      await crm({ action:'ext_producto_eliminar', sheet: p._sheet, row: p._row });
+      await crmOk({ action:'ext_producto_eliminar', sheet: p._sheet, row: p._row, nombre: p.nombre });
       toast('Producto eliminado');
       delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
-    } catch(e) { toast('Error al eliminar', 'err'); }
+    } catch(e) { toast('Error al eliminar: ' + e.message, 'err'); }
   });
 }
 
@@ -791,12 +854,12 @@ async function guardarNuevaCat() {
 function eliminarCategoria(cat) {
   confirmar(`¿Eliminar la categoría "${cat}" y TODOS sus productos? Esta acción no se puede deshacer.`, async () => {
     try {
-      await crm({ action:'ext_categoria_eliminar', nombre: cat });
+      await crmOk({ action:'ext_categoria_eliminar', nombre: cat });
       toast('Categoría eliminada');
       _prodCatFil = 'Todos';
       hide('modal-editar-cats');
       delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
-    } catch(e) { toast('Error al eliminar categoría', 'err'); }
+    } catch(e) { toast('Error al eliminar categoría: ' + e.message, 'err'); }
   });
 }
 
@@ -804,8 +867,6 @@ function eliminarCategoria(cat) {
 
 function _silentRefreshPedidos() {
   if (!sessionStorage.getItem('ops_crm_token')) return;
-  delete _cache['ext_pedidos_listar'];
-  _pedidos = [];
   loadPedidos(true, true).then(() => {
     if (currentSec === 'panel') loadPanel();
   }).catch(() => {});

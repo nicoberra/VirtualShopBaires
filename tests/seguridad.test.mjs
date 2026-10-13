@@ -25,7 +25,7 @@ function crearEntorno(hojasIniciales, pagosMP = {}, busquedaMP = []) {
       setValue: (v) => { while (HOJAS[name].length < r) HOJAS[name].push([]); HOJAS[name][r - 1][c - 1] = v; },
       getValue: () => (HOJAS[name][r - 1] || [])[c - 1],
       getValues: () => HOJAS[name].slice(r - 1, r - 1 + (nr || 1)).map(row => row.slice(c - 1, c - 1 + (nc || 1))),
-      setValues: () => {}, setFontWeight: () => ({}),
+      setValues: (vals) => { vals.forEach((fila, i) => fila.forEach((v, j) => { const row = HOJAS[name][r - 1 + i]; row[c - 1 + j] = v; })); return { setFontWeight: () => ({}) }; }, setFontWeight: () => ({}),
     }),
     appendRow: (row) => HOJAS[name].push(row.slice()),
     setFrozenRows: () => {},

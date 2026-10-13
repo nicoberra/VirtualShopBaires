@@ -162,7 +162,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v4-supabase1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v5-supabase2' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
@@ -903,7 +903,36 @@ function _numPrecio(v) {
 }
 
 // Pestañas de catálogo (todas menos las del sistema). Se lee una vez por ejecución.
+// ¿Los productos ya viven en Supabase? Se activa con la propiedad FUENTE_PRODUCTOS=supabase
+// (junto con la tienda y el CRM, para que todo funcione igual).
+var SB_PUBLICO_URL = 'https://dtsixnqwwrbwybulpuxo.supabase.co';
+var SB_PUBLICO_KEY = 'sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM';   // pública por diseño (solo lectura vía RLS)
+function _productosEnSupabase() {
+  return PropertiesService.getScriptProperties().getProperty('FUENTE_PRODUCTOS') === 'supabase';
+}
+function _sbLeerCatalogo() {
+  var sel = 'categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,variantes(color,talle,precio,precio_descuento,stock,imagen_url,orden)';
+  var h = { apikey: SB_PUBLICO_KEY };
+  var rc = UrlFetchApp.fetch(SB_PUBLICO_URL + '/rest/v1/categorias?select=nombre&visible=eq.true&order=orden', { headers: h, muteHttpExceptions: true });
+  var rp = UrlFetchApp.fetch(SB_PUBLICO_URL + '/rest/v1/productos?select=' + encodeURIComponent(sel) + '&order=orden', { headers: h, muteHttpExceptions: true });
+  if (rc.getResponseCode() !== 200 || rp.getResponseCode() !== 200) throw 'Supabase no respondió (' + rc.getResponseCode() + '/' + rp.getResponseCode() + ')';
+  return { categorias: JSON.parse(rc.getContentText()).map(function(c) { return c.nombre; }), productos: JSON.parse(rp.getContentText()) };
+}
+
 function _nuevoCacheCatalogo() {
+  if (_productosEnSupabase()) {
+    var d = _sbLeerCatalogo(), cache = { _tabs: {} };
+    d.categorias.forEach(function(c) { cache._tabs[c] = true; cache[c] = []; });
+    d.productos.forEach(function(p) {
+      if (!cache[p.categoria]) return;
+      (p.variantes || []).forEach(function(v) {      // la clave pública solo ve variantes con stock
+        var desc = v.precio_descuento === null ? null : Number(v.precio_descuento);
+        cache[p.categoria].push({ nombre: p.nombre, n: _normKey(p.nombre), color: String(v.color || '').toLowerCase(),
+          talle: String(v.talle || '').toLowerCase(), precio: (desc && desc > 0) ? desc : Number(v.precio) });
+      });
+    });
+    return cache;
+  }
   var tabs = {};
   ss().getSheets().forEach(function(sh) {
     var n = sh.getName();
@@ -1172,6 +1201,8 @@ function sbEstado() {
 // Copia TODOS los productos de la planilla a Supabase. Ejecutar a mano desde el editor
 // (elegir migrarProductosASupabase → Ejecutar). Se puede repetir: reemplaza lo que haya.
 function migrarProductosASupabase() {
+  // Una vez que los productos viven en Supabase, la planilla queda vieja: no se copia encima.
+  if (_productosEnSupabase()) throw 'Los productos ya se editan en Supabase: no se vuelven a copiar desde la planilla.';
   var lock = LockService.getScriptLock(); lock.waitLock(30000);
   try {
     var cat = _catalogoArmar();                       // pestañas listadas en "Categorias"
@@ -1241,6 +1272,21 @@ function migrarProductosASupabase() {
 }
 
 function catalogoPublico() {
+  if (_productosEnSupabase()) {   // mismo formato de siempre, armado desde Supabase
+    var d = _sbLeerCatalogo();
+    var cols = ['producto','precio','stock','color','talle/medida','descripcion','destacado','subcategoria','','','imagen_url','descuento'].map(function(l) { return { label: l }; });
+    var hojas = {};
+    d.categorias.forEach(function(c) { hojas[c] = { cols: cols, rows: [] }; });
+    var cel = function(x) { return (x === null || x === undefined || x === '') ? null : { v: x }; };
+    d.productos.forEach(function(p) {
+      if (!hojas[p.categoria]) return;
+      (p.variantes || []).sort(function(a, b) { return a.orden - b.orden; }).forEach(function(v) {
+        hojas[p.categoria].rows.push({ c: [cel(p.nombre), cel(Number(v.precio)), { v: !!v.stock }, cel(v.color), cel(v.talle), cel(p.descripcion),
+          { v: !!p.destacado }, cel(p.subcategoria), null, null, cel(v.imagen_url), cel(v.precio_descuento === null ? null : Number(v.precio_descuento))] });
+      });
+    });
+    return { ok: true, generado: new Date().toISOString(), fuente: 'supabase', categorias: d.categorias, hojas: hojas };
+  }
   var cache = CacheService.getScriptCache();
   try {
     var meta = cache.get('catalogo_meta');

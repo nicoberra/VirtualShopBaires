@@ -428,3 +428,38 @@ console.log("Migración a Supabase");
   ok("usa la clave secreta solo en el header apikey y reemplaza lo anterior (se puede repetir)");
 }
 console.log(`\n${n} pruebas OK (total)`);
+
+// ── Precios del checkout leídos de Supabase ──────────────────────────────────
+console.log("Checkout con productos en Supabase");
+{
+  const prods = [
+    { categoria: "Camping", nombre: "Silla", descripcion: "", subcategoria: null, destacado: false, imagenes: [], orden: 0,
+      variantes: [{ color: "Azul", talle: "", precio: 30000, precio_descuento: null, stock: true, imagen_url: null, orden: 0 },
+                  { color: "Rojo", talle: "", precio: 30000, precio_descuento: 25000, stock: true, imagen_url: null, orden: 1 }] },
+  ];
+  const pedidas = [];
+  const stubs = {
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => k === "FUENTE_PRODUCTOS" ? "supabase" : "" }) },
+    SpreadsheetApp: { openById: () => { throw new Error("no debería leer la planilla"); } },
+    CacheService: { getScriptCache: () => ({ get: () => null, put() {}, remove() {} }) }, LockService: {},
+    UrlFetchApp: { fetch: (url, opt) => { pedidas.push({ url, key: opt.headers.apikey });
+      const body = url.includes("/categorias") ? [{ nombre: "Camping" }] : prods;
+      return { getResponseCode: () => 200, getContentText: () => JSON.stringify(body) }; } },
+    Utilities: { formatDate: () => "" }, ContentService: {}, DriveApp: {}, Logger: { log() {} }, MailApp: {}, ScriptApp: {},
+  };
+  const gs = new Function(...Object.keys(stubs), readFileSync(join(root, "crm/Codigo.gs"), "utf8") + "\nreturn { _calcularPedidoServidor, catalogoPublico, migrarProductosASupabase };")(...Object.values(stubs));
+  const r = gs._calcularPedidoServidor([{ nombre: "Silla", categoria: "Camping", color: "Rojo", cantidad: 2, precio: 1 }], "gba1", 0);
+  assert.equal(r.items[0].precio, 25000); assert.equal(r.total, 57000);
+  ok("precio real desde Supabase (con descuento) + envío; el precio del navegador se ignora");
+  const r2 = gs._calcularPedidoServidor([{ nombre: "Carpa", categoria: "Camping", cantidad: 1 }], "", 0);
+  assert.deepEqual(r2.noVerificados, ["Carpa"]);
+  ok("producto que no está (o sin stock) en Supabase → no se puede cobrar");
+  assert.ok(pedidas.every(p => p.key.startsWith("sb_publishable_")));
+  ok("usa solo la clave pública (no necesita la secreta)");
+  const c = gs.catalogoPublico();
+  assert.equal(c.fuente, "supabase"); assert.equal(c.hojas.Camping.rows.length, 2); assert.equal(c.hojas.Camping.rows[1].c[11].v, 25000);
+  ok("el catálogo público (generador de páginas) también sale de Supabase con el mismo formato");
+  assert.throws(() => gs.migrarProductosASupabase(), /ya se editan en Supabase/);
+  ok("con Supabase activo, no se puede pisar Supabase con la planilla vieja");
+}
+console.log(`\n${n} pruebas OK (con Supabase)`);

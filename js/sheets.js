@@ -145,12 +145,49 @@ function _parseGviz(text) {
 // se intenta la lectura directa de la planilla (solo funciona mientras sea pública).
 const CATALOGO_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec?action=catalogo";
 let _catalogoPromesa = null;
+// ── Supabase (base de datos rápida) ─────────────────────────────────────────
+// Cuando PRODUCTOS_EN_SUPABASE es true, la tienda lee de Supabase con la clave
+// publishable (pública por diseño: solo ve categorías visibles, productos y
+// variantes con stock; nunca SKU/costos). Se activa junto con el CRM.
+const PRODUCTOS_EN_SUPABASE = false;
+const SUPABASE_URL = "https://dtsixnqwwrbwybulpuxo.supabase.co";
+const SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM";
+let _sbImagenes = null;   // { categoria: { nombre: [urls] } } para sumar a IMAGE_MAP
+
+async function _catalogoSupabase() {
+  const h = { apikey: SUPABASE_PUB };
+  const sel = "categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,variantes(color,talle,precio,precio_descuento,stock,imagen_url,orden)";
+  const json = r => r.ok ? r.json() : Promise.reject(new Error("Supabase " + r.status));
+  const [cats, prods] = await Promise.all([
+    fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre&visible=eq.true&order=orden`, { headers: h }).then(json),
+    fetch(`${SUPABASE_URL}/rest/v1/productos?select=${sel}&order=orden`, { headers: h }).then(json),
+  ]);
+  // Mismo formato de columnas que la planilla, para que fetchHoja no cambie
+  const cols = ["producto","precio","stock","color","talle/medida","descripcion","destacado","subcategoria","","","imagen_url","descuento"].map(label => ({ label }));
+  const hojas = {}; const imgs = {};
+  cats.forEach(c => { hojas[c.nombre] = { cols, rows: [] }; });
+  prods.forEach(p => {
+    const hoja = hojas[p.categoria]; if (!hoja) return;
+    if (p.imagenes && p.imagenes.length) (imgs[p.categoria] = imgs[p.categoria] || {})[p.nombre] = p.imagenes;
+    (p.variantes || []).sort((a, b) => a.orden - b.orden).forEach(v => {
+      const cel = x => (x === null || x === undefined || x === "") ? null : { v: x };
+      hoja.rows.push({ c: [cel(p.nombre), cel(Number(v.precio)), { v: !!v.stock }, cel(v.color), cel(v.talle), cel(p.descripcion),
+        { v: !!p.destacado }, cel(p.subcategoria), null, null, cel(v.imagen_url), cel(v.precio_descuento === null ? null : Number(v.precio_descuento))] });
+    });
+  });
+  _sbImagenes = imgs;
+  return { ok: true, categorias: cats.map(c => c.nombre), hojas };
+}
+
 function _catalogoCRM() {
   if (!_catalogoPromesa) {
-    _catalogoPromesa = _fetchWithTimeout(CATALOGO_URL, 20000)
+    const desdeCRM = () => _fetchWithTimeout(CATALOGO_URL, 20000)
       .then(r => r.json())
       .then(j => (j && j.ok && j.hojas) ? j : null)
       .catch(() => null);
+    _catalogoPromesa = PRODUCTOS_EN_SUPABASE
+      ? _catalogoSupabase().catch(e => { console.warn("Supabase no respondió, uso el CRM:", e); return desdeCRM(); })
+      : desdeCRM();
   }
   return _catalogoPromesa;
 }
@@ -334,6 +371,8 @@ async function cargarProductos() {
       obtenerCategorias(),
       cargarImagenes(),
     ]);
+    // Fotos guardadas en Supabase (si la tienda lee de ahí) tienen prioridad sobre el manifest
+    if (_sbImagenes) Object.entries(_sbImagenes).forEach(([cat, m]) => { IMAGE_MAP[cat] = Object.assign(IMAGE_MAP[cat] || {}, m); });
 
     // 2. Cargar hojas de productos (omitir categorías externas)
     const hojasCargables = hojas.filter(h => !Object.keys(CATS_EXTERNAS).includes(h.toLowerCase().trim()));

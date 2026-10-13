@@ -1307,7 +1307,9 @@ header {
   border-radius: var(--radius);
   padding: 36px 28px;
 }
-.contact-info-card h2 { font-size: 1.2rem; font-weight: 800; margin-bottom: 24px; }
+.contact-info-card h2, .contact-info-card .contact-h1 { font-size: 1.2rem; font-weight: 800; margin-bottom: 24px; }
+.kw-line { display: block; font-size: .42em; font-weight: 700; letter-spacing: .02em; opacity: .85; margin-bottom: 6px; }
+.faq-cta .faq-cta-title { font-size: 1.17em; font-weight: 700; margin: 0 0 8px; }
 .contact-item {
   display: flex;
   gap: 14px;

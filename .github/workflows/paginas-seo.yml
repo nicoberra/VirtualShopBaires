@@ -1,0 +1,38 @@
+name: Páginas SEO (categorías y productos)
+
+# Regenera /<categoria>/, /producto/<slug>/ y sitemap.xml desde la planilla pública.
+# Corre todos los días a las 6:00 (Argentina) y se puede lanzar a mano desde Actions.
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: paginas-seo
+  cancel-in-progress: false
+
+jobs:
+  generar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generar páginas
+        run: python tools/generar_seo.py
+      - name: Publicar si hubo cambios
+        run: |
+          git config user.name  "vsb-bot"
+          git config user.email "vsb-bot@users.noreply.github.com"
+          git add -A producto sitemap.xml autos-a-escala inflables juguetes fitness camping playa muebles bazar-bano-y-cocina mascotas pilates-y-yoga
+          if git diff --cached --quiet; then
+            echo "Sin cambios"
+            exit 0
+          fi
+          git commit -m "Páginas SEO: actualización automática desde la planilla"
+          git pull --rebase origin main
+          git push origin HEAD:main

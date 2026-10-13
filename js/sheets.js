@@ -42,7 +42,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v12';
+const _CACHE_DATA   = 'vsb_data_v13';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -149,7 +149,7 @@ let _catalogoPromesa = null;
 // Cuando PRODUCTOS_EN_SUPABASE es true, la tienda lee de Supabase con la clave
 // publishable (pública por diseño: solo ve categorías visibles, productos y
 // variantes con stock; nunca SKU/costos). Se activa junto con el CRM.
-const PRODUCTOS_EN_SUPABASE = false;
+const PRODUCTOS_EN_SUPABASE = true;
 const SUPABASE_URL = "https://dtsixnqwwrbwybulpuxo.supabase.co";
 const SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM";
 let _sbImagenes = null;   // { categoria: { nombre: [urls] } } para sumar a IMAGE_MAP

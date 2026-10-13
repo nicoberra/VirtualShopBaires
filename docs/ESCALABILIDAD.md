@@ -44,8 +44,8 @@ y antiabuso, está desconectado de la tienda.
 | 1 | 🔴 Alta | El total de Mercado Pago se armaba con el precio que mandaba el navegador. | `crm/Codigo.gs` → `crearPreferencia` | **Corregido** (ver §3) |
 | 2 | 🔴 Alta | XSS almacenado: nombre, email, productos, notas de clientes se insertaban con `innerHTML` sin escapar en el CRM. | `crm/panel.js`, `crm/panel-ops.js` | **Corregido** (ver §3) |
 | 3 | 🟡 Media | El total de los pedidos por transferencia también venía del navegador. | `crm/Codigo.gs` → `crearPedido` | **Corregido** (mismo mecanismo que 1) |
-| 4 | 🟡 Media | Contraseñas de clientes en texto plano en la pestaña `Clientes` y `Usuarios`. | `Codigo.gs` → `registrar`/`login`; `apps-script.gs` → `registerUser`/`loginUser` | **Propuesta** (§5) — espera OK |
-| 5 | 🟡 Media | `createOrder` y `mp_preferencia` son públicos sin rate limit ni Turnstile: spam de pedidos y de avisos. | `Codigo.gs` → `doPost` | **Propuesta** (§5) — espera OK |
+| 4 | 🟡 Media | Contraseñas de clientes en texto plano en la pestaña `Clientes` y `Usuarios`. | `Codigo.gs` → `registrar`/`login`; `apps-script.gs` → `registerUser`/`loginUser` | **Corregido** (§3.4): hash con sal, migración automática en el login |
+| 5 | 🟡 Media | `createOrder` y `mp_preferencia` son públicos sin rate limit ni Turnstile: spam de pedidos y de avisos. | `Codigo.gs` → `doPost` | **Corregido** (§3.4): honeypot, límites por email y global, idempotencia. Turnstile pendiente (requiere crear el widget) |
 | 6 | 🟢 Baja | Precio en texto con punto de miles ("$ 12.500") se interpreta como 12,5 **en la tienda** (`js/sheets.js` → `precioBase`). En el servidor ya se corrigió. Hoy no afecta porque las celdas son numéricas. | `js/sheets.js` ~192 | Pendiente (cambio chico) |
 | 7 | 🟢 Baja | Comprobantes en Drive se comparten "cualquiera con el enlace" (hoy desactivado: `COMPROB_FOLDER_ID` vacío). | `Codigo.gs` → `comprobanteSubir` | Propuesta: carpeta privada + enlace firmado desde el CRM |
 | 8 | 🟢 Baja | Rate limit del login del panel por prefijo de clave, no por cliente (Apps Script no expone IP). | `Codigo.gs` → `loginPanel` | Mitigación: passphrase larga en `PANEL_PASS` |
@@ -92,6 +92,37 @@ Sintaxis verificada con `node --check` en los 5 archivos JS tocados y en `Codigo
 ### 3.3 Herramientas nuevas
 - `tests/precio-servidor.test.mjs` — pruebas del cálculo de precios (sin red).
 - `tests/carga/` — scripts de carga (Node y k6) con **bloqueo** si la URL es de producción.
+
+
+### 3.4 Segunda ronda (2026-10-12, con OK del dueño)
+Evidencia: `node tests/seguridad.test.mjs` → **26/26 OK** (ejecuta `Codigo.gs` y `apps-script.gs` reales
+contra planilla, caché, lock, Mercado Pago y Telegram simulados). `node tests/precio-servidor.test.mjs` → 9/9.
+
+- **Contraseñas:** `_hashClave` = SHA-256 iterado 1.000 veces con sal de 16 caracteres por usuario, guardado
+  como `s1$<sal>$<hash>` **en la misma columna** (no cambia la estructura de la planilla). Las claves viejas en
+  texto plano siguen entrando y se convierten solas en el primer login. Bloqueo de 15 min tras 10 intentos
+  fallidos por email. En `apps-script.gs` el navegador ya mandaba SHA-256(clave+email); ahora el servidor le
+  agrega sal e iteraciones encima (bloque en `docs/apps-script-claves.gs`).
+- **Antiabuso en `createOrder` y `mp_preferencia`:** campo trampa (honeypot) en el checkout; máx. 5 pedidos
+  distintos por email cada 10 min; máx. 60 por minuto en total.
+- **Idempotencia:** el mismo carrito del mismo email en 10 min devuelve el mismo pedido / el mismo link de pago
+  (clave MD5 en `CacheService` + lock corto). Número de pedido con un dígito aleatorio extra.
+- **Webhook de Mercado Pago:** la preferencia ahora lleva `notification_url` → `?action=mp_webhook`. Como Apps
+  Script no expone encabezados HTTP, **no se puede validar la firma `x-signature`**; en su lugar cada aviso se
+  **reconsulta** a `GET /v1/payments/{id}` con el `MP_ACCESS_TOKEN`. Solo un pago `approved` con
+  `external_reference` igual a un pedido lo confirma; si pagó menos que el monto, no confirma y marca
+  `⚠ PAGÓ $X DE $Y`. Idempotente por `payment.id`.
+- **Conciliación:** `conciliarPagosMP()` revisa pagos aprobados de las últimas 48 h. Se activa corriendo
+  `instalarConciliacion()` una vez (trigger cada 30 min).
+- **Errores centralizados:** pestaña `Errores` (se crea sola) + aviso por Telegram máx. 1 por tipo cada 15 min.
+- **Telegram:** `TG_TOKEN` y `TG_CHAT` se leen de Propiedades del script (antes estaban vacíos en el código).
+- **Mis compras:** nueva acción `mis_pedidos` que lee `Pedidos externos` y los pedidos de Mercado Pago de
+  `Pedidos` (el email ahora se guarda en las notas). Devuelve solo número, fecha, productos, total y estado —
+  nunca dirección, DNI ni teléfono. `mis-compras.html` combina esto con el sistema viejo y escapa todo.
+
+Pendiente: **Turnstile** (crear el widget en Cloudflare y poner `TURNSTILE_SECRET` en Propiedades), y
+`order-status.html` ("Ver detalle") sigue leyendo el sistema viejo, así que para pedidos nuevos puede no
+encontrar el pedido.
 
 ---
 

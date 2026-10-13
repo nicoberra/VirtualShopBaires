@@ -499,6 +499,10 @@
           <div class="co-form-row" style="margin-top:4px;">
             <label for="f-notes">Observaciones (opcional)</label>
             <textarea class="co-input" id="f-notes" placeholder="Alguna indicación adicional..."></textarea>
+            <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+              <label for="f-website">No completar</label>
+              <input type="text" id="f-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
           </div>
         </div>
 
@@ -834,6 +838,7 @@ async function submitOrder() {
       precio: i.precio,          // solo informativo: el servidor recalcula con el precio real
     })),
     envioZona: envio.estado === "zona" ? envio.zona.id : "",
+    website: v("f-website"),     // antispam: queda vacío para personas
     subtotal: calcPrices().sub,
     descuento: calcPrices().disc,
     total: calcPrices().total,
@@ -870,6 +875,7 @@ async function submitOrder() {
         action:   'mp_preferencia',
         items:    JSON.stringify(mpItems),
         envio:    envio.estado === "zona" ? envio.zona.id : "",
+        website:  v("f-website"),
         nombre:   nombre + ' ' + apellido,
         email,
         telefono,

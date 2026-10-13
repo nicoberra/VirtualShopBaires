@@ -163,9 +163,11 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v7-antiabuso1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v8-confianza1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
+    else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
+    else if (accion === 'olvidarDispositivo')   out = olvidarDispositivo(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
     else if (accion === 'mis_pedidos')          out = misPedidos(p);
     else if (accion === 'catalogo')             out = catalogoPublico();
@@ -1146,7 +1148,7 @@ function _headerIdx(headers) {
   return idx;
 }
 
-var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos externos','Pedidos Externos'];
+var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos externos','Pedidos Externos','Dispositivos'];
 
 // ─── CATÁLOGO PÚBLICO (la tienda lo lee de acá, no de la planilla) ─
 // Así la planilla puede ser PRIVADA: este script la lee como dueño y entrega solo
@@ -2317,7 +2319,67 @@ function loginPanel(p) {
   _falloLimpiar('panel_login');
   var token = Utilities.getUuid();
   cache.put('panel_' + token, '1', 28800); // 8 horas
+  var out = { ok:true, token: token };
+  // A partir del 3er ingreso correcto en el mismo navegador, queda como dispositivo de confianza
+  if (String(p.confiar || '') === '1') {
+    try { out.dispositivo = _crearDispositivo(p.navegador); } catch (e) { _registrarError('dispositivo', e); }
+  }
+  return out;
+}
+
+// ─── DISPOSITIVOS DE CONFIANZA DEL PANEL ─────────────────────
+// Un navegador de confianza guarda una llave larga y aleatoria (nunca la contraseña).
+// En la pestaña "Dispositivos" solo queda el hash de la llave. Se invalida sola si cambia
+// PANEL_PASS, si no se usa en DISP_DIAS días, o con "Salir" en ese navegador.
+var DISP_DIAS = 60, DISP_MAX = 30;
+function _hojaDispositivos() {
+  var sh = ss().getSheetByName('Dispositivos');
+  if (!sh) {
+    sh = ss().insertSheet('Dispositivos');
+    sh.appendRow(['Llave (hash)', 'Creado', 'Último uso', 'Clave (hash)', 'Navegador']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function _claveHashPanel() {
+  return _sha256('vsb-panel:' + (PropertiesService.getScriptProperties().getProperty('PANEL_PASS') || ''));
+}
+function _crearDispositivo(navegador) {
+  var llave = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '').toLowerCase();
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var sh = _hojaDispositivos();
+    sh.appendRow([_sha256(llave), new Date(), new Date(), _claveHashPanel(), String(navegador || '').slice(0, 120)]);
+    var sobran = sh.getLastRow() - 1 - DISP_MAX;          // se borran los más viejos
+    if (sobran > 0) sh.deleteRows(2, sobran);
+  } finally { lock.releaseLock(); }
+  return llave;
+}
+function _buscarDispositivo(llave) {
+  if (!/^[a-f0-9]{64}$/.test(String(llave || ''))) return null;
+  var h = _sha256(llave), sh = _hojaDispositivos(), datos = sh.getDataRange().getValues();
+  for (var i = 1; i < datos.length; i++) if (String(datos[i][0]) === h) return { sh: sh, fila: i + 1, datos: datos[i] };
+  return null;
+}
+function loginDispositivo(p) {
+  if (!_limite('disp_global_' + Math.floor(Date.now() / 60000), 60, 120))
+    return { ok:false, error:'Demasiados intentos. Probá de nuevo en un minuto.' };
+  var d = _buscarDispositivo(p.dispositivo);
+  if (!d) return { ok:false, error:'dispositivo' };
+  var vencido = new Date(d.datos[2]).getTime() < Date.now() - DISP_DIAS * 86400000;
+  if (vencido || String(d.datos[3]) !== _claveHashPanel()) {
+    d.sh.deleteRow(d.fila);
+    return { ok:false, error:'dispositivo' };
+  }
+  d.sh.getRange(d.fila, 3).setValue(new Date());
+  var token = Utilities.getUuid();
+  CacheService.getScriptCache().put('panel_' + token, '1', 28800);
   return { ok:true, token: token };
+}
+function olvidarDispositivo(p) {
+  var d = _buscarDispositivo(p.dispositivo);
+  if (d) d.sh.deleteRow(d.fila);
+  return { ok:true };
 }
 
 function verifyPanel(p) {

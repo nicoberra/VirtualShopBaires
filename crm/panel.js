@@ -12,7 +12,7 @@ const CRM_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWq
 function crm(params) {
   return new Promise((resolve, reject) => {
     // Inyectar token en todas las llamadas excepto las públicas
-    const PUBLIC = { loginPanel:1, verifyPanel:1, version:1 };
+    const PUBLIC = { loginPanel:1, verifyPanel:1, version:1, loginDispositivo:1, olvidarDispositivo:1 };
     const token = !PUBLIC[params.action] ? sessionStorage.getItem('crm_token') : null;
     const allParams = token ? { token, ...params } : { ...params };
 
@@ -113,8 +113,10 @@ async function doLogin() {
     if (glass) glass.error(); else shakeLoginBox();
   };
   try {
-    const data = await crm({ action: 'loginPanel', clave: pass });
+    const extra = window.confianza ? confianza.paramsLogin() : {};
+    const data = await crm({ action: 'loginPanel', clave: pass, ...extra });
     if (data.ok && data.token) {
+      if (window.confianza) confianza.ingresoOk(data);
       sessionStorage.setItem('crm_token', data.token);
       const entrar = () => {
         hide('login-wrap');
@@ -155,7 +157,8 @@ function prefetchAll() {
   }).catch(() => {});
 }
 
-function logout() {
+async function logout() {
+  if (window.confianza) await confianza.olvidar();   // deja de ser de confianza
   lsBorrarTodo();
   sessionStorage.removeItem('crm_token');
   location.reload();
@@ -1100,5 +1103,12 @@ document.addEventListener('DOMContentLoaded', () => {
     hide('login-wrap');
     show('app', 'flex');
     goTo('panel');
+  } else if (window.confianza) {
+    confianza.entrarDirecto(t => sessionStorage.setItem('crm_token', t), () => {
+      hide('login-wrap');
+      show('app', 'flex');
+      goTo('panel');
+      prefetchAll();
+    });
   }
 });

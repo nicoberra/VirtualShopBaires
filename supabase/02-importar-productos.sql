@@ -30,7 +30,7 @@ select i.categoria, i.nombre,
        coalesce((array_agg(nullif(i.descripcion, '') order by i.fila) filter (where nullif(i.descripcion, '') is not null))[1], ''),
        (array_agg(i.subcategoria order by i.fila) filter (where i.subcategoria is not null))[1],
        bool_or(i.destacado),
-       (array_agg(i.imagenes order by i.fila))[1],
+       array(select jsonb_array_elements_text((array_agg(i.imagenes_j order by i.fila))[1])),
        min(c.orden) * 10000 + min(i.fila)
 from imp i join public.categorias c on c.nombre = i.categoria
 group by i.categoria, i.nombre;

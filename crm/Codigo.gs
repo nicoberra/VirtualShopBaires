@@ -161,7 +161,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v3-2026-10-13' };
+    else if (accion === 'version')              out = { ok:true, version: 'v3-crm' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
@@ -790,7 +790,7 @@ function manifestGuardarKey(man, key, names) {
 
 // ─── UTILIDADES DE SEGURIDAD ─────────────────────────────────
 
-var CRM_EXEC_URL = 'https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec';
+var CRM_EXEC_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
 
 function _hex(bytes) {
   return bytes.map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');

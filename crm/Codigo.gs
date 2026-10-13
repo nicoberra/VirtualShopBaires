@@ -166,12 +166,14 @@ function manejar(e) {
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
     else if (accion === 'mis_pedidos')          out = misPedidos(p);
+    else if (accion === 'catalogo')             out = catalogoPublico();
     else throw 'Acción desconocida: ' + accion;
 
   } catch(err) {
     out = { ok:false, error: String(err) };
     _registrarError(accion, err);
   }
+  if (CAMBIAN_CATALOGO[accion]) _catalogoInvalidar();   // la tienda ve los cambios al instante
   return responder(out, p.callback);
 }
 
@@ -1076,6 +1078,79 @@ function _headerIdx(headers) {
 }
 
 var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos externos','Pedidos Externos'];
+
+// ─── CATÁLOGO PÚBLICO (la tienda lo lee de acá, no de la planilla) ─
+// Así la planilla puede ser PRIVADA: este script la lee como dueño y entrega solo
+// las pestañas listadas en "Categorias", sin columnas internas (costo, SKU, proveedor).
+// Formato igual al de la API gviz de Sheets, para que js/sheets.js lo use sin cambios.
+var CATALOGO_NO_PUBLICAR = /sku|costo|proveedor|compra|ganancia|margen/i;
+var CATALOGO_PROHIBIDAS  = SYSTEM_TABS.concat(['Usuarios', 'Errores', 'Categorias']);
+var CAMBIAN_CATALOGO = {
+  'ext_producto_update':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
+  'ext_producto_eliminar':1, 'ext_categoria_agregar':1, 'ext_categoria_eliminar':1,
+  'producto_foto_subir':1, 'producto_fotos_set':1, 'productos_save':1, 'productos_add':1
+};
+var CATALOGO_CACHE_SEG = 300;
+
+function _catalogoInvalidar() {
+  try { CacheService.getScriptCache().remove('catalogo_meta'); } catch(e) {}
+}
+
+function _catalogoArmar() {
+  var spreadsheet = ss();
+  var hc = spreadsheet.getSheetByName('Categorias');
+  var cats = [];
+  if (hc && hc.getLastRow() >= 1) {
+    hc.getRange(1, 1, hc.getLastRow(), 1).getValues().forEach(function(r) {
+      var v = String(r[0] || '').trim();
+      if (v && v.toLowerCase() !== 'nombre') cats.push(v);
+    });
+  }
+  var hojas = {};
+  cats.forEach(function(tab) {
+    if (CATALOGO_PROHIBIDAS.indexOf(tab) >= 0) return;
+    var sh = spreadsheet.getSheetByName(tab);
+    if (!sh || sh.getLastRow() < 1 || sh.getLastColumn() < 1) return;
+    var datos = sh.getDataRange().getValues();
+    var head = datos[0].map(function(h) { return String(h || '').trim(); });
+    var ocultas = head.map(function(h) { return CATALOGO_NO_PUBLICAR.test(h); });
+    var cols = head.map(function(h, i) { return { label: ocultas[i] ? '' : h }; });
+    var rows = [];
+    for (var r = 1; r < datos.length; r++) {
+      if (!String(datos[r][0] || '').trim()) continue;
+      rows.push({ c: datos[r].map(function(v, i) {
+        if (ocultas[i] || v === '' || v === null) return null;
+        if (v instanceof Date) return { v: Utilities.formatDate(v, 'GMT-3', 'yyyy-MM-dd') };
+        return { v: v };
+      }) });
+    }
+    hojas[tab] = { cols: cols, rows: rows };
+  });
+  return { ok: true, generado: new Date().toISOString(), categorias: cats, hojas: hojas };
+}
+
+// Respuesta cacheada 5 min en trozos (CacheService admite 100 KB por clave).
+function catalogoPublico() {
+  var cache = CacheService.getScriptCache();
+  try {
+    var meta = cache.get('catalogo_meta');
+    if (meta) {
+      var n = parseInt(meta, 10), claves = [];
+      for (var i = 0; i < n; i++) claves.push('catalogo_' + i);
+      var partes = cache.getAll(claves);
+      if (claves.every(function(k) { return partes[k] !== undefined && partes[k] !== null; }))
+        return JSON.parse(claves.map(function(k) { return partes[k]; }).join(''));
+    }
+  } catch(e) {}
+  var data = _catalogoArmar();
+  try {
+    var txt = JSON.stringify(data), TROZO = 90000, put = {}, cant = Math.ceil(txt.length / TROZO);
+    for (var j = 0; j < cant; j++) put['catalogo_' + j] = txt.substr(j * TROZO, TROZO);
+    cache.putAll(put, CATALOGO_CACHE_SEG);
+    cache.put('catalogo_meta', String(cant), CATALOGO_CACHE_SEG);
+  } catch(e) {}
+  return data;
+}
 
 function extProductosListar(p) {
   var filtCat = String(p.categoria||'').trim();

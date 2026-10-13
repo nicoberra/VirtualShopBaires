@@ -277,4 +277,46 @@ console.log("Pestaña con formato viejo y Clientes ampliado");
   ok("Clientes: las columnas nuevas se agregan al final sin mover las existentes, y DNI/apellido/razón social se guardan");
 }
 
+// ── Catálogo público (para poder hacer privada la planilla) ──────────────────
+console.log("Catálogo público");
+{
+  const HOJAS = {
+    Categorias: [["Autos a escala"], ["Camping"], ["Clientes"], ["Pedidos externos"]],
+    "Autos a escala": [["Producto", "Precio", "Stock", "Color", "Talle/Medida", "Descripcion", "destacado", "Subcategoria", "SKU_costo", "", "imagen_url", "descuento"],
+                       ["Auto Maisto", 5499, true, "Rojo", "", "desc", false, "", "4.6", "", "https://img/x.jpg", ""], ["", "", "", "", "", "", "", "", "", "", "", ""]],
+    Camping: [["Producto", "Precio", "Stock", "Color", "Costo proveedor"], ["Silla", 30000, true, "Azul", 12000]],
+    Clientes: [["ID", "Email"], ["c1", "secreto@cliente.com"]],
+    "Pedidos externos": [["Email", "DNI/CUIT"], ["x@y.com", "30111222"]],
+  };
+  const sheet = (name) => ({
+    getLastRow: () => HOJAS[name].length, getLastColumn: () => HOJAS[name][0].length,
+    getDataRange: () => ({ getValues: () => HOJAS[name].map(r => r.slice()) }),
+    getRange: (r, c, nr, nc) => ({ getValues: () => HOJAS[name].slice(r - 1, r - 1 + nr).map(x => x.slice(c - 1, c - 1 + nc)) }),
+  });
+  const ssFake = { getSheetByName: (n) => HOJAS[n] ? sheet(n) : null, getSheets: () => Object.keys(HOJAS).map(sheet) };
+  const cache = new Map(); let lecturas = 0;
+  const stubs = {
+    PropertiesService: { getScriptProperties: () => ({ getProperty: () => "" }) }, SpreadsheetApp: { openById: () => { lecturas++; return ssFake; } },
+    CacheService: { getScriptCache: () => ({ get: (k) => cache.get(k) ?? null, put: (k, v) => cache.set(k, v), putAll: (o) => Object.entries(o).forEach(([k, v]) => cache.set(k, v)), getAll: (ks) => Object.fromEntries(ks.map(k => [k, cache.get(k)])), remove: (k) => cache.delete(k) }) },
+    LockService: {}, UrlFetchApp: {}, Utilities: { formatDate: () => "" }, ContentService: {}, DriveApp: {}, Logger: { log() {} }, MailApp: {}, ScriptApp: {},
+  };
+  const gs = new Function(...Object.keys(stubs), readFileSync(join(root, "crm/Codigo.gs"), "utf8") + "\nreturn { catalogoPublico, _catalogoInvalidar };")(...Object.values(stubs));
+  const c = gs.catalogoPublico();
+  const json = JSON.stringify(c);
+  assert.deepEqual(Object.keys(c.hojas).sort(), ["Autos a escala", "Camping"]);
+  assert.ok(!json.includes("secreto@cliente.com") && !json.includes("30111222") && !json.includes("x@y.com"));
+  ok("solo entrega pestañas de productos: nunca Clientes ni Pedidos aunque estén en Categorias");
+  const autos = c.hojas["Autos a escala"];
+  assert.equal(autos.cols[8].label, ""); assert.equal(autos.rows[0].c[8], null); assert.ok(!json.includes("4.6"));
+  assert.equal(c.hojas.Camping.cols[4].label, ""); assert.ok(!json.includes("12000"));
+  ok("oculta columnas internas (SKU_costo, Costo proveedor) sin correr las demás de lugar");
+  assert.equal(autos.cols[11].label, "descuento"); assert.equal(autos.rows[0].c[1].v, 5499); assert.equal(autos.rows[0].c[2].v, true);
+  assert.equal(autos.rows.length, 1);
+  ok("formato igual al de la planilla: precios, casillas, descuento e imagen_url; sin filas vacías");
+  const antes = lecturas; gs.catalogoPublico(); assert.equal(lecturas, antes);
+  ok("la segunda visita sale de la caché (no vuelve a leer la planilla)");
+  gs._catalogoInvalidar(); gs.catalogoPublico(); assert.equal(lecturas, antes + 1);
+  ok("al editar un producto desde el CRM la caché se borra y la tienda ve el cambio");
+}
+
 console.log(`\n${n} pruebas OK`);

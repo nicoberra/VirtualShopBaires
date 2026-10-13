@@ -149,10 +149,29 @@ def gviz(hoja):
     txt = urllib.request.urlopen(url, timeout=60).read().decode("utf-8")
     return json.loads(re.search(r"setResponse\(([\s\S]*)\)\s*;?\s*$", txt).group(1))
 
+CATALOGO_URL = ("https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec"
+                "?action=catalogo")
+
+def leer_catalogo_crm():
+    """El CRM entrega solo las pestañas de productos (la planilla puede ser privada)."""
+    try:
+        req = urllib.request.Request(CATALOGO_URL, headers={"User-Agent": "vsb-generador-seo"})
+        j = json.loads(urllib.request.urlopen(req, timeout=90).read().decode("utf-8"))
+        if j.get("ok") and j.get("hojas"):
+            return {t: tabla for t, tabla in j["hojas"].items() if t.lower().strip() not in CATS_EXTERNAS}
+    except Exception as e:
+        print(f"  aviso: el CRM no entregó el catálogo ({e}); se intenta la planilla directa", file=sys.stderr)
+    return None
+
 def leer_planilla(offline):
     if offline:
         return json.load(open(CACHE, encoding="utf-8"))
-    cats = [r["c"][0]["v"].strip() for r in gviz("Categorias")["table"]["rows"]
+    hojas = leer_catalogo_crm()
+    if hojas:
+        os.makedirs(os.path.dirname(CACHE), exist_ok=True)
+        json.dump(hojas, open(CACHE, "w", encoding="utf-8"), ensure_ascii=False)
+        return hojas
+    cats =[r["c"][0]["v"].strip() for r in gviz("Categorias")["table"]["rows"]
             if r.get("c") and r["c"][0] and r["c"][0].get("v")]
     hojas = {}
     for c in cats:

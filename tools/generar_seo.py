@@ -230,7 +230,8 @@ def productos_de(tab, tabla, manifest):
         v = cat_man.get(clave) if clave else None
         imgs = v if isinstance(v, list) else ([v] if v else [])
         imgs += [x["imagen"] for x in p["variantes"] if x["imagen"]]
-        p["imagenes"] = list(dict.fromkeys(i for i in imgs if i.startswith("http")))
+        # El encuadre del CRM ("#vsb=...") es solo para la tienda: Google recibe la foto sin eso
+        p["imagenes"] = list(dict.fromkeys(i.split("#")[0] for i in imgs if i.startswith("http")))
         p["marca"] = next((m for m in MARCAS if re.search(r"\b" + re.escape(m) + r"\b", p["nombre"], re.I)), None)
         if p["marca"] == "Burago":
             p["marca"] = "Bburago"

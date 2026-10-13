@@ -1,6 +1,17 @@
 const selectedVariants = {};
 const WA_NUMBER = "5491149457266";
 
+// Encuadre de fotos elegido en el CRM: viaja en la URL como "#vsb=x,y,zoom"
+// (el navegador ignora lo que va después de #). Sin encuadre: la foto entera, sin recortes.
+function fotoSrc(url) { return String(url || "").split("#")[0]; }
+function fotoEstilo(url) {
+  const m = /#vsb=(\d+(?:\.\d+)?),(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)/.exec(String(url || ""));
+  if (!m) return "";
+  const x = Math.min(100, +m[1]), y = Math.min(100, +m[2]), z = Math.min(4, Math.max(1, +m[3]));
+  return `object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;`;
+}
+function ponerFoto(imgEl, url) { imgEl.src = fotoSrc(url); imgEl.style.cssText = fotoEstilo(url); }
+
 function getFavoritos() { try { return JSON.parse(localStorage.getItem("vsb_favoritos") || "[]"); } catch (e) { return []; } }
 // Clave estable (categoría + nombre): el id numérico cambia cuando cambia el catálogo.
 // Los favoritos viejos guardados con id se siguen reconociendo.
@@ -85,9 +96,9 @@ function mostrarImagenVariante(pid) {
   const v = p.variantes.find(x => x.color === sel.color && x.imagen);
   if (!v) return;
   const cardImg = document.querySelector(`.product-card[data-id="${pid}"] .product-img img`);
-  if (cardImg) { cardImg.style.display = ''; cardImg.src = v.imagen; }
+  if (cardImg) ponerFoto(cardImg, v.imagen);
   const modalImg = document.getElementById('modal-img-main');
-  if (modalImg && modalImg.tagName === 'IMG') modalImg.src = v.imagen;
+  if (modalImg && modalImg.tagName === 'IMG') modalImg.src = fotoSrc(v.imagen);
 }
 
 function isVariantComplete(pid) {
@@ -266,9 +277,8 @@ function cardImgNav(btn, dir) {
   const imgEl = card.querySelector('.product-img img');
   if (!imgEl) return;
   let idx = (parseInt(imgEl.dataset.idx || '0') + dir + imgs.length) % imgs.length;
-  imgEl.style.display = '';
   imgEl.onerror = function() { this.style.display = 'none'; this.parentElement.classList.add('img-fallback'); };
-  imgEl.src = imgs[idx];
+  ponerFoto(imgEl, imgs[idx]);
   imgEl.dataset.idx = String(idx);
   card.querySelectorAll('.card-img-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
 }
@@ -308,7 +318,7 @@ function renderProductCard(p) {
   const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
   const hasMultiImgs = imgs.length > 1;
   const imgHTML = imgs.length > 0
-    ? `<img src="${imgs[0]}" alt="${p.nombre}" loading="lazy" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
+    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${p.nombre}" loading="lazy" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
   const carouselHTML = hasMultiImgs
     ? `<button class="card-arrow card-arrow-prev" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button class="card-arrow card-arrow-next" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
@@ -432,7 +442,7 @@ function openProductModal(pid) {
 
   const imgs    = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
   const imgHTML = imgs.length
-    ? `<img src="${imgs[0]}" alt="${p.nombre}" id="modal-img-main" />
+    ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" />
        ${imgs.length > 1 ? `
          <button class="modal-img-prev" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left"></i></button>
          <button class="modal-img-next" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right"></i></button>
@@ -650,7 +660,7 @@ function modalGaleriaGo(pid, idx) {
 function _actualizarGaleria(imgs) {
   const imgEl  = document.getElementById('modal-img-main');
   const dotsEl = document.getElementById('modal-img-dots');
-  if (imgEl && imgEl.tagName === 'IMG') imgEl.src = imgs[_galeriaIdx];
+  if (imgEl && imgEl.tagName === 'IMG') imgEl.src = fotoSrc(imgs[_galeriaIdx]);
   if (dotsEl) {
     dotsEl.querySelectorAll('.modal-dot').forEach((d, i) =>
       d.classList.toggle('active', i === _galeriaIdx)

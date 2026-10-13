@@ -34,7 +34,7 @@ const Cart = (() => {
       const varInfo = [item.color, item.talle].filter(Boolean).join(" / ");
       const varHTML = varInfo ? `<div class="cart-item-variant">${varInfo}</div>` : "";
       const imgHTML = item.imagen
-        ? `<img src="${item.imagen}" alt="${item.nombre}" />`
+        ? `<img src="${typeof fotoSrc === 'function' ? fotoSrc(item.imagen) : item.imagen}" style="${typeof fotoEstilo === 'function' ? fotoEstilo(item.imagen) : ''}" alt="${item.nombre}" />`
         : `<i class="fa-solid fa-box-open"></i>`;
       return `
         <div class="cart-item">

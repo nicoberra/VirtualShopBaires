@@ -760,19 +760,22 @@ function renderFotos(p) {
   const vars = hermanos(p).filter(v => v.imagen);
   const fotosHTML = _fotosProd.map((url, i) => `
         <div class="foto-tile">
-          <img src="${escHtml(url)}" alt="Foto ${i + 1}" loading="lazy">
+          <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy">
           ${i === 0 ? '<span class="foto-principal">Principal</span>' : `<button type="button" class="foto-btn foto-btn-star" data-acc="principal" data-i="${i}" title="Hacer principal" aria-label="Hacer principal"><i class="fa-solid fa-star"></i></button>`}
+          <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre" data-i="${i}" title="Encuadrar" aria-label="Encuadrar foto ${i + 1}"><i class="fa-solid fa-crop-simple"></i></button>
           <button type="button" class="foto-btn foto-btn-x" data-acc="quitar" data-i="${i}" title="Quitar de la tienda" aria-label="Quitar foto"><i class="fa-solid fa-xmark"></i></button>
         </div>`).join('')
     + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span></label>`);
 
-  const varsHTML = vars.length > 1 || (vars.length === 1 && !_fotosProd.includes(vars[0].imagen))
+  const enLista = u => _fotosProd.some(f => fotoSrcCRM(f) === fotoSrcCRM(u));
+  const varsHTML = vars.length > 1 || (vars.length === 1 && !enLista(vars[0].imagen))
     ? `<div class="fotos-variantes">
-         <span class="text-muted" style="font-size:.75rem">Fotos de cada variante (se cambian desde la planilla, columna imagen_url)</span>
-         <div class="fotos-grid">${vars.map(v => `
-           <div class="foto-item foto-item-sm" title="${escHtml(v.color || '')}">
-             <img src="${escHtml(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy">
-             <span class="foto-var-label">${escHtml(v.color || '')}</span>
+         <span class="text-muted" style="font-size:.78rem">Fotos de cada variante (tocá <i class="fa-solid fa-crop-simple"></i> para encuadrarla)</span>
+         <div class="fotos-tiles fotos-tiles-sm">${vars.map((v, j) => `
+           <div class="foto-tile foto-tile-sm" title="${escHtml(v.color || '')}">
+             <img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy">
+             <span class="foto-var-label">${escHtml(v.color || v.talle || '')}</span>
+             <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre-var" data-i="${j}" title="Encuadrar" aria-label="Encuadrar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-solid fa-crop-simple"></i></button>
            </div>`).join('')}
          </div>
        </div>`
@@ -784,8 +787,143 @@ function renderFotos(p) {
 
   grid.innerHTML = `<div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
   grid.querySelectorAll('.foto-btn').forEach(b => {
-    b.addEventListener('click', () => accionFoto(p, b.dataset.acc, Number(b.dataset.i)));
+    b.addEventListener('click', () => {
+      if (b.dataset.acc === 'encuadre-var') encuadrarVariante(p, vars[Number(b.dataset.i)]);
+      else accionFoto(p, b.dataset.acc, Number(b.dataset.i));
+    });
   });
+}
+
+// ─── ENCUADRE DE FOTOS (cómo se ve en la tarjeta de la tienda) ───────
+// Se guarda en la propia URL: "foto.jpg#vsb=x,y,zoom". Sin eso, la tienda muestra la foto entera.
+function fotoSrcCRM(url) { return String(url || '').split('#')[0]; }
+function _leerEncuadre(url) {
+  const m = /#vsb=(\d+(?:\.\d+)?),(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)/.exec(String(url || ''));
+  return m ? { x: Math.min(100, +m[1]), y: Math.min(100, +m[2]), z: Math.min(4, Math.max(1, +m[3])) } : null;
+}
+function fotoEstiloCRM(url) {
+  const e = _leerEncuadre(url);
+  return e ? `object-fit:cover;object-position:${e.x}% ${e.y}%;transform:scale(${e.z});transform-origin:${e.x}% ${e.y}%;` : '';
+}
+
+function encuadrarVariante(p, v) {
+  if (!v) return;
+  abrirEncuadre(v.imagen, `Foto de ${v.color || v.talle || 'la variante'}`, async nueva => {
+    const r = await actualizarCampo(v, 'imagen_url', nueva);
+    if (r && r.ok === false) throw new Error(r.error);
+    v.imagen = nueva;
+    lsGuardar('productos', _productos);
+    renderFotos(p);
+  });
+}
+
+// Editor: cuadro igual a la tarjeta de la tienda. Arrastrar mueve la foto, el control acerca.
+function abrirEncuadre(url, titulo, onGuardar) {
+  const base = fotoSrcCRM(url);
+  const inicial = _leerEncuadre(url);
+  let e = inicial ? { ...inicial } : { x: 50, y: 50, z: 1 };
+  let entera = !inicial;
+
+  document.getElementById('modal-encuadre')?.remove();
+  const m = document.createElement('div');
+  m.id = 'modal-encuadre';
+  m.className = 'modal-backdrop';
+  m.style.display = 'flex';
+  m.innerHTML = `
+    <div class="modal enc-modal" role="dialog" aria-modal="true" aria-labelledby="enc-tit">
+      <div class="mprod-head">
+        <div class="mprod-head-txt"><h3 id="enc-tit">Encuadrar foto</h3><p class="mprod-head-sub"></p></div>
+        <button type="button" class="mprod-x enc-cerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="enc-body">
+        <div class="enc-marco" tabindex="0" aria-label="Vista de la tarjeta. Arrastrá para mover la foto; con las flechas también.">
+          <img alt="" draggable="false">
+          <span class="enc-guia" aria-hidden="true"></span>
+        </div>
+        <p class="enc-ayuda"><i class="fa-solid fa-hand-pointer"></i> Así se ve en la tienda. Arrastrá para mover la foto.</p>
+        <label class="enc-zoom"><i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i>
+          <input type="range" min="1" max="3" step="0.05" aria-label="Acercar">
+          <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></label>
+        <div class="seg seg-grande enc-modo" role="group" aria-label="Modo">
+          <button type="button" class="seg-btn" data-modo="entera"><i class="fa-solid fa-expand"></i> Foto entera</button>
+          <button type="button" class="seg-btn" data-modo="encuadre"><i class="fa-solid fa-crop-simple"></i> Encuadrada</button>
+        </div>
+      </div>
+      <div class="mprod-foot">
+        <button type="button" class="btn-secondary enc-cerrar">Cancelar</button>
+        <button type="button" class="btn-primary enc-guardar">Guardar encuadre</button>
+      </div>
+    </div>`;
+  document.body.appendChild(m);
+  m.querySelector('.mprod-head-sub').textContent = titulo || '';
+  const marco = m.querySelector('.enc-marco'), img = marco.querySelector('img'), zoom = m.querySelector('input[type=range]');
+  img.src = base;
+
+  const pintar = () => {
+    img.style.cssText = entera ? '' : `object-fit:cover;object-position:${e.x}% ${e.y}%;transform:scale(${e.z});transform-origin:${e.x}% ${e.y}%;`;
+    zoom.value = e.z;
+    zoom.disabled = false;
+    m.querySelectorAll('[data-modo]').forEach(b => {
+      const on = (b.dataset.modo === 'entera') === entera;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on));
+    });
+    marco.classList.toggle('entera', entera);
+  };
+  const recortar = () => { if (entera) { entera = false; } };
+
+  // Arrastrar (mouse o dedo): mover el punto de enfoque al revés del gesto, como al acomodar una foto
+  let drag = null;
+  marco.addEventListener('pointerdown', ev => {
+    marco.setPointerCapture(ev.pointerId);
+    drag = { x: ev.clientX, y: ev.clientY, ex: e.x, ey: e.y };
+    recortar(); pintar();
+  });
+  marco.addEventListener('pointermove', ev => {
+    if (!drag) return;
+    const w = marco.clientWidth, k = 100 / (w * Math.max(0.6, e.z - 0.4));
+    e.x = Math.min(100, Math.max(0, drag.ex - (ev.clientX - drag.x) * k));
+    e.y = Math.min(100, Math.max(0, drag.ey - (ev.clientY - drag.y) * k));
+    pintar();
+  });
+  const soltar = () => { drag = null; };
+  marco.addEventListener('pointerup', soltar);
+  marco.addEventListener('pointercancel', soltar);
+  marco.addEventListener('keydown', ev => {
+    const paso = ev.shiftKey ? 10 : 3, d = { ArrowLeft: [-paso, 0], ArrowRight: [paso, 0], ArrowUp: [0, -paso], ArrowDown: [0, paso] }[ev.key];
+    if (!d) return;
+    ev.preventDefault(); recortar();
+    e.x = Math.min(100, Math.max(0, e.x + d[0])); e.y = Math.min(100, Math.max(0, e.y + d[1]));
+    pintar();
+  });
+  zoom.addEventListener('input', () => { recortar(); e.z = Number(zoom.value); pintar(); });
+  m.querySelectorAll('[data-modo]').forEach(b => b.addEventListener('click', () => {
+    entera = b.dataset.modo === 'entera';
+    if (!entera && !inicial && e.z === 1 && e.x === 50 && e.y === 50) e = { x: 50, y: 50, z: 1 };
+    pintar();
+  }));
+
+  const cerrar = () => { m.remove(); document.removeEventListener('keydown', esc); };
+  const esc = ev => { if (ev.key === 'Escape') cerrar(); };
+  document.addEventListener('keydown', esc);
+  m.addEventListener('click', ev => { if (ev.target === m) cerrar(); });
+  m.querySelectorAll('.enc-cerrar').forEach(b => b.addEventListener('click', cerrar));
+  m.querySelector('.enc-guardar').addEventListener('click', async ev => {
+    const btn = ev.currentTarget;
+    const r1 = n => Math.round(n * 10) / 10;
+    const nueva = entera ? base : `${base}#vsb=${r1(e.x)},${r1(e.y)},${Math.round(e.z * 100) / 100}`;
+    if (nueva === url) { cerrar(); return; }
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      await onGuardar(nueva);
+      toast(entera ? 'Se muestra la foto entera ✓' : 'Encuadre guardado ✓ (en la tienda se ve en unos minutos)');
+      cerrar();
+    } catch (err) {
+      toast('No se pudo guardar: ' + err.message, 'err');
+      btn.disabled = false; btn.textContent = 'Guardar encuadre';
+    }
+  });
+  pintar();
+  setTimeout(() => marco.focus({ preventScroll: true }), 50);
 }
 
 async function guardarFotos(p, urls, msgOk) {
@@ -801,6 +939,11 @@ function accionFoto(p, acc, i) {
     const urls = _fotosProd.slice();
     const [f] = urls.splice(i, 1); urls.unshift(f);
     guardarFotos(p, urls, 'Foto principal actualizada ✓').catch(e => toast('Error: ' + e.message, 'err'));
+  } else if (acc === 'encuadre') {
+    abrirEncuadre(_fotosProd[i], i === 0 ? 'Foto principal' : `Foto ${i + 1}`, nueva => {
+      const urls = _fotosProd.slice(); urls[i] = nueva;
+      return guardarFotos(p, urls, 'Encuadre guardado ✓');
+    });
   } else if (acc === 'quitar') {
     confirmar('¿Quitar esta foto del producto en la tienda?', () => {
       const urls = _fotosProd.filter((_, j) => j !== i);

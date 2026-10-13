@@ -154,4 +154,15 @@ function cargar() {
   assert.ok(!db.productos.some(p => p.categoria === "Camping")); assert.ok(!db.categorias.some(c => c.nombre === "Camping"));
   ok("crear y eliminar categorías (eliminar borra sus productos)");
 }
+
+// Los <script> del CRM comparten el ámbito global: un nombre repetido rompe el archivo entero.
+{
+  const nombres = f => new Set([...readFileSync(join(root, f), "utf8").matchAll(/^(?:const|let|var|function|async function|class)\s+([\w$]+)/gm)].map(m => m[1]));
+  const propios = nombres("crm/supabase-crm.js");
+  for (const f of ["crm/panel.js", "crm/panel-ops.js", "crm/productos-crm.js"]) {
+    const choque = [...nombres(f)].filter(x => propios.has(x));
+    assert.deepEqual(choque, [], `nombres repetidos con ${f}: ${choque}`);
+  }
+  ok("no repite nombres globales de los otros archivos del CRM");
+}
 console.log(`\n${n} pruebas OK`);

@@ -78,7 +78,7 @@ function _sbErr(error, que) {
   throw new Error((que ? que + ': ' : '') + msg);
 }
 // Formato argentino: "32.500" = 32500 · "1.234,50" = 1234.5 · "32500" / "32.5" tal cual
-const _num = v => {
+const _sbNum = v => {
   let s = String(v ?? '').replace(/[^\d.,-]/g, '');
   if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
   else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
@@ -124,8 +124,8 @@ const SB_ACCIONES = {
     const campo = String(p.campo || '').trim().toLowerCase(), vid = Number(p.row);
     let valor = p.valor;
     if (campo === 'stock' || campo === 'destacado') valor = String(valor) === 'true' || valor === true;
-    else if (campo === 'precio') valor = _num(valor);
-    else if (campo === 'descuento') valor = _num(valor) > 0 ? _num(valor) : null;
+    else if (campo === 'precio') valor = _sbNum(valor);
+    else if (campo === 'descuento') valor = _sbNum(valor) > 0 ? _sbNum(valor) : null;
     else valor = String(valor ?? '').trim();
     if (_CAMPOS_VARIANTE[campo]) {
       const { error } = await sbCliente().from('variantes').update({ [_CAMPOS_VARIANTE[campo]]: valor === '' && campo === 'sku_costo' ? null : valor }).eq('id', vid);
@@ -145,7 +145,7 @@ const SB_ACCIONES = {
       .insert({ categoria: p.sheet, nombre: String(p.nombre).trim(), orden: 999999 }).select('id').single();
     _sbErr(error, 'Agregar producto');
     const r = await sbCliente().from('variantes').insert({ producto_id: data.id, color: String(p.marca || '').trim(),
-      precio: _num(p.precio), stock: _num(p.stock) > 0 });
+      precio: _sbNum(p.precio), stock: _sbNum(p.stock) > 0 });
     _sbErr(r.error, 'Agregar producto');
     return { ok: true, id: data.id };
   },
@@ -161,7 +161,7 @@ const SB_ACCIONES = {
     const { data: hermanas } = await sbCliente().from('variantes').select('orden').eq('producto_id', pid);
     const orden = Math.max(-1, ...(hermanas || []).map(v => v.orden)) + 1;
     const { error } = await sbCliente().from('variantes').insert({ producto_id: pid, color: String(p.color || '').trim(),
-      precio: _num(p.precio), stock: true, sku_costo: String(p.sku || '').trim() || null, imagen_url: imagen, orden });
+      precio: _sbNum(p.precio), stock: true, sku_costo: String(p.sku || '').trim() || null, imagen_url: imagen, orden });
     _sbErr(error, 'Agregar variante');
     return { ok: true };
   },

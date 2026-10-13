@@ -163,7 +163,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v6-supabase3' };
+    else if (accion === 'version')              out = { ok:true, version: 'v7-antiabuso1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
@@ -385,6 +385,8 @@ function registrar(p) {
   var idx = idxClientes();
   var datos = sh.getDataRange().getValues();
   if (!p.email || !p.clave) return { ok:false, error:'Faltan datos.' };
+  var errReg = _antiabusoRegistro(p);
+  if (errReg) return { ok:false, error: errReg };
 
   var m = buscarPorEmail(datos, idx, p.email);
   if (m >= 0) {
@@ -417,10 +419,12 @@ function login(p) {
   var m = buscarPorEmail(datos, idx, p.email);
   if (m < 0)                    return { ok:false, error:'No encontramos una cuenta con ese email.' };
   if (!datos[m][idx.clave])     return { ok:false, error:'Esa cuenta todavía no tiene contraseña.' };
-  if (!_limite('login_' + String(p.email).trim().toLowerCase(), 10, 900))
-    return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
+  var emailL = String(p.email).trim().toLowerCase();
+  if (!_limite('login_' + emailL, 10, 900)) return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
+  if (_bloqueado('login_' + emailL, 5)) return { ok:false, error: MSJ_BLOQUEO };
   var v = _verificarClave(datos[m][idx.clave], p.clave);
-  if (!v.ok) return { ok:false, error:'Contraseña incorrecta.' };
+  if (!v.ok) { _falloSumar('login_' + emailL, 900); return { ok:false, error:'Contraseña incorrecta.' }; }
+  _falloLimpiar('login_' + emailL);
   if (v.actualizar) sh.getRange(m+1, idx.clave+1).setValue(_hashClave(p.clave));   // migra la clave vieja
   return { ok:true, cliente: clienteDeFila(datos, idx, m) };
 }
@@ -844,8 +848,34 @@ function _antiabuso(p, tipo) {
     return 'Estamos recibiendo muchos pedidos en este momento. Probá de nuevo en un minuto.';
   return '';
 }
-// Clave de idempotencia: el mismo carrito del mismo email en 10 min devuelve el mismo pedido.
+// Bloqueo tras intentos FALLIDOS (los ingresos correctos no cuentan y limpian el contador).
+function _fallosClave(clave) { return 'fl_' + _md5(clave); }
+function _bloqueado(clave, max) {
+  return parseInt(CacheService.getScriptCache().get(_fallosClave(clave)) || '0', 10) >= max;
+}
+function _falloSumar(clave, segundos) {
+  var c = CacheService.getScriptCache(), k = _fallosClave(clave);
+  c.put(k, String(parseInt(c.get(k) || '0', 10) + 1), segundos);
+}
+function _falloLimpiar(clave) { CacheService.getScriptCache().remove(_fallosClave(clave)); }
+var MSJ_BLOQUEO = 'Por seguridad bloqueamos los intentos por 15 minutos. Si olvidaste la contraseña, escribinos por WhatsApp.';
+
+// Antiabuso para crear cuentas: honeypot + 5 por email cada 10 min + 30 por minuto en total.
+function _antiabusoRegistro(p) {
+  if (String(p.website || '').trim()) return 'No se pudo crear la cuenta.';
+  var email = String(p.email || '').trim().toLowerCase();
+  if (!_limite('registro_' + email, 5, 600)) return 'Demasiados intentos. Esperá unos minutos.';
+  if (!_limite('registro_global_' + Math.floor(Date.now() / 60000), 30, 120))
+    return 'Estamos recibiendo muchos registros. Probá de nuevo en un minuto.';
+  return '';
+}
+
+// Clave de idempotencia. Formato nuevo: el checkout manda idPedido (uno por intento de compra)
+// y el mismo id devuelve el mismo pedido. Formato viejo (sin id): mismo carrito del mismo email.
+// En los dos casos dura 10 min.
 function _claveIdem(tipo, p, items) {
+  var id = String(p.idPedido || '').trim();
+  if (/^[\w-]{8,64}$/.test(id)) return 'idem_' + tipo + '_id_' + _md5(id);
   var norm = (items || []).map(function(i) {
     return [_normKey(i.nombre || i.title || ''), String(i.color||'').toLowerCase(), String(i.talle||'').toLowerCase(),
             parseInt(i.cantidad || i.quantity || i.qty || 1, 10)].join('|');
@@ -2006,7 +2036,8 @@ function tiendaRegistrar(p) {
   var email = String(p.email || '').trim().toLowerCase(), nombre = String(p.nombre || '').trim().slice(0, 80);
   var hash = String(p.hash || '').trim();
   if (!nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !hash) return { ok:false, error:'Nombre, email y contraseña requeridos' };
-  if (!_limite('registro_' + email, 5, 600)) return { ok:false, error:'Demasiados intentos. Esperá unos minutos.' };
+  var errReg = _antiabusoRegistro(p);
+  if (errReg) return { ok:false, error: errReg };
   var lock = LockService.getScriptLock(); lock.waitLock(15000);
   try {
     var sh = _hojaUsuarios();
@@ -2018,11 +2049,14 @@ function tiendaRegistrar(p) {
 function tiendaLogin(p) {
   var email = String(p.email || '').trim().toLowerCase(), hash = String(p.hash || '').trim();
   if (!email || !hash) return { ok:false, error:'Faltan datos' };
+  if (String(p.website || '').trim()) return { ok:false, error:'No se pudo iniciar sesión.' };   // honeypot
   if (!_limite('login_tienda_' + email, 10, 900)) return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
+  if (_bloqueado('login_tienda_' + email, 5)) return { ok:false, error: MSJ_BLOQUEO };
   var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
   if (!u) return { ok:false, error:'Usuario no encontrado' };
   var v = _verificarClave(u.datos[3], hash);
-  if (!v.ok) return { ok:false, error:'Contraseña incorrecta' };
+  if (!v.ok) { _falloSumar('login_tienda_' + email, 900); return { ok:false, error:'Contraseña incorrecta' }; }
+  _falloLimpiar('login_tienda_' + email);
   if (v.actualizar) sh.getRange(u.fila, 4).setValue(_hashClave(hash));
   return { ok:true, nombre: u.datos[2], email: u.datos[1] };
 }
@@ -2033,7 +2067,9 @@ function tiendaCambiarClave(p) {
   if (!_limite('cambio_tienda_' + email, 10, 900)) return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
   var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
   if (!u) return { ok:false, error:'Usuario no encontrado' };
-  if (!_verificarClave(u.datos[3], viejo).ok) return { ok:false, error:'Contraseña actual incorrecta' };
+  if (_bloqueado('login_tienda_' + email, 5)) return { ok:false, error: MSJ_BLOQUEO };
+  if (!_verificarClave(u.datos[3], viejo).ok) { _falloSumar('login_tienda_' + email, 900); return { ok:false, error:'Contraseña actual incorrecta' }; }
+  _falloLimpiar('login_tienda_' + email);
   sh.getRange(u.fila, 4).setValue(_hashClave(nuevo));
   return { ok:true };
 }
@@ -2267,19 +2303,18 @@ function loginPanel(p) {
   var stored = PropertiesService.getScriptProperties().getProperty('PANEL_PASS');
   if (!stored) return { ok:false, error:'Contraseña no configurada. Agregá PANEL_PASS en las propiedades del script.' };
 
-  // Rate limiting: máx 5 intentos fallidos en 15 minutos por prefijo de clave
-  var cache    = CacheService.getScriptCache();
-  var rateKey  = 'login_fail_' + Utilities.base64Encode(String(p.clave||'').slice(0,4));
-  var fails    = parseInt(cache.get(rateKey) || '0', 10);
-  if (fails >= 5) return { ok:false, error:'Demasiados intentos fallidos. Esperá 15 minutos.' };
+  // Máx 10 claves equivocadas en 15 min EN TOTAL (no por prefijo: así no se puede adivinar
+  // probando combinaciones). La clave correcta limpia el contador.
+  var cache = CacheService.getScriptCache();
+  if (_bloqueado('panel_login', 10)) return { ok:false, error:'Demasiados intentos fallidos. Esperá 15 minutos.' };
 
   if (String(p.clave || '') !== String(stored)) {
-    cache.put(rateKey, String(fails + 1), 900); // 15 minutos
+    _falloSumar('panel_login', 900);
     return { ok:false, error:'Contraseña incorrecta.' };
   }
 
   // Éxito: limpiar contador y emitir token
-  cache.remove(rateKey);
+  _falloLimpiar('panel_login');
   var token = Utilities.getUuid();
   cache.put('panel_' + token, '1', 28800); // 8 horas
   return { ok:true, token: token };

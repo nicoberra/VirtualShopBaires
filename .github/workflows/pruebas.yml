@@ -1,0 +1,46 @@
+name: Pruebas
+
+# Corre en cada push y pull request: revisa la sintaxis de todo el JavaScript
+# y ejecuta las pruebas de tests/*.test.mjs (precios del servidor, CRM, seguridad,
+# antiabuso, Supabase simulado). Sin secretos ni acceso a producción: todo es local.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Sintaxis del JavaScript (tienda y CRM)
+        run: |
+          set -e
+          for f in js/*.js crm/*.js; do
+            node --check "$f"
+          done
+          # El servidor del CRM es .gs (JavaScript de Apps Script): se compila sin ejecutarlo
+          node -e "new Function(require('fs').readFileSync('crm/Codigo.gs','utf8'))"
+          echo "Sintaxis OK"
+
+      - name: Pruebas
+        run: |
+          set -e
+          for t in tests/*.test.mjs; do
+            echo "── $t"
+            node "$t"
+          done

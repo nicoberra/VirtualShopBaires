@@ -819,9 +819,22 @@ async function submitOrder() {
     : envio.estado === "viacargo" ? `Envío a coordinar (Vía Cargo)${envio.partido ? " · " + envio.partido : ""}` : "";
 
   const metodoPago = getPaymentMethod();
+  // Un id por intento de compra: si se reenvía (doble clic, reintento) el servidor devuelve
+  // el mismo pedido. Cambia solo si cambia el carrito, el email, el pago o el envío.
+  const idPedido = (() => {
+    const firma = JSON.stringify([cartItems.map(i => [i.nombre, i.color, i.talle, i.qty]), email, metodoPago, entrega, envio.costo]);
+    try {
+      const prev = JSON.parse(sessionStorage.getItem("vsb_id_pedido") || "null");
+      if (prev && prev.f === firma) return prev.id;
+    } catch (e) {}
+    const id = "p-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+    try { sessionStorage.setItem("vsb_id_pedido", JSON.stringify({ f: firma, id })); } catch (e) {}
+    return id;
+  })();
 
   const payload = {
     action: "createOrder",
+    idPedido,
     nombre, apellido, email, telefono, dni,
     metodoEntrega: entrega === "envio"
       ? (envio.estado === "zona" ? `Envío ${envio.zona.nombre} · ${envio.partido}` : "Envío Vía Cargo")
@@ -873,6 +886,7 @@ async function submitOrder() {
     try {
       const data = await mpJSONP({
         action:   'mp_preferencia',
+        idPedido,
         items:    JSON.stringify(mpItems),
         envio:    envio.estado === "zona" ? envio.zona.id : "",
         website:  v("f-website"),
@@ -884,6 +898,7 @@ async function submitOrder() {
       hideLoading();
       if (data.ok && data.url) {
         Cart.clear();
+        try { sessionStorage.removeItem("vsb_id_pedido"); } catch (e) {}
         window.location.href = data.url;
       } else {
         btn.disabled = false;
@@ -915,6 +930,7 @@ async function submitOrder() {
     createdOrder = data;
     customerEmail = email;
     Cart.clear();
+    try { sessionStorage.removeItem("vsb_id_pedido"); } catch (e) {}
     showConfirmation(data, email);
   } catch (err) {
     hideLoading();

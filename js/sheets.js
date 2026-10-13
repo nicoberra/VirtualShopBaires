@@ -42,7 +42,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v10';
+const _CACHE_DATA   = 'vsb_data_v11';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -140,7 +140,24 @@ function _parseGviz(text) {
   return JSON.parse(text);
 }
 
+// El catálogo se pide al CRM (Apps Script), que lee la planilla como dueño: así la
+// planilla puede ser privada y no expone pedidos ni clientes. Si el CRM no responde,
+// se intenta la lectura directa de la planilla (solo funciona mientras sea pública).
+const CATALOGO_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec?action=catalogo";
+let _catalogoPromesa = null;
+function _catalogoCRM() {
+  if (!_catalogoPromesa) {
+    _catalogoPromesa = _fetchWithTimeout(CATALOGO_URL, 20000)
+      .then(r => r.json())
+      .then(j => (j && j.ok && j.hojas) ? j : null)
+      .catch(() => null);
+  }
+  return _catalogoPromesa;
+}
+
 async function obtenerCategorias() {
+  const cat = await _catalogoCRM();
+  if (cat) return cat.categorias.filter(c => c && c.toLowerCase() !== "nombre");
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=Categorias`;
   const res  = await _fetchWithTimeout(url);
   const text = await res.text();
@@ -156,9 +173,15 @@ async function obtenerCategorias() {
 async function fetchHoja(nombreHoja) {
   const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(nombreHoja)}`;
   try {
-    const res  = await _fetchWithTimeout(url);
-    const text = await res.text();
-    const json = _parseGviz(text);
+    const cat = await _catalogoCRM();
+    let json;
+    if (cat) {
+      json = { table: cat.hojas[nombreHoja] || { cols: [], rows: [] } };
+    } else {
+      const res  = await _fetchWithTimeout(url);
+      const text = await res.text();
+      json = _parseGviz(text);
+    }
     const rows = json.table.rows;
     if (!rows) return [];
 

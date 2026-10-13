@@ -143,7 +143,7 @@ function _parseGviz(text) {
 // El catálogo se pide al CRM (Apps Script), que lee la planilla como dueño: así la
 // planilla puede ser privada y no expone pedidos ni clientes. Si el CRM no responde,
 // se intenta la lectura directa de la planilla (solo funciona mientras sea pública).
-const CATALOGO_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec?action=catalogo";
+const CATALOGO_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec?action=catalogo";
 let _catalogoPromesa = null;
 function _catalogoCRM() {
   if (!_catalogoPromesa) {

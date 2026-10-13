@@ -149,7 +149,7 @@ def gviz(hoja):
     txt = urllib.request.urlopen(url, timeout=60).read().decode("utf-8")
     return json.loads(re.search(r"setResponse\(([\s\S]*)\)\s*;?\s*$", txt).group(1))
 
-CATALOGO_URL = ("https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec"
+CATALOGO_URL = ("https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec"
                 "?action=catalogo")
 
 def leer_catalogo_crm():

@@ -163,7 +163,7 @@ function goTo(sec) {
   const el = $('sec-' + sec);
   if (el) el.classList.add('active');
 
-  document.querySelectorAll('.nav-link').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.nav-link, .mnav-btn').forEach(a => a.classList.remove('active'));
   document.querySelectorAll(`[data-sec="${sec}"]`).forEach(a => a.classList.add('active'));
 
   if (currentSec !== sec) {

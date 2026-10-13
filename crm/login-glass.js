@@ -14,13 +14,13 @@
   const tit   = document.getElementById('login-tit');
   const sub   = document.getElementById('login-sub');
   const TXT   = { tit: tit.textContent, sub: sub.textContent };
-  const MAX = 16, MIN = 6;
+  const MAX = 16, MIN = 4;   // la clave actual es de 4: si es más larga, aparecen más casillas
   const sinMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let ocupado = false;
 
   function pintar() {
     const n = Math.min(input.value.length, MAX);
-    const total = Math.min(Math.max(n + 1, MIN), MAX);
+    const total = Math.min(Math.max(n < MIN ? MIN : n, MIN), MAX);
     while (fila.children.length < total) {
       const c = document.createElement('span');
       c.className = 'glass-box';
@@ -30,7 +30,7 @@
     const foco = document.activeElement === input && !ocupado;
     [...fila.children].forEach((c, i) => {
       const lleno = i < n;
-      c.classList.toggle('activo', foco && i === Math.min(n, MAX - 1));
+      c.classList.toggle('activo', foco && i === n);
       if (lleno && !c.classList.contains('lleno')) {
         c.classList.add('lleno');
         c.innerHTML = '<i></i>';            // el punto entra con su "pop"

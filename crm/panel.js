@@ -26,6 +26,7 @@ function crm(params) {
       // Token expirado o inválido: volver al login
       if (data && data.ok === false && data.error === 'auth') {
         sessionStorage.removeItem('crm_token');
+        lsBorrarTodo();
         location.reload();
         return;
       }
@@ -147,6 +148,7 @@ function prefetchAll() {
 }
 
 function logout() {
+  lsBorrarTodo();
   sessionStorage.removeItem('crm_token');
   location.reload();
 }
@@ -197,6 +199,29 @@ async function getData(action, tab, force = false) {
 function invalidate(...keys) {
   keys.forEach(k => delete _cache[k]);
 }
+
+// ─── ESCRITURAS SEGURAS Y CACHÉ LOCAL ─────────────────────────
+// crmOk: falla si el backend responde ok:false (antes se mostraba "guardado" aunque fallara).
+async function crmOk(params) {
+  const r = await crm(params);
+  if (!r || r.ok === false) throw new Error((r && r.error) || 'No se pudo guardar');
+  return r;
+}
+// unaVez: evita que un doble clic mande dos veces la misma acción.
+const _ocupado = {};
+async function unaVez(clave, fn) {
+  if (_ocupado[clave]) return;
+  _ocupado[clave] = true;
+  try { return await fn(); } finally { _ocupado[clave] = false; }
+}
+// Caché en localStorage: cada sección pinta al instante y se actualiza en segundo plano.
+const _LS = location.pathname.includes('panel-ops') ? 'vsbops_' : 'vsbcrm_';
+const LS_TTL = 40000;
+function lsGuardar(k, data) { try { localStorage.setItem(_LS + k, JSON.stringify({ t: Date.now(), d: data })); } catch {} }
+function lsLeer(k) { try { const o = JSON.parse(localStorage.getItem(_LS + k) || 'null'); return o && Array.isArray(o.d) ? o : null; } catch { return null; } }
+function lsBorrarTodo() { try { Object.keys(localStorage).filter(k => k.startsWith(_LS)).forEach(k => localStorage.removeItem(k)); } catch {} }
+// Campos de cliente que el backend guarda hoy (pestaña Clientes)
+const CLI_CAMPOS_GUARDADOS = ['nombre','apellido','telefono','email','dni','direccion','cp','ciudad','provincia','cuit','iva','razon','notas'];
 
 // ─── PANEL (DASHBOARD) ───────────────────────────────────────
 
@@ -299,24 +324,39 @@ function parseDetalle(det) {
 const lunesDe = d => { const x = new Date(d); x.setHours(0,0,0,0); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; };
 const parseFecha = f => { const d = new Date(String(f).replace(' ','T')); return isNaN(d) ? null : d; };
 
+const _num = v => {
+  if (typeof v === 'number') return v;
+  let s = String(v ?? '').replace(/[^\d.,-]/g, '');
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  const n = parseFloat(s); return isNaN(n) ? 0 : n;
+};
+const ESTADOS_COBRADOS = ['Confirmado', 'En camino', 'Entregado'];
+
 function agruparFacturacion(pedidos, productos) {
-  const costoDe = nombre => { const p = productos.find(x => x.nombre === nombre); return p ? (Number(String(p.costo).replace(/[^\d.]/g,''))||0) : 0; };
+  const costos = {};
+  productos.forEach(x => { const c = _num(x.costo); if (c > 0) costos[String(x.nombre).trim().toLowerCase()] = c; });
+  const hayCostos = Object.keys(costos).length > 0;
   const ventas = pedidos.map(p => {
-    const items = parseDetalle(p.detalle);
-    const monto = Number(String(p.monto).replace(/[^\d.]/g,''))||0;
-    const costo = items.reduce((s,it) => s + costoDe(it.nombre)*(it.cantidad||1), 0);
-    return { fecha: parseFecha(p.fecha), monto, beneficio: monto - costo, items };
-  }).filter(v => v.fecha);
+    const estado = p.estado || 'Pendiente';
+    const items = parseDetalle(p.productos || p.detalle).map(it => ({ ...it, nombre: it.nombre.split(' · ')[0].trim() }));
+    const monto = _num(p.total !== undefined && p.total !== '' ? p.total : p.monto);
+    let costo = 0, costoCompleto = hayCostos && items.length > 0;
+    items.forEach(it => { const c = costos[it.nombre.toLowerCase()]; if (c) costo += c * (it.cantidad || 1); else costoCompleto = false; });
+    return { fecha: parseFecha(p.timestamp || p.fecha), monto, estado, beneficio: costoCompleto ? monto - costo : null, items };
+  }).filter(v => v.fecha && v.estado !== 'Cancelado');
 
   const bucket = (map, key, d, v) => {
-    const b = map[key] || (map[key] = { monto:0, ben:0, n:0, d, prod:{} });
-    b.monto += v.monto; b.ben += v.beneficio; b.n++;
+    const b = map[key] || (map[key] = { monto:0, ben:0, benParcial:false, n:0, pendN:0, pendMonto:0, d, prod:{} });
+    if (!ESTADOS_COBRADOS.includes(v.estado)) { b.pendN++; b.pendMonto += v.monto; return; }
+    b.monto += v.monto; b.n++;
+    if (v.beneficio === null) b.benParcial = true; else b.ben += v.beneficio;
     v.items.forEach(it => { b.prod[it.nombre] = (b.prod[it.nombre]||0)+(it.cantidad||1); });
   };
   const por = { anios:{}, meses:{}, semanas:{} };
   ventas.forEach(v => {
     bucket(por.anios,   v.fecha.getFullYear(),                                   new Date(v.fecha.getFullYear(),0,1), v);
-    bucket(por.meses,   v.fecha.getFullYear()+'-'+v.fecha.getMonth(),            v.fecha, v);
+    bucket(por.meses,   v.fecha.getFullYear()+'-'+v.fecha.getMonth(),            new Date(v.fecha.getFullYear(), v.fecha.getMonth(), 1), v);
     const l = lunesDe(v.fecha);
     bucket(por.semanas, l.getTime(),                                             l, v);
   });
@@ -336,7 +376,7 @@ async function loadFacturacion(force=false) {
   el.innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
   try {
     const [pedidos, productoRes] = await Promise.all([
-      getData('list', 'Pedidos', force),
+      crm({ action: 'ext_pedidos_listar', todos: 1 }).then(r => Array.isArray(r) ? r : []),
       crm({ action: 'productos_list' })
     ]);
     const productos = productoRes.rows || [];
@@ -361,7 +401,7 @@ function renderFact() {
   el.innerHTML = `
     <table>
       <thead><tr>
-        <th>Período</th><th>N° ventas</th><th>Facturado</th><th>Beneficio</th>
+        <th>Período</th><th>N° ventas</th><th>Facturado</th><th>Beneficio</th><th>Pendientes de pago</th>
       </tr></thead>
       <tbody id="fact-tbody"></tbody>
     </table>`;
@@ -374,12 +414,13 @@ function renderFact() {
       <td><i class="fa-solid fa-chevron-right" id="ficon-${rid}" style="font-size:0.7rem;margin-right:8px;color:var(--text2);transition:transform 0.2s"></i>${fmtPeriodo(_factTab,b)}</td>
       <td>${b.n}</td>
       <td>${fmtMoney(b.monto)}</td>
-      <td class="${b.ben>=0?'text-green':'text-red'}">${fmtMoney(b.ben)}</td>`;
+      <td class="${b.ben>=0?'text-green':'text-red'}" title="${b.benParcial ? 'Faltan costos de algunos productos: el beneficio no es exacto' : ''}">${b.n ? (b.benParcial && !b.ben ? '—' : fmtMoney(b.ben) + (b.benParcial ? ' *' : '')) : '—'}</td>
+      <td class="text-muted">${b.pendN ? b.pendN + ' · ' + fmtMoney(b.pendMonto) : '—'}</td>`;
     tr.onclick = () => toggleFactDetail(rid, b);
     tbody.appendChild(tr);
     const det = document.createElement('tr');
     det.id = rid; det.className = 'fact-detail-row'; det.style.display='none';
-    det.innerHTML = `<td colspan="4"><div class="fact-detail-inner" id="${rid}-inner"></div></td>`;
+    det.innerHTML = `<td colspan="5"><div class="fact-detail-inner" id="${rid}-inner"></div></td>`;
     tbody.appendChild(det);
   });
 }
@@ -423,11 +464,19 @@ function pedidosDeCliente(cli) {
 
 async function loadClientes(force=false) {
   if (!force && _clientes.length) { filtrarClientes(); return; }
-  $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  const local = !force && lsLeer('clientes');
+  if (local) {
+    _clientes = local.d; _cache['list:Clientes'] = _clientes; filtrarClientes();
+    if (Date.now() - local.t < LS_TTL) return;
+  } else {
+    $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  }
   try {
-    _clientes = await getData('list','Clientes',force);
-    filtrarClientes();
+    _clientes = await getData('list','Clientes',true);
+    lsGuardar('clientes', _clientes);
+    if (currentSec === 'clientes') filtrarClientes();
   } catch(e) {
+    if (local) return;
     $('cli-table').innerHTML = `<div style="padding:20px;text-align:center">
       <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
       <button class="btn-secondary" onclick="loadClientes(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
@@ -552,38 +601,50 @@ function editarCliente(c) {
 }
 
 async function guardarCliente() {
-  const nombre = val('mcli-nombre');
-  if (!nombre) { toast('El nombre es obligatorio','err'); return; }
-  const id = val('mcli-id');
-  const params = {
-    action: id ? 'update' : 'add', tab: 'Clientes',
-    nombre, apellido: val('mcli-apellido'), telefono: val('mcli-telefono'),
-    dni: val('mcli-dni'), email: val('mcli-email'),
-    direccion: val('mcli-direccion'), cp: val('mcli-cp'),
-    ciudad: val('mcli-ciudad'), provincia: val('mcli-provincia'),
-    cuit: val('mcli-cuit'), iva: val('mcli-iva'), razon: val('mcli-razon'),
-    notas: val('mcli-notas')
-  };
-  if (id) params.id = id;
-  try {
-    const r = await crm(params);
-    if (!r.ok) throw new Error(r.error || 'error');
-    toast(id ? 'Cliente actualizado' : 'Cliente guardado');
-    hide('modal-cliente');
-    invalidate('list:Clientes');
-    loadClientes(true);
-  } catch(e) { toast('Error: ' + e.message, 'err'); }
+  return unaVez('cliente', async () => {
+    const nombre = val('mcli-nombre');
+    if (!nombre) { toast('El nombre es obligatorio','err'); return; }
+    const id = val('mcli-id');
+    const params = {
+      action: id ? 'update' : 'add', tab: 'Clientes',
+      nombre, apellido: val('mcli-apellido'), telefono: val('mcli-telefono'),
+      dni: val('mcli-dni'), email: val('mcli-email'),
+      direccion: val('mcli-direccion'), cp: val('mcli-cp'),
+      ciudad: val('mcli-ciudad'), provincia: val('mcli-provincia'),
+      cuit: val('mcli-cuit'), iva: val('mcli-iva'), razon: val('mcli-razon'),
+      notas: val('mcli-notas')
+    };
+    if (id) params.id = id;
+    try {
+      const r = await crmOk(params);
+      if (id && r.updated === false) throw new Error('No se encontró el cliente (¿lo borraron?)');
+      toast(id ? 'Cliente actualizado' : 'Cliente guardado');
+      hide('modal-cliente');
+      // Actualizar en memoria (sin volver a descargar toda la tabla)
+      const nuevoId = id || r.id;
+      const datos = {};
+      CLI_CAMPOS_GUARDADOS.forEach(k => { if (params[k] !== undefined) datos[k] = params[k]; });
+      const i = _clientes.findIndex(c => String(c.id) === String(nuevoId));
+      if (i >= 0) _clientes[i] = { ..._clientes[i], ...datos };
+      else _clientes.push({ ...datos, id: nuevoId, origen: 'crm' });
+      _cache['list:Clientes'] = _clientes; lsGuardar('clientes', _clientes);
+      filtrarClientes();
+    } catch(e) { toast('Error: ' + e.message, 'err'); }
+  });
 }
 
 function borrarCliente(id, nombre) {
-  confirmar(`¿Borrar al cliente "${nombre}"?`, async () => {
+  if (!String(id || '').trim()) { toast('Este cliente no tiene ID: borralo desde la planilla', 'err'); return; }
+  confirmar(`¿Borrar al cliente "${nombre}"?`, () => unaVez('borrar-cli-' + id, async () => {
     try {
-      await crm({ action:'delete', tab:'Clientes', id });
+      const r = await crmOk({ action:'delete', tab:'Clientes', id });
+      if (r.deleted === false) throw new Error('No se encontró el cliente (¿ya estaba borrado?)');
+      _clientes = _clientes.filter(c => String(c.id) !== String(id));
+      _cache['list:Clientes'] = _clientes; lsGuardar('clientes', _clientes);
       toast('Cliente borrado');
-      invalidate('list:Clientes');
-      loadClientes(true);
+      filtrarClientes();
     } catch(e) { toast('Error: '+e.message,'err'); }
-  });
+  }));
 }
 
 // ─── PRODUCTOS (Sheet externo por categorías) ────────────────
@@ -648,8 +709,8 @@ function refreshCurrent() {
   if (btn) { btn.classList.add('spinning'); setTimeout(() => btn.classList.remove('spinning'), 700); }
   const key = currentSec;
   if (key === 'pedidos')      { delete _cache['ext_pedidos_listar'];   _pedidos   = []; loadPedidos(true);   return; }
-  if (key === 'clientes')     { delete _cache['ext_clientes_listar'];  _clientes  = []; loadClientes(true);  return; }
-  if (key === 'productos')    { delete _cache['ext_productos_listar']; _productos = []; loadProductos(true); return; }
+  if (key === 'clientes')     { delete _cache['list:Clientes'];  _clientes  = []; loadClientes(true);  return; }
+  if (key === 'productos')    { delete _cache['ext_productos_list']; _productos = []; loadProductos(true); return; }
   if (key === 'facturacion')  { loadFacturacion(true); return; }
   if (key === 'comprobantes') { loadComprobantes(true); return; }
   if (key === 'panel')        { Object.keys(_cache).forEach(k => delete _cache[k]); _clientes = []; _pedidos = []; _productos = []; loadPanel(); return; }
@@ -665,12 +726,20 @@ async function refreshPedidos() {
 
 async function loadPedidos(force=false, silent=false) {
   if (!force && _pedidos.length) { filtrarPedidos(); return; }
-  if (!silent) $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  const local = !force && lsLeer('pedidos');
+  if (local) {
+    _pedidos = local.d; filtrarPedidos();
+    if (Date.now() - local.t < LS_TTL) return;
+  } else if (!silent) {
+    $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+  }
   try {
     const raw = await crm({ action: 'ext_pedidos_listar' });
     _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+    lsGuardar('pedidos', _pedidos);
     filtrarPedidos();
   } catch(e) {
+    if (local || silent) return;
     $('ped-table').innerHTML = `<div style="padding:20px;text-align:center">
       <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
       <button class="btn-secondary" onclick="loadPedidos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
@@ -770,7 +839,7 @@ function renderPedidos(list) {
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>
-        <select class="sel sel-sm" onchange="cambiarEstadoPedido(this,${p._row||0})">
+        <select class="sel sel-sm" onchange="cambiarEstadoPedido(this,'${hx(p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0))}')">
           ${['Pendiente','Confirmado','En camino','Entregado','Cancelado'].map(e =>
             `<option${e===estado?' selected':''}>${e}</option>`).join('')}
         </select>
@@ -789,15 +858,25 @@ function renderPedidos(list) {
   el.appendChild(t);
 }
 
-async function cambiarEstadoPedido(sel, row) {
+async function cambiarEstadoPedido(sel, clave) {
   const estado = sel.value;
+  const m = String(clave).match(/^(mp|row):(.*)$/);
+  const tipo = m ? m[1] : 'row', ref = m ? m[2] : String(clave);
+  const p = _pedidos.find(x => tipo === 'mp' ? String(x._mpId) === ref : String(x._row) === ref);
+  const anterior = p ? (p.estado || 'Pendiente') : null;
   try {
-    await crm({ action: 'ext_pedido_update', row, campo: 'estado', valor: estado });
-    const p = _pedidos.find(x => String(x._row) === String(row));
+    if (tipo === 'mp') {
+      const r = await crmOk({ action: 'update', tab: 'Pedidos', id: ref, estado });
+      if (r.updated === false) throw new Error('No se encontró el pedido');
+    } else {
+      await crmOk({ action: 'ext_pedido_update', row: ref, campo: 'estado', valor: estado, orderNumber: (p && p.orderNumber) || '' });
+    }
     if (p) p.estado = estado;
+    lsGuardar('pedidos', _pedidos);
     toast('Estado actualizado');
   } catch(e) {
-    toast('Error al actualizar', 'err');
+    if (anterior) sel.value = anterior;
+    toast('Error: ' + e.message, 'err');
   }
 }
 
@@ -923,8 +1002,6 @@ async function loadComprobantes(force=false) {
 
 function _silentRefreshPedidos() {
   if (!sessionStorage.getItem('crm_token')) return;
-  delete _cache['ext_pedidos_listar'];
-  _pedidos = [];
   loadPedidos(true, true).then(() => {
     if (currentSec === 'panel') loadPanel();
   }).catch(() => {});
@@ -952,24 +1029,24 @@ async function guardarNuevoProd() {
   const btn = $('np-btn-guardar');
   btn.disabled = true; btn.textContent = 'Guardando…';
   try {
-    await crm({ action:'ext_producto_agregar', sheet: categoria, nombre,
+    await crmOk({ action:'ext_producto_agregar', sheet: categoria, nombre,
       precio: Number($('np-precio').value)||0,
       stock:  Number($('np-stock').value)||1,
       marca:  $('np-marca').value.trim() });
     toast('Producto agregado ✓');
     hide('modal-nuevo-prod');
     delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
-  } catch(e) { toast('Error al agregar', 'err'); }
+  } catch(e) { toast('Error al agregar: ' + e.message, 'err'); }
   finally { btn.disabled = false; btn.textContent = 'Agregar producto'; }
 }
 
 function eliminarProducto(p) {
   confirmar(`¿Eliminar "${p.nombre}"? Esta acción no se puede deshacer.`, async () => {
     try {
-      await crm({ action:'ext_producto_eliminar', sheet: p._sheet, row: p._row });
+      await crmOk({ action:'ext_producto_eliminar', sheet: p._sheet, row: p._row, nombre: p.nombre });
       toast('Producto eliminado');
       delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
-    } catch(e) { toast('Error al eliminar', 'err'); }
+    } catch(e) { toast('Error al eliminar: ' + e.message, 'err'); }
   });
 }
 
@@ -988,12 +1065,12 @@ async function guardarNuevaCat() {
 function eliminarCategoria(cat) {
   confirmar(`¿Eliminar la categoría "${cat}" y TODOS sus productos? Esta acción no se puede deshacer.`, async () => {
     try {
-      await crm({ action:'ext_categoria_eliminar', nombre: cat });
+      await crmOk({ action:'ext_categoria_eliminar', nombre: cat });
       toast('Categoría eliminada');
       _prodCatFil = 'Todos';
       hide('modal-editar-cats');
       delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
-    } catch(e) { toast('Error al eliminar categoría', 'err'); }
+    } catch(e) { toast('Error al eliminar categoría: ' + e.message, 'err'); }
   });
 }
 

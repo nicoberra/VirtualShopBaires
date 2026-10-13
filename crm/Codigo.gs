@@ -57,7 +57,16 @@ var TABS = {
     { k:'ciudad',   h:'Ciudad'    },
     { k:'notas',    h:'Notas'     },
     { k:'origen',   h:'Origen'    },
-    { k:'clave',    h:'Clave'     }
+    { k:'clave',    h:'Clave'     },
+    // Columnas agregadas al final (2026-10-13): la ficha del CRM ya las pedía y se perdían
+    { k:'apellido',  h:'Apellido'      },
+    { k:'dni',       h:'DNI'           },
+    { k:'direccion', h:'Dirección'     },
+    { k:'cp',        h:'CP'            },
+    { k:'provincia', h:'Provincia'     },
+    { k:'cuit',      h:'CUIT'          },
+    { k:'iva',       h:'Condición IVA' },
+    { k:'razon',     h:'Razón social'  }
   ],
   'Pedidos': [
     { k:'id',          h:'ID'           },
@@ -303,6 +312,7 @@ function agregar(tab, p) {
 }
 
 function actualizar(tab, p) {
+  if (!String(p.id || '').trim()) return false;
   var sh = hoja(tab);
   var cols = TABS[tab];
   if (p.telefono) p.telefono = limpiarTel(p.telefono);
@@ -320,6 +330,7 @@ function actualizar(tab, p) {
 }
 
 function borrar(tab, id) {
+  if (!String(id || '').trim()) return false;   // sin id podría borrar la primera fila sin id
   var sh = hoja(tab);
   var datos = sh.getDataRange().getValues();
   for (var i = 1; i < datos.length; i++) {
@@ -1250,6 +1261,9 @@ function extProductoEliminar(p) {
   var sh = ss().getSheetByName(sheetName);
   if (!sh) return { ok:false, error:'Hoja no encontrada: ' + sheetName };
   if (row < 2 || row > sh.getLastRow()) return { ok:false, error:'Fila fuera de rango' };
+  // Confirmar que la fila sigue siendo ese producto (si alguien agregó o borró filas, la posición cambia)
+  if (p.nombre && String(sh.getRange(row, 1).getValue()).trim() !== String(p.nombre).trim())
+    return { ok:false, error:'La lista cambió desde que la abriste. Tocá actualizar y volvé a intentar.' };
   sh.deleteRow(row);
   return { ok:true };
 }
@@ -1276,6 +1290,43 @@ function extCategoriaEliminar(p) {
   return { ok:true };
 }
 
+// ─── Columnas de "Pedidos externos" ──────────────────────────
+// La pestaña puede tener encabezados del sistema viejo ("Fecha", "N° Pedido", "Estado pedido"…)
+// o los del CRM ("timestamp", "orderNumber", "estado"…). Se busca cada campo por sus alias.
+var PED_ALIAS = {
+  timestamp:     ['timestamp', 'fecha'],
+  orderNumber:   ['ordernumber', 'npedido', 'nropedido'],
+  nombre:        ['nombre'],
+  apellido:      ['apellido'],
+  email:         ['email'],
+  telefono:      ['telefono'],
+  dni:           ['dni', 'dnicuit'],
+  metodoEntrega: ['metodoentrega'],
+  metodoPago:    ['metodopago'],
+  provincia:     ['provincia'],
+  localidad:     ['localidad'],
+  calle:         ['calle'],
+  numeroCalle:   ['numerocalle', 'numero'],
+  piso:          ['piso', 'pisodpto'],
+  cp:            ['cp'],
+  productos:     ['productos'],
+  subtotal:      ['subtotal'],
+  descuento:     ['descuento'],
+  total:         ['total'],
+  observaciones: ['observaciones'],
+  estado:        ['estado', 'estadopedido']
+};
+function _normH(h) { return _normKey(h).replace(/\s+/g, ''); }
+// Devuelve { campo: índice de columna (0-based) } según los encabezados reales de la pestaña.
+function _mapaPedidos(headers) {
+  var hs = headers.map(_normH), idx = {};
+  Object.keys(PED_ALIAS).forEach(function(k) {
+    var al = PED_ALIAS[k];
+    for (var i = 0; i < al.length; i++) { var j = hs.indexOf(al[i]); if (j >= 0) { idx[k] = j; break; } }
+  });
+  return idx;
+}
+
 function extPedidosListar(p) {
   try {
     var ssO  = ss();
@@ -1285,19 +1336,51 @@ function extPedidosListar(p) {
     if (data.length < 2) return [];
 
     var headers = data[0].map(function(h) { return String(h||'').trim(); });
+    var mapa    = _mapaPedidos(headers);
+    var fmtV    = function(v) { return (v instanceof Date) ? Utilities.formatDate(v, 'GMT-3', 'yyyy-MM-dd HH:mm') : v; };
     var result  = [];
     for (var r = 1; r < data.length; r++) {
       if (!data[r][0]) continue;
-      var obj = { _row: r + 1 };
-      headers.forEach(function(h, i) {
-        var v = data[r][i];
-        obj[h] = (v instanceof Date)
-          ? Utilities.formatDate(v, 'GMT-3', 'yyyy-MM-dd HH:mm') : v;
-      });
+      var obj = { _row: r + 1, fuente: 'web' };
+      headers.forEach(function(h, i) { obj[h] = fmtV(data[r][i]); });
+      // nombres estándar (timestamp, orderNumber, estado…) sin importar el encabezado real
+      Object.keys(mapa).forEach(function(k) { obj[k] = fmtV(data[r][mapa[k]]); });
       result.push(obj);
     }
-    return result.slice(0, 300);
+
+    // Pedidos de Mercado Pago (pestaña Pedidos): mismo formato para verlos en la misma lista
+    var shM = ssO.getSheetByName('Pedidos');
+    if (shM && shM.getLastRow() >= 2) {
+      var cols = TABS['Pedidos'].map(function(c) { return c.k; });
+      var dm = shM.getDataRange().getValues();
+      for (var m = 1; m < dm.length; m++) {
+        var id = dm[m][cols.indexOf('id')];
+        if (!id) continue;
+        var notas = String(dm[m][cols.indexOf('notas')] || '');
+        var f = dm[m][cols.indexOf('fecha')];
+        result.push({
+          fuente:        'mp',
+          _mpId:         String(id),
+          orderNumber:   (notas.match(/ref: ([\w\-]+)/) || [])[1] || String(id),
+          timestamp:     (f instanceof Date) ? Utilities.formatDate(f, 'GMT-3', 'yyyy-MM-dd HH:mm') : String(f || ''),
+          nombre:        dm[m][cols.indexOf('cliente')],
+          telefono:      dm[m][cols.indexOf('telefono')],
+          email:         (notas.match(/email: ([^\s·]+)/) || [])[1] || '',
+          productos:     dm[m][cols.indexOf('detalle')],
+          total:         dm[m][cols.indexOf('monto')],
+          metodoPago:    'mercadopago',
+          estado:        dm[m][cols.indexOf('estado')] || 'Pendiente',
+          observaciones: notas,
+          comprobante:   dm[m][cols.indexOf('comprobante')]
+        });
+      }
+    }
+
+    // Más viejos primero (el panel los da vuelta). Sin "todos", solo los 300 más recientes.
+    result.sort(function(a, b) { return String(a.timestamp || '') < String(b.timestamp || '') ? -1 : 1; });
+    return (p && p.todos) ? result : result.slice(-300);
   } catch(ex) {
+    _registrarError('ext_pedidos_listar', ex);
     return [];
   }
 }
@@ -1363,13 +1446,25 @@ function crearPedido(p) {
       }
     } catch(ex) {}
 
-    var row = COLS.map(function(col) {
+    var valorDe = function(col) {
       if (col === 'timestamp')   return now;
       if (col === 'orderNumber') return orderNum;
       if (col === 'estado')      return 'Pendiente';
       if (col === 'productos')   return productosStr;
       return (p[col] !== undefined && p[col] !== null) ? p[col] : '';
-    });
+    };
+    // Escribir cada dato en la columna que corresponde según los encabezados reales
+    // (la pestaña puede tener el formato viejo: "Fecha", "N° Pedido", "Estado pedido"…)
+    var headersP = sh.getRange(1, 1, 1, Math.max(1, sh.getLastColumn())).getValues()[0];
+    var mapaP = _mapaPedidos(headersP);
+    var faltan = COLS.filter(function(c) { return mapaP[c] === undefined; });
+    if (faltan.length) {   // columnas que la pestaña no tiene: se agregan al final
+      sh.getRange(1, headersP.length + 1, 1, faltan.length).setValues([faltan]);
+      faltan.forEach(function(c, i) { mapaP[c] = headersP.length + i; });
+      headersP = headersP.concat(faltan);
+    }
+    var row = headersP.map(function() { return ''; });
+    COLS.forEach(function(c) { row[mapaP[c]] = valorDe(c); });
 
     sh.appendRow(row);
 
@@ -1523,19 +1618,20 @@ function misPedidos(p) {
   var sh = ssO.getSheetByName('Pedidos externos') || ssO.getSheetByName('Pedidos Externos');
   if (sh && sh.getLastRow() >= 2) {
     var d = sh.getDataRange().getValues();
-    var ix = _headerIdx(d[0]);
+    var ix = _mapaPedidos(d[0]);
+    var col = function(r, k) { return ix[k] === undefined ? '' : d[r][ix[k]]; };
     for (var r = 1; r < d.length; r++) {
-      if (String(d[r][ix['email']] || '').trim().toLowerCase() !== email) continue;
-      var estado = d[r][ix['estado']];
+      if (String(col(r, 'email') || '').trim().toLowerCase() !== email) continue;
+      var estado = col(r, 'estado');
       orders.push({
-        numero:        d[r][ix['ordernumber']],
-        fecha:         d[r][ix['timestamp']],
-        productos:     d[r][ix['productos']],
-        total:         d[r][ix['total']],
-        metodoPago:    d[r][ix['metodopago']],
-        metodoEntrega: d[r][ix['metodoentrega']],
+        numero:        col(r, 'orderNumber'),
+        fecha:         col(r, 'timestamp'),
+        productos:     col(r, 'productos'),
+        total:         col(r, 'total'),
+        metodoPago:    col(r, 'metodoPago'),
+        metodoEntrega: col(r, 'metodoEntrega'),
         estadoPedido:  estado,
-        estadoPago:    _estadoPagoWeb(estado, d[r][ix['metodopago']])
+        estadoPago:    _estadoPagoWeb(estado, col(r, 'metodoPago'))
       });
     }
   }
@@ -1579,11 +1675,20 @@ function extPedidoActualizar(p) {
   if (!sh) return { ok:false, error:'Hoja no encontrada' };
 
   var headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  var colIdx  = -1;
-  for (var i = 0; i < headers.length; i++) {
-    if (String(headers[i]||'').trim().toLowerCase() === campo) { colIdx = i + 1; break; }
+  var mapa    = _mapaPedidos(headers);
+  var canon   = Object.keys(PED_ALIAS).filter(function(k) { return k.toLowerCase() === campo; })[0];
+  var colIdx  = (canon && mapa[canon] !== undefined) ? mapa[canon] + 1 : -1;
+  if (colIdx < 0) {
+    for (var i = 0; i < headers.length; i++) {
+      if (_normH(headers[i]) === _normH(campo)) { colIdx = i + 1; break; }
+    }
   }
   if (colIdx < 0) return { ok:false, error:'Campo no encontrado: ' + campo };
+
+  // Confirmar que la fila es ese pedido
+  if (p.orderNumber && mapa.orderNumber !== undefined &&
+      String(sh.getRange(row, mapa.orderNumber + 1).getValue()) !== String(p.orderNumber))
+    return { ok:false, error:'El pedido cambió de lugar en la planilla. Tocá actualizar y volvé a intentar.' };
 
   sh.getRange(row, colIdx).setValue(valor);
   return { ok:true };

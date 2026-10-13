@@ -13,21 +13,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="panel.css?v=17">
+  <link rel="stylesheet" href="panel.css?v=18">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 
 <!-- ===== LOGIN ===== -->
-<div id="login-wrap">
-  <div id="login-box">
+<div id="login-wrap" class="glass-wrap">
+  <div id="login-box" class="glass-card">
     <img class="login-logo-img" src="logo-vsb.webp" alt="Virtual Shop Baires" width="720" height="243">
-    <h2>Acceso al panel</h2>
-    <div class="form-group">
-      <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    </div>
-    <button class="btn-primary btn-full" onclick="doLogin()">Entrar <i class="fa-solid fa-arrow-right"></i></button>
-    <p id="login-err" class="err-msg"></p>
+    <h2 id="login-tit" class="glass-tit">Acceso al panel</h2>
+    <p id="login-sub" class="glass-sub" aria-live="polite">Ingresá tu clave para continuar.</p>
+    <label class="glass-field" for="login-pass">
+      <input type="password" id="login-pass" aria-label="Contraseña del panel" autocomplete="current-password" enterkeyhint="go" autocapitalize="off" spellcheck="false" onkeydown="if(event.key==='Enter')doLogin()">
+      <span class="glass-boxes" aria-hidden="true"></span>
+      <span class="glass-check" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    </label>
+    <button type="button" class="btn-primary btn-full glass-btn" onclick="doLogin()">Entrar <i class="fa-solid fa-arrow-right"></i></button>
+    <p id="login-err" class="err-msg" role="alert"></p>
   </div>
 </div>
 
@@ -479,9 +482,10 @@
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<script src="panel.js?v=17"></script>
+<script src="panel.js?v=18"></script>
 <script src="productos-crm.js?v=6"></script>
 <script src="nav-movil.js?v=1"></script>
+<script src="login-glass.js?v=1"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

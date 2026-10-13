@@ -1214,3 +1214,99 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .mnav-pildora { transition: none; }
   .mnav-abajo .mnav-btn:active { transform: none; }
 }
+
+/* ── Ingreso de vidrio (Glassy) ─────────────────────────── */
+#login-wrap.glass-wrap {
+  position: relative; overflow: hidden; isolation: isolate;
+  background:
+    radial-gradient(60% 50% at 18% 20%, rgba(204,18,18,.28), transparent 70%),
+    radial-gradient(55% 45% at 85% 85%, rgba(30,64,140,.45), transparent 70%),
+    linear-gradient(160deg, #0d1424 0%, #0a0f1c 55%, #120a10 100%);
+}
+/* Relieve: facetas oscuras como placas, solo decoración */
+#login-wrap.glass-wrap::before {
+  content: ''; position: absolute; inset: -20%; z-index: -1; opacity: .55;
+  background:
+    linear-gradient(115deg, transparent 0 38%, rgba(255,255,255,.06) 38% 39%, transparent 39% 100%),
+    linear-gradient(65deg, transparent 0 55%, rgba(255,255,255,.05) 55% 56%, transparent 56% 100%),
+    linear-gradient(145deg, rgba(255,255,255,.04) 0 22%, transparent 22% 100%),
+    conic-gradient(from 210deg at 70% 30%, rgba(255,255,255,.07), transparent 25%, rgba(0,0,0,.25) 50%, transparent 75%),
+    conic-gradient(from 20deg at 25% 75%, rgba(0,0,0,.3), transparent 30%, rgba(255,255,255,.05) 60%, transparent 85%);
+}
+#login-box.glass-card {
+  position: relative; max-width: 400px; padding: 34px 32px 26px; border-radius: 22px; text-align: center;
+  background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  color: #fff;
+}
+/* Resplandor de estado (verde / rojo) — capa propia que solo cambia opacidad */
+#login-box.glass-card::after {
+  content: ''; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0;
+  transition: opacity .45s ease;
+  box-shadow: 0 0 0 1px rgba(34,197,94,.55), 0 0 48px rgba(34,197,94,.35), inset 0 0 60px rgba(34,197,94,.18);
+}
+#login-box.glass-card.ok::after { opacity: 1; }
+#login-box.glass-card.mal::after { opacity: 1; box-shadow: 0 0 0 1px rgba(239,68,68,.6), 0 0 40px rgba(239,68,68,.32), inset 0 0 50px rgba(239,68,68,.14); }
+#login-box.glass-card .login-logo-img { width: min(240px, 100%); margin-bottom: 18px; filter: drop-shadow(0 6px 18px rgba(0,0,0,.4)); }
+#login-box .glass-tit { color: #fff; font-size: 1.25rem; font-weight: 800; margin-bottom: 6px; }
+.glass-sub { color: rgba(255,255,255,.62); font-size: .92rem; margin-bottom: 22px; min-height: 1.3em; }
+
+.glass-field { position: relative; display: block; height: 56px; margin-bottom: 18px; cursor: text; }
+.glass-field input[type=password] {
+  position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; z-index: 2;
+  opacity: 0; color: transparent; caret-color: transparent; border: 0; background: none; padding: 0;
+}
+.glass-boxes { position: absolute; inset: 0; display: flex; justify-content: center; gap: 8px; }
+.glass-box {
+  flex: 0 1 44px; min-width: 14px; height: 56px; border-radius: 12px; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16);
+  transition: border-color .2s ease, background-color .2s ease, box-shadow .2s ease,
+              transform .5s cubic-bezier(.65,0,.35,1), opacity .35s ease .15s;
+}
+.glass-box.activo {
+  border-color: #ff4d4d; background: rgba(229,34,34,.10);
+  box-shadow: 0 0 0 3px rgba(229,34,34,.22), 0 0 22px rgba(229,34,34,.45);
+}
+.glass-box.activo::after {   /* cursor titilando */
+  content: ''; width: 2px; height: 24px; border-radius: 2px; background: #fff; animation: glass-caret 1s steps(1) infinite;
+}
+.glass-box.lleno { border-color: rgba(255,255,255,.3); background: rgba(255,255,255,.1); }
+.glass-box i { width: 10px; height: 10px; border-radius: 50%; background: #fff; animation: glass-pop .32s cubic-bezier(.34,1.56,.64,1) both; }
+.glass-field.cargando .glass-box.lleno { animation: glass-pulso 1s ease-in-out infinite; }
+.glass-field.cargando .glass-box.lleno:nth-child(2n) { animation-delay: .15s; }
+.glass-field.cargando .glass-box.lleno:nth-child(3n) { animation-delay: .3s; }
+/* Error: casillas en rojo */
+.glass-field.mal .glass-box { border-color: rgba(239,68,68,.85); background: rgba(239,68,68,.12); box-shadow: 0 0 16px rgba(239,68,68,.35); }
+/* Éxito: las casillas se juntan en el centro y aparece el ✓ */
+.glass-field.ok .glass-box { transform: translateX(var(--dx, 0)) scale(.85); opacity: 0; border-color: #22c55e; }
+.glass-check {
+  position: absolute; z-index: 1; left: 50%; top: 0; width: 56px; height: 56px; margin-left: -28px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  background: rgba(34,197,94,.18); border: 1.5px solid #22c55e; box-shadow: 0 0 26px rgba(34,197,94,.55);
+  opacity: 0; transform: scale(.6); transition: opacity .3s ease .35s, transform .45s cubic-bezier(.34,1.56,.64,1) .35s;
+}
+.glass-field.ok .glass-check { opacity: 1; transform: none; }
+.glass-check path { stroke-dasharray: 24; stroke-dashoffset: 24; transition: stroke-dashoffset .4s ease .6s; }
+.glass-field.ok .glass-check path { stroke-dashoffset: 0; }
+.glass-btn { min-height: 50px; border-radius: 12px; font-size: 1rem; font-weight: 800; box-shadow: 0 10px 24px rgba(204,18,18,.35); }
+#login-box.glass-card.ok .glass-btn { opacity: 0; transform: translateY(6px); pointer-events: none; transition: opacity .25s ease, transform .25s ease; }
+#login-box.glass-card .err-msg { color: #ff8a8a; }
+
+@keyframes glass-pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+@keyframes glass-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes glass-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+@media (max-width: 480px) {
+  #login-box.glass-card { padding: 28px 20px 22px; }
+  .glass-boxes { gap: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .glass-box, .glass-check, .glass-check path, #login-box.glass-card::after, #login-box.glass-card.ok .glass-btn { transition: none; }
+  .glass-box i, .glass-box.activo::after, .glass-field.cargando .glass-box.lleno { animation: none; }
+  .glass-field.ok .glass-box { transform: none; }
+}
+/* El menú inferior no se muestra en la pantalla de ingreso */
+#app[style*="none"] ~ .mnav-abajo { display: none !important; }

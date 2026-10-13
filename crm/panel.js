@@ -106,21 +106,28 @@ async function doLogin() {
   const btn = document.querySelector('#login-box button');
   if (btn) btn.disabled = true;
   $('login-err').textContent = '';
+  const glass = window.loginGlass;
+  if (glass) glass.cargando(true);
+  const fallo = msg => {
+    $('login-err').textContent = msg;
+    if (glass) glass.error(); else shakeLoginBox();
+  };
   try {
     const data = await crm({ action: 'loginPanel', clave: pass });
     if (data.ok && data.token) {
       sessionStorage.setItem('crm_token', data.token);
-      hide('login-wrap');
-      show('app', 'flex');
-      goTo('panel');
-      prefetchAll();
+      const entrar = () => {
+        hide('login-wrap');
+        show('app', 'flex');
+        goTo('panel');
+        prefetchAll();
+      };
+      if (glass) glass.exito(entrar); else entrar();
     } else {
-      $('login-err').textContent = data.error || 'Contraseña incorrecta.';
-      shakeLoginBox();
+      fallo(data.error || 'Contraseña incorrecta.');
     }
   } catch {
-    $('login-err').textContent = 'Error de conexión. Intentá de nuevo.';
-    shakeLoginBox();
+    fallo('Error de conexión. Intentá de nuevo.');
   } finally {
     if (btn) btn.disabled = false;
   }

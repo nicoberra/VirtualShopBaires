@@ -161,12 +161,20 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v2' };
+    else if (accion === 'version')              out = { ok:true, version: 'v3-2026-10-13' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
     else if (accion === 'mis_pedidos')          out = misPedidos(p);
     else if (accion === 'catalogo')             out = catalogoPublico();
+    // Cuentas de clientes y seguimiento (antes en otro script: ahora todo vive acá)
+    else if (accion === 'registerUser')         out = tiendaRegistrar(p);
+    else if (accion === 'loginUser')            out = tiendaLogin(p);
+    else if (accion === 'changePassword')       out = tiendaCambiarClave(p);
+    else if (accion === 'subscribe')            out = { ok:true, id: suscribir(p) };
+    else if (accion === 'getMyOrders')          out = misPedidos(p);
+    else if (accion === 'getOrder')             out = tiendaPedido(p);
+    else if (accion === 'uploadProof')          out = tiendaComprobante(p);
     else throw 'Acción desconocida: ' + accion;
 
   } catch(err) {
@@ -782,7 +790,7 @@ function manifestGuardarKey(man, key, names) {
 
 // ─── UTILIDADES DE SEGURIDAD ─────────────────────────────────
 
-var CRM_EXEC_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
+var CRM_EXEC_URL = 'https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec';
 
 function _hex(bytes) {
   return bytes.map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
@@ -1678,6 +1686,121 @@ function _estadoPagoWeb(estado, metodo) {
   if (e === 'cancelado') return 'PAGO RECHAZADO';
   if (e === 'confirmado' || e === 'en camino' || e === 'entregado') return 'PAGO CONFIRMADO';
   return 'PENDIENTE DE PAGO';
+}
+
+// ─── CUENTAS DE CLIENTES DE LA TIENDA (pestaña Usuarios) ─────
+// El navegador manda SHA-256(clave+email); acá se guarda con sal: "s1$<sal>$<hash>".
+// Los hashes viejos sin "s1$" siguen entrando y se convierten solos.
+function _hojaUsuarios() {
+  var spreadsheet = ss();
+  var sh = spreadsheet.getSheetByName('Usuarios');
+  if (!sh) {
+    sh = spreadsheet.insertSheet('Usuarios');
+    sh.appendRow(['Fecha registro', 'Email', 'Nombre', 'Hash contraseña']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function _buscarUsuario(sh, email) {
+  var datos = sh.getDataRange().getValues();
+  for (var i = 1; i < datos.length; i++)
+    if (String(datos[i][1] || '').trim().toLowerCase() === email) return { fila: i + 1, datos: datos[i] };
+  return null;
+}
+function tiendaRegistrar(p) {
+  var email = String(p.email || '').trim().toLowerCase(), nombre = String(p.nombre || '').trim().slice(0, 80);
+  var hash = String(p.hash || '').trim();
+  if (!nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !hash) return { ok:false, error:'Nombre, email y contraseña requeridos' };
+  if (!_limite('registro_' + email, 5, 600)) return { ok:false, error:'Demasiados intentos. Esperá unos minutos.' };
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var sh = _hojaUsuarios();
+    if (_buscarUsuario(sh, email)) return { ok:false, error:'email_taken' };
+    sh.appendRow([Utilities.formatDate(new Date(), 'GMT-3', 'dd/MM/yyyy HH:mm'), email, nombre, _hashClave(hash)]);
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+function tiendaLogin(p) {
+  var email = String(p.email || '').trim().toLowerCase(), hash = String(p.hash || '').trim();
+  if (!email || !hash) return { ok:false, error:'Faltan datos' };
+  if (!_limite('login_tienda_' + email, 10, 900)) return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
+  var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
+  if (!u) return { ok:false, error:'Usuario no encontrado' };
+  var v = _verificarClave(u.datos[3], hash);
+  if (!v.ok) return { ok:false, error:'Contraseña incorrecta' };
+  if (v.actualizar) sh.getRange(u.fila, 4).setValue(_hashClave(hash));
+  return { ok:true, nombre: u.datos[2], email: u.datos[1] };
+}
+function tiendaCambiarClave(p) {
+  var email = String(p.email || '').trim().toLowerCase();
+  var viejo = String(p.oldHash || '').trim(), nuevo = String(p.newHash || '').trim();
+  if (!email || !viejo || !nuevo) return { ok:false, error:'Faltan datos' };
+  if (!_limite('cambio_tienda_' + email, 10, 900)) return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
+  var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
+  if (!u) return { ok:false, error:'Usuario no encontrado' };
+  if (!_verificarClave(u.datos[3], viejo).ok) return { ok:false, error:'Contraseña actual incorrecta' };
+  sh.getRange(u.fila, 4).setValue(_hashClave(nuevo));
+  return { ok:true };
+}
+
+// ─── SEGUIMIENTO DE UN PEDIDO (order-status.html) ────────────
+// Busca por número + email (los dos tienen que coincidir). No devuelve dirección ni DNI.
+function _buscarPedidoWeb(numero, email) {
+  var sh = ss().getSheetByName('Pedidos externos') || ss().getSheetByName('Pedidos Externos');
+  if (!sh || sh.getLastRow() < 2) return null;
+  var d = sh.getDataRange().getValues(), ix = _mapaPedidos(d[0]);
+  if (ix.orderNumber === undefined || ix.email === undefined) return null;
+  for (var r = 1; r < d.length; r++) {
+    if (String(d[r][ix.orderNumber]) === numero && String(d[r][ix.email] || '').trim().toLowerCase() === email)
+      return { sh: sh, fila: r + 1, d: d[r], ix: ix, headers: d[0] };
+  }
+  return null;
+}
+function tiendaPedido(p) {
+  var numero = String(p.order || '').trim(), email = String(p.email || '').trim().toLowerCase();
+  if (!numero || !email) return { ok:false, error:'Faltan parámetros' };
+  if (!_limite('seguimiento_' + email, 30, 600)) return { ok:false, error:'Demasiadas consultas. Esperá unos minutos.' };
+  var w = _buscarPedidoWeb(numero, email);
+  if (w) {
+    var c = function(k) { return w.ix[k] === undefined ? '' : w.d[w.ix[k]]; };
+    var est = c('estado');
+    var f = c('timestamp');
+    return { ok:true, order: {
+      numero: numero, fecha: (f instanceof Date) ? Utilities.formatDate(f, 'GMT-3', 'yyyy-MM-dd HH:mm') : f,
+      nombre: c('nombre'), apellido: c('apellido'), email: email, metodoEntrega: c('metodoEntrega'),
+      total: c('total'), estadoPago: _estadoPagoWeb(est, c('metodoPago')), estadoPedido: est,
+      productos: [], urlComprobante: '', numeroSeguimiento: ''
+    } };
+  }
+  var m = misPedidos({ email: email });   // pedidos de Mercado Pago (por referencia)
+  var o = (m.orders || []).filter(function(x) { return String(x.numero) === numero; })[0];
+  if (!o) return { ok:false, error:'Pedido no encontrado' };
+  return { ok:true, order: { numero: o.numero, fecha: o.fecha, email: email, metodoEntrega: o.metodoEntrega, total: o.total,
+    estadoPago: o.estadoPago, estadoPedido: o.estadoPedido, productos: [], urlComprobante: '', numeroSeguimiento: '' } };
+}
+
+// Comprobante de transferencia: se guarda PRIVADO en Drive (carpeta "VSB-Comprobantes")
+// y el link queda en las observaciones del pedido para verlo desde el CRM.
+function tiendaComprobante(p) {
+  var numero = String(p.orderNumber || '').trim(), email = String(p.email || '').trim().toLowerCase();
+  if (!numero || !email || !p.fileBase64) return { ok:false, error:'Faltan datos requeridos' };
+  var datos = String(p.fileBase64).replace(/^data:[^;]+;base64,/, '');
+  if (datos.length > 7000000) return { ok:false, error:'El archivo es muy grande (máx. 5 MB).' };
+  var mime = String(p.fileMimeType || 'image/jpeg');
+  if (!/^(image\/(jpeg|png|webp|heic)|application\/pdf)$/.test(mime)) return { ok:false, error:'Subí una imagen o un PDF.' };
+  if (!_limite('comprobante_' + email, 5, 3600)) return { ok:false, error:'Demasiados intentos. Esperá un rato.' };
+  var w = _buscarPedidoWeb(numero, email);
+  if (!w) return { ok:false, error:'Pedido no encontrado' };
+  var carpetas = DriveApp.getFoldersByName('VSB-Comprobantes');
+  var carpeta = carpetas.hasNext() ? carpetas.next() : DriveApp.createFolder('VSB-Comprobantes');
+  var archivo = carpeta.createFile(Utilities.newBlob(Utilities.base64Decode(datos), mime, numero + '-comprobante'));
+  var url = archivo.getUrl();
+  if (w.ix.observaciones !== undefined) {
+    var obs = String(w.d[w.ix.observaciones] || '');
+    w.sh.getRange(w.fila, w.ix.observaciones + 1).setValue(('Comprobante: ' + url + (obs ? ' | ' + obs : '')).slice(0, 5000));
+  }
+  avisarTelegram('📎 Comprobante subido\nPedido ' + numero + '\n' + url);
+  return { ok:true, message:'Comprobante recibido. Te avisaremos cuando confirmemos el pago.' };
 }
 
 function misPedidos(p) {

@@ -319,4 +319,62 @@ console.log("Catálogo público");
   ok("al editar un producto desde el CRM la caché se borra y la tienda ve el cambio");
 }
 
+// ── Cuentas de clientes y seguimiento (ahora en el mismo script) ─────────────
+console.log("Cuentas de la tienda y seguimiento");
+{
+  const crypto = await import("node:crypto");
+  const HOJAS = {
+    "Pedidos externos": [["Fecha", "Hora", "N° Pedido", "Nombre", "Apellido", "Email", "Calle", "Total", "Método pago", "Estado pedido", "Observaciones"],
+                         ["2026-10-12 21:53", "", "VSB-77", "Ana", "Pérez", "ana@test.local", "Calle Falsa 123", 27000, "transferencia", "Pendiente", ""]],
+    Pedidos: [["ID", "Fecha", "Cliente", "Teléfono", "Detalle", "Monto", "Estado", "Notas", "Comprobante", "ClienteID"]],
+    Suscriptores: [["ID", "Fecha", "Email", "Nombre", "Origen"]],
+  };
+  const sheet = (name) => ({
+    getLastRow: () => HOJAS[name].length, getLastColumn: () => HOJAS[name][0].length,
+    getDataRange: () => ({ getValues: () => HOJAS[name].map(r => r.slice()) }),
+    getRange: (r, c) => ({ setValue: (v) => { HOJAS[name][r - 1][c - 1] = v; }, getValue: () => HOJAS[name][r - 1][c - 1] }),
+    appendRow: (row) => HOJAS[name].push(row.slice()), setFrozenRows() {},
+  });
+  const ssFake = { getSheetByName: (n) => HOJAS[n] ? sheet(n) : null, insertSheet: (n) => { HOJAS[n] = []; return sheet(n); }, getSheets: () => [] };
+  const cache = new Map(); const archivos = []; const tg = [];
+  const toBytes = (b) => Array.from(b).map(x => x > 127 ? x - 256 : x);
+  const stubs = {
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => k === "TG_TOKEN" || k === "TG_CHAT" ? "x" : "" }) }, SpreadsheetApp: { openById: () => ssFake },
+    CacheService: { getScriptCache: () => ({ get: (k) => cache.get(k) ?? null, put: (k, v) => cache.set(k, v), remove: (k) => cache.delete(k) }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock: () => true, releaseLock() {} }) },
+    UrlFetchApp: { fetch: (u, o) => { tg.push(o && o.payload && o.payload.text); return {}; } },
+    Utilities: { DigestAlgorithm: { MD5: "md5", SHA_256: "sha256" }, Charset: { UTF_8: "utf8" }, computeDigest: (a, s) => toBytes(crypto.createHash(a).update(String(s)).digest()),
+      formatDate: () => "13/10/2026 10:00", getUuid: () => crypto.randomUUID(), base64Decode: (s) => [...Buffer.from(s, "base64")], newBlob: (b, m, n) => ({ b, m, n }) },
+    DriveApp: { getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({ createFile: (blob) => { archivos.push(blob); return { getUrl: () => "https://drive.google.com/file/d/abc/view" }; } }) },
+    ContentService: {}, Logger: { log() {} }, MailApp: {}, ScriptApp: {},
+  };
+  const gs = new Function(...Object.keys(stubs), readFileSync(join(root, "crm/Codigo.gs"), "utf8") +
+    "\nreturn { tiendaRegistrar, tiendaLogin, tiendaCambiarClave, tiendaPedido, tiendaComprobante, suscribir };")(...Object.values(stubs));
+  const h1 = "a".repeat(64), h2 = "b".repeat(64);
+  assert.equal(gs.tiendaRegistrar({ nombre: "Ana", email: "Ana@Test.local", hash: h1 }).ok, true);
+  assert.match(String(HOJAS.Usuarios.at(-1)[3]), /^s1\$/);
+  assert.equal(gs.tiendaRegistrar({ nombre: "Ana", email: "ana@test.local", hash: h1 }).error, "email_taken");
+  ok("registro: crea la pestaña Usuarios, guarda hash con sal y no duplica emails");
+  const l = gs.tiendaLogin({ email: "ana@test.local", hash: h1 });
+  assert.equal(l.ok, true); assert.equal(l.nombre, "Ana");
+  assert.equal(gs.tiendaLogin({ email: "ana@test.local", hash: h2 }).error, "Contraseña incorrecta");
+  ok("login: devuelve nombre y email como espera mi-cuenta.html");
+  assert.equal(gs.tiendaCambiarClave({ email: "ana@test.local", oldHash: h1, newHash: h2 }).ok, true);
+  assert.equal(gs.tiendaLogin({ email: "ana@test.local", hash: h2 }).ok, true);
+  ok("cambiar contraseña funciona");
+  const o = gs.tiendaPedido({ order: "VSB-77", email: "ANA@test.local" });
+  assert.equal(o.ok, true); assert.equal(o.order.numero, "VSB-77"); assert.equal(o.order.total, 27000); assert.equal(o.order.estadoPago, "PENDIENTE DE PAGO");
+  assert.ok(!JSON.stringify(o).includes("Calle Falsa"));
+  assert.equal(gs.tiendaPedido({ order: "VSB-77", email: "otro@test.local" }).ok, false);
+  ok("estado del pedido: número + email, sin exponer la dirección; con otro email no lo muestra");
+  const png = Buffer.from("png").toString("base64");
+  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", email: "ana@test.local", fileBase64: "data:image/png;base64," + png, fileMimeType: "image/png" }).ok, true);
+  assert.equal(archivos.length, 1); assert.match(HOJAS["Pedidos externos"][1][10], /^Comprobante: https:\/\/drive/);
+  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", email: "ana@test.local", fileBase64: png, fileMimeType: "text/html" }).ok, false);
+  ok("comprobante: se guarda en Drive, queda el link en el pedido y rechaza archivos que no son imagen/PDF");
+  gs.suscribir({ email: "news@test.local", nombre: "N" }); gs.suscribir({ email: "news@test.local" });
+  assert.equal(HOJAS.Suscriptores.length, 2);
+  ok("suscripción sin duplicados");
+}
+
 console.log(`\n${n} pruebas OK`);

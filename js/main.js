@@ -304,3 +304,21 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.title = 'Hola, ' + user.nombre + ' — Mi cuenta';
   }
 })();
+
+// Limpia de la barra de direcciones los códigos de seguimiento que agregan Google, Meta, etc.
+// (?srsltid=…, gclid, fbclid, utm_…). No recarga la página ni toca los parámetros propios
+// de la tienda (cat, buscar, id, order, email, ref…).
+(function() {
+  const RASTREO = /^(srsltid|gclid|gbraid|wbraid|gad_source|gad_campaignid|fbclid|msclkid|ttclid|igshid|utm_[a-z]+)$/i;
+  function limpiar() {
+    try {
+      const url = new URL(window.location.href);
+      const claves = [...url.searchParams.keys()].filter(k => RASTREO.test(k));
+      if (!claves.length) return;
+      claves.forEach(k => url.searchParams.delete(k));
+      history.replaceState(history.state, '', url.pathname + (url.search || '') + url.hash);
+    } catch (e) {}
+  }
+  if (document.readyState === 'complete') setTimeout(limpiar, 800);
+  else window.addEventListener('load', () => setTimeout(limpiar, 800));
+})();

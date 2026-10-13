@@ -827,11 +827,13 @@ async function submitOrder() {
     envio: envio.costo,
     productos: cartItems.map(i => ({
       nombre: i.nombre,
+      categoria: i.categoria || "",
       color: i.color || "",
       talle: i.talle || "",
       qty: i.qty,
-      precio: i.precio,
+      precio: i.precio,          // solo informativo: el servidor recalcula con el precio real
     })),
+    envioZona: envio.estado === "zona" ? envio.zona.id : "",
     subtotal: calcPrices().sub,
     descuento: calcPrices().disc,
     total: calcPrices().total,
@@ -855,16 +857,19 @@ async function submitOrder() {
   // ── MercadoPago: crear preferencia y redirigir ───────────
   if (metodoPago === "mercadopago") {
     showLoading("Redirigiendo a MercadoPago...");
+    // Se mandan producto + variante + cantidad; el precio y el envío los calcula el servidor.
     const mpItems = cartItems.map(i => ({
-      nombre:   i.nombre + (i.color ? ' · ' + i.color : '') + (i.talle ? ' / ' + i.talle : ''),
-      cantidad: i.qty,
-      precio:   i.precio
+      nombre:    i.nombre,
+      categoria: i.categoria || "",
+      color:     i.color || "",
+      talle:     i.talle || "",
+      cantidad:  i.qty
     }));
-    if (envio.costo > 0) mpItems.push({ nombre: `Envío a domicilio · ${envio.zona.nombre}`, cantidad: 1, precio: envio.costo });
     try {
       const data = await mpJSONP({
         action:   'mp_preferencia',
         items:    JSON.stringify(mpItems),
+        envio:    envio.estado === "zona" ? envio.zona.id : "",
         nombre:   nombre + ' ' + apellido,
         email,
         telefono,

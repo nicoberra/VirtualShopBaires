@@ -33,9 +33,10 @@ var COMPROB_FOLDER_ID = '';   // ← PEGAR ID DE CARPETA DRIVE AQUÍ (opcional)
 // Obtené el Access Token en: mercadopago.com.ar/developers → Tu aplicación → Credenciales
 var MP_ACCESS_TOKEN = PropertiesService.getScriptProperties().getProperty('MP_ACCESS_TOKEN') || '';
 
-// Avisos por Telegram cuando entra un pedido (opcional)
-var TG_TOKEN = '';
-var TG_CHAT  = '';
+// Avisos por Telegram cuando entra un pedido (opcional).
+// Se leen de Propiedades del script (TG_TOKEN y TG_CHAT) para no publicarlos en el repo.
+var TG_TOKEN = PropertiesService.getScriptProperties().getProperty('TG_TOKEN') || '';
+var TG_CHAT  = PropertiesService.getScriptProperties().getProperty('TG_CHAT')  || '';
 
 // Datos bancarios para transferencia (se muestran en el checkout)
 var BANK_ALIAS   = 'virtualshopbairescvu';
@@ -154,10 +155,13 @@ function manejar(e) {
     else if (accion === 'version')              out = { ok:true, version: 'v2' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
+    else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
+    else if (accion === 'mis_pedidos')          out = misPedidos(p);
     else throw 'Acción desconocida: ' + accion;
 
   } catch(err) {
     out = { ok:false, error: String(err) };
+    _registrarError(accion, err);
   }
   return responder(out, p.callback);
 }
@@ -362,7 +366,7 @@ function registrar(p) {
   var m = buscarPorEmail(datos, idx, p.email);
   if (m >= 0) {
     if (datos[m][idx.clave]) return { ok:false, error:'Ya existe una cuenta con ese email. Iniciá sesión.' };
-    sh.getRange(m+1, idx.clave+1).setValue(p.clave);
+    sh.getRange(m+1, idx.clave+1).setValue(_hashClave(p.clave));
     ['nombre','telefono','ciudad'].forEach(function(k) {
       if (p[k]) sh.getRange(m+1, idx[k]+1).setValue(p[k]);
     });
@@ -377,6 +381,7 @@ function registrar(p) {
     if (col.k==='fecha')  return new Date();
     if (col.k==='origen') return 'web';
     if (col.k==='notas')  return 'cuenta web';
+    if (col.k==='clave')  return _hashClave(p.clave);
     return p[col.k] || '';
   }));
   return { ok:true, cliente:{ id:id, nombre:p.nombre||'', email:p.email||'', telefono:p.telefono||'', ciudad:p.ciudad||'' } };
@@ -389,7 +394,11 @@ function login(p) {
   var m = buscarPorEmail(datos, idx, p.email);
   if (m < 0)                    return { ok:false, error:'No encontramos una cuenta con ese email.' };
   if (!datos[m][idx.clave])     return { ok:false, error:'Esa cuenta todavía no tiene contraseña.' };
-  if (String(datos[m][idx.clave]) !== String(p.clave)) return { ok:false, error:'Contraseña incorrecta.' };
+  if (!_limite('login_' + String(p.email).trim().toLowerCase(), 10, 900))
+    return { ok:false, error:'Demasiados intentos. Esperá 15 minutos.' };
+  var v = _verificarClave(datos[m][idx.clave], p.clave);
+  if (!v.ok) return { ok:false, error:'Contraseña incorrecta.' };
+  if (v.actualizar) sh.getRange(m+1, idx.clave+1).setValue(_hashClave(p.clave));   // migra la clave vieja
   return { ok:true, cliente: clienteDeFila(datos, idx, m) };
 }
 
@@ -758,6 +767,94 @@ function manifestGuardarKey(man, key, names) {
 
 // ─── MERCADO PAGO ────────────────────────────────────────────
 
+// ─── UTILIDADES DE SEGURIDAD ─────────────────────────────────
+
+var CRM_EXEC_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec';
+
+function _hex(bytes) {
+  return bytes.map(function(b) { return ('0' + (b & 0xff).toString(16)).slice(-2); }).join('');
+}
+function _md5(s) {
+  return _hex(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, String(s), Utilities.Charset.UTF_8));
+}
+function _sha256(s) {
+  return _hex(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8));
+}
+
+// Contraseñas: se guardan como "s1$<sal>$<hash>" (SHA-256 iterado con sal por usuario).
+// Las claves viejas en texto plano siguen funcionando y se convierten solas al próximo login.
+var CLAVE_ITERACIONES = 1000;
+function _hashClave(clave, sal) {
+  sal = sal || _md5(Utilities.getUuid() + Math.random()).slice(0, 16);
+  var h = String(clave);
+  for (var i = 0; i < CLAVE_ITERACIONES; i++) h = _sha256(sal + ':' + h);
+  return 's1$' + sal + '$' + h;
+}
+// Devuelve { ok, actualizar } — actualizar=true si la clave guardada estaba en texto plano.
+function _verificarClave(guardada, clave) {
+  guardada = String(guardada || '');
+  if (!guardada) return { ok:false, actualizar:false };
+  if (guardada.indexOf('s1$') === 0) {
+    var sal = guardada.split('$')[1];
+    return { ok: _hashClave(clave, sal) === guardada, actualizar:false };
+  }
+  var ok = guardada === String(clave);
+  return { ok: ok, actualizar: ok };
+}
+
+// Límite de pedidos: true si todavía se permite. Ventana deslizante en CacheService.
+function _limite(clave, max, segundos) {
+  var c = CacheService.getScriptCache();
+  var k = 'rl_' + _md5(clave);
+  var n = parseInt(c.get(k) || '0', 10);
+  if (n >= max) return false;
+  c.put(k, String(n + 1), segundos);
+  return true;
+}
+// Antiabuso común para endpoints públicos que crean pedidos o pagos.
+function _antiabuso(p, tipo) {
+  if (String(p.website || '').trim()) return 'No se pudo procesar el pedido.';   // honeypot: lo completan los bots
+  var email = String(p.email || '').trim().toLowerCase();
+  if (email && !_limite(tipo + '_mail_' + email, 5, 600))
+    return 'Hiciste muchos intentos seguidos. Esperá unos minutos y probá de nuevo.';
+  if (!_limite(tipo + '_global_' + Math.floor(Date.now() / 60000), 60, 120))
+    return 'Estamos recibiendo muchos pedidos en este momento. Probá de nuevo en un minuto.';
+  return '';
+}
+// Clave de idempotencia: el mismo carrito del mismo email en 10 min devuelve el mismo pedido.
+function _claveIdem(tipo, p, items) {
+  var norm = (items || []).map(function(i) {
+    return [_normKey(i.nombre || i.title || ''), String(i.color||'').toLowerCase(), String(i.talle||'').toLowerCase(),
+            parseInt(i.cantidad || i.quantity || i.qty || 1, 10)].join('|');
+  }).sort().join(';');
+  return 'idem_' + tipo + '_' + _md5([String(p.email||'').trim().toLowerCase(), String(p.nombre||'').trim().toLowerCase(),
+    norm, String(p.metodoPago||''), String(p.envioZona || p.envio || '')].join('#'));
+}
+
+// ─── ERRORES CENTRALIZADOS ───────────────────────────────────
+// Registra en la pestaña "Errores" y avisa por Telegram como máximo una vez cada 15 min por tipo.
+var ERRORES_ESPERADOS = /^(Pestaña inválida|Acción desconocida)/;
+function _registrarError(accion, err) {
+  try {
+    var msg = String(err && err.message || err).slice(0, 500);
+    if (ERRORES_ESPERADOS.test(msg)) return;
+    var spreadsheet = ss();
+    var sh = spreadsheet.getSheetByName('Errores');
+    if (!sh) {
+      sh = spreadsheet.insertSheet('Errores');
+      sh.appendRow(['Fecha', 'Acción', 'Error']);
+      sh.setFrozenRows(1);
+    }
+    sh.appendRow([new Date(), String(accion || ''), msg]);
+    var k = 'err_tg_' + _md5(String(accion) + msg.slice(0, 80));
+    var c = CacheService.getScriptCache();
+    if (!c.get(k)) {
+      c.put(k, '1', 900);
+      avisarTelegram('⚠️ Error en el CRM (' + (accion || '—') + ')\n' + msg.slice(0, 300));
+    }
+  } catch(e) {}
+}
+
 // ─── PRECIOS EN EL SERVIDOR ──────────────────────────────────
 // Nunca se confía en el precio que manda el navegador: el precio de cada
 // producto se busca en la planilla (misma regla que la tienda: columna
@@ -885,6 +982,14 @@ function crearPreferencia(p) {
   try { items = JSON.parse(p.items || '[]'); } catch(e) { return { ok:false, error:'items inválidos' }; }
   if (!items.length) return { ok:false, error:'Carrito vacío' };
 
+  // Mismo carrito reenviado (doble clic, reintento tras timeout) → mismo link de pago
+  var cacheMP = CacheService.getScriptCache();
+  var idem = _claveIdem('mp', p, items);
+  var previo = cacheMP.get(idem);
+  if (previo) { try { return JSON.parse(previo); } catch(e) {} }
+  var abuso = _antiabuso(p, 'mp');
+  if (abuso) return { ok:false, error: abuso };
+
   // Precios y envío calculados en el servidor; el precio del navegador se ignora.
   var calc = _calcularPedidoServidor(items, p.envio, 0);
   if (calc.noVerificados.length)
@@ -913,7 +1018,8 @@ function crearPreferencia(p) {
     },
     auto_return: 'approved',
     statement_descriptor: 'Virtual Shop Baires',
-    external_reference: ref
+    external_reference: ref,
+    notification_url: CRM_EXEC_URL + '?action=mp_webhook'
   };
   if (p.email) payload.payer = { email: String(p.email) };
 
@@ -939,11 +1045,13 @@ function crearPreferencia(p) {
     detalle:  detalle,
     monto:    total,
     estado:   'Pendiente',
-    notas:    'MercadoPago · ref: ' + ref
+    notas:    'MercadoPago · ref: ' + ref + (p.email ? ' · email: ' + String(p.email).trim().toLowerCase().slice(0, 120) : '')
   });
 
   avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref);
-  return { ok:true, url: json.init_point, ref: ref, total: total };
+  var res = { ok:true, url: json.init_point, ref: ref, total: total };
+  cacheMP.put(idem, JSON.stringify(res), 600);
+  return res;
 }
 
 // ─── COMPROBANTES DE PAGO (Google Drive) ─────────────────────
@@ -1200,6 +1308,24 @@ function crearPedido(p) {
                 'metodoEntrega','metodoPago','provincia','localidad','calle','numeroCalle',
                 'piso','cp','productos','subtotal','descuento','total','observaciones','estado'];
 
+    var prodsIdem = [];
+    try { prodsIdem = (typeof p.productos === 'string') ? JSON.parse(p.productos) : (p.productos || []); } catch(ex) {}
+    var cacheP = CacheService.getScriptCache();
+    var idem   = _claveIdem('pedido', p, prodsIdem);
+    var previo = cacheP.get(idem);
+    if (previo) { try { return JSON.parse(previo); } catch(ex) {} }
+    var abuso = _antiabuso(p, 'pedido');
+    if (abuso) return { ok:false, error: abuso };
+
+    // Lock corto: dos envíos idénticos simultáneos no crean dos pedidos
+    var lock = LockService.getScriptLock();
+    var conLock = lock.tryLock(15000);
+    if (conLock) {
+      previo = cacheP.get(idem);
+      if (previo) { lock.releaseLock(); try { return JSON.parse(previo); } catch(ex) {} }
+    }
+    try {
+
     var ssO = ss();
     var sh  = ssO.getSheetByName('Pedidos externos') || ssO.getSheetByName('Pedidos Externos');
     if (!sh) {
@@ -1209,7 +1335,7 @@ function crearPedido(p) {
       sh.setFrozenRows(1);
     }
 
-    var orderNum = 'VSB-' + new Date().getTime();
+    var orderNum = 'VSB-' + new Date().getTime() + Math.floor(Math.random() * 10);
     var now = Utilities.formatDate(new Date(), 'GMT-3', 'yyyy-MM-dd HH:mm');
 
     // Subtotal, descuento, envío y total se recalculan con precios del servidor.
@@ -1247,12 +1373,7 @@ function crearPedido(p) {
 
     sh.appendRow(row);
 
-    avisarTelegram('🛒 Nuevo pedido: ' + orderNum +
-      '\n' + (p.nombre||'') + ' ' + (p.apellido||'') +
-      '\n' + (p.email||'') + ' · ' + (p.telefono||'') +
-      '\nTotal: $' + (p.total||0) + ' · ' + (p.metodoPago||'') + ' · ' + (p.metodoEntrega||''));
-
-    return {
+    var res = {
       ok:          true,
       orderNumber: orderNum,
       total:       p.total || 0,
@@ -1264,9 +1385,187 @@ function crearPedido(p) {
         cuit:    BANK_CUIT
       }
     };
+    cacheP.put(idem, JSON.stringify(res), 600);
+
+    } finally {
+      if (conLock) lock.releaseLock();
+    }
+
+    avisarTelegram('🛒 Nuevo pedido: ' + orderNum +
+      '\n' + (p.nombre||'') + ' ' + (p.apellido||'') +
+      '\n' + (p.email||'') + ' · ' + (p.telefono||'') +
+      '\nTotal: $' + (p.total||0) + ' · ' + (p.metodoPago||'') + ' · ' + (p.metodoEntrega||''));
+
+    return res;
   } catch(err) {
+    _registrarError('createOrder', err);
     return { ok:false, error: String(err) };
   }
+}
+
+// ─── MERCADO PAGO: CONFIRMACIÓN AUTOMÁTICA ───────────────────
+// Apps Script no expone los encabezados HTTP, así que no se puede validar la firma
+// x-signature. En su lugar, cada aviso se RECONSULTA a la API de Mercado Pago con el
+// MP_ACCESS_TOKEN: solo un pago real, aprobado y de esta cuenta confirma un pedido.
+
+function _mpGet(path) {
+  var r = UrlFetchApp.fetch('https://api.mercadopago.com' + path, {
+    method: 'get', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + MP_ACCESS_TOKEN }
+  });
+  var j = null;
+  try { j = JSON.parse(r.getContentText()); } catch(e) {}
+  return { code: r.getResponseCode(), json: j };
+}
+
+// Marca como Confirmado el pedido de la pestaña Pedidos cuya nota tiene "ref: <external_reference>".
+// Idempotente: si ya está confirmado o el pago ya se procesó, no hace nada.
+function _confirmarPagoMP(pago) {
+  if (!pago || pago.status !== 'approved') return { ok:true, estado:'ignorado' };
+  var ref = String(pago.external_reference || '');
+  if (!ref) return { ok:true, estado:'sin_ref' };
+
+  var cache = CacheService.getScriptCache();
+  var kPago = 'mp_ok_' + pago.id;
+  if (cache.get(kPago)) return { ok:true, estado:'duplicado' };
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = hoja('Pedidos');
+    var cols = TABS['Pedidos'].map(function(c) { return c.k; });
+    var cEstado = cols.indexOf('estado'), cNotas = cols.indexOf('notas'), cMonto = cols.indexOf('monto');
+    var datos = sh.getDataRange().getValues();
+    for (var i = datos.length - 1; i >= 1; i--) {
+      var notas = String(datos[i][cNotas] || '');
+      if (notas.indexOf('ref: ' + ref) < 0) continue;
+      if (notas.indexOf('pago MP ' + pago.id) >= 0 || String(datos[i][cEstado]) === 'Confirmado') {
+        cache.put(kPago, '1', 21600);
+        return { ok:true, estado:'ya_confirmado' };
+      }
+      var monto = Number(datos[i][cMonto]) || 0;
+      var pagado = Number(pago.transaction_amount) || 0;
+      var aviso = (monto && pagado + 1 < monto) ? ' ⚠ PAGÓ $' + pagado + ' DE $' + monto : '';
+      if (!aviso) sh.getRange(i + 1, cEstado + 1).setValue('Confirmado');
+      sh.getRange(i + 1, cNotas + 1).setValue(notas + ' · pago MP ' + pago.id + ' aprobado' + aviso);
+      cache.put(kPago, '1', 21600);
+      avisarTelegram((aviso ? '⚠️ Pago MP con monto distinto' : '✅ Pago MP aprobado') +
+        '\n👤 ' + (datos[i][cols.indexOf('cliente')] || '—') + '\n💰 $' + pagado + '\nRef: ' + ref);
+      return { ok:true, estado: aviso ? 'monto_distinto' : 'confirmado' };
+    }
+    return { ok:true, estado:'pedido_no_encontrado' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Recibe las notificaciones de Mercado Pago (notification_url de la preferencia).
+function mpWebhook(p, e) {
+  if (!MP_ACCESS_TOKEN) return { ok:true };
+  var body = {};
+  try { if (e && e.postData && e.postData.contents) body = JSON.parse(e.postData.contents); } catch(ex) {}
+  var tipo = String(p.type || p.topic || body.type || body.topic || '');
+  var id   = String(p['data.id'] || (body.data && body.data.id) || p.id || '');
+  if (tipo !== 'payment' || !/^\d+$/.test(id)) return { ok:true };
+
+  var r = _mpGet('/v1/payments/' + id);
+  if (r.code !== 200 || !r.json) { _registrarError('mp_webhook', 'No se pudo consultar el pago ' + id + ' (' + r.code + ')'); return { ok:true }; }
+  return _confirmarPagoMP(r.json);
+}
+
+// Conciliación: confirma pagos aprobados de las últimas 48 h que no llegaron por webhook.
+// Se ejecuta sola cada 30 min después de correr instalarConciliacion() una vez.
+function conciliarPagosMP() {
+  if (!MP_ACCESS_TOKEN) return { ok:false, error:'MP_ACCESS_TOKEN no configurado' };
+  var desde = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  var hasta = new Date().toISOString();
+  var r = _mpGet('/v1/payments/search?sort=date_created&criteria=desc&status=approved&limit=100' +
+                 '&range=date_created&begin_date=' + encodeURIComponent(desde) + '&end_date=' + encodeURIComponent(hasta));
+  if (r.code !== 200 || !r.json) { _registrarError('conciliarPagosMP', 'Búsqueda de pagos falló (' + r.code + ')'); return { ok:false }; }
+  var res = { revisados:0, confirmados:0 };
+  (r.json.results || []).forEach(function(pago) {
+    if (String(pago.external_reference || '').indexOf('vsb-') !== 0) return;
+    res.revisados++;
+    var x = _confirmarPagoMP(pago);
+    if (x.estado === 'confirmado' || x.estado === 'monto_distinto') res.confirmados++;
+  });
+  return res;
+}
+
+// Ejecutar UNA vez a mano desde el editor de Apps Script (pide autorización).
+function instalarConciliacion() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'conciliarPagosMP') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('conciliarPagosMP').timeBased().everyMinutes(30).create();
+  return 'Conciliación instalada: cada 30 minutos';
+}
+
+// ─── MIS COMPRAS (página pública por email) ──────────────────
+// Devuelve solo lo necesario para listar: nunca dirección, DNI ni teléfono.
+function _estadoPagoWeb(estado, metodo) {
+  var e = String(estado || '').toLowerCase();
+  if (e === 'cancelado') return 'PAGO RECHAZADO';
+  if (e === 'confirmado' || e === 'en camino' || e === 'entregado') return 'PAGO CONFIRMADO';
+  return 'PENDIENTE DE PAGO';
+}
+
+function misPedidos(p) {
+  var email = String(p.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok:false, error:'Email inválido' };
+  if (!_limite('mis_' + email, 20, 600) || !_limite('mis_global_' + Math.floor(Date.now() / 60000), 120, 120))
+    return { ok:false, error:'Demasiadas consultas. Esperá unos minutos.' };
+
+  var orders = [];
+  var ssO = ss();
+
+  // Pedidos de la web (transferencia / efectivo)
+  var sh = ssO.getSheetByName('Pedidos externos') || ssO.getSheetByName('Pedidos Externos');
+  if (sh && sh.getLastRow() >= 2) {
+    var d = sh.getDataRange().getValues();
+    var ix = _headerIdx(d[0]);
+    for (var r = 1; r < d.length; r++) {
+      if (String(d[r][ix['email']] || '').trim().toLowerCase() !== email) continue;
+      var estado = d[r][ix['estado']];
+      orders.push({
+        numero:        d[r][ix['ordernumber']],
+        fecha:         d[r][ix['timestamp']],
+        productos:     d[r][ix['productos']],
+        total:         d[r][ix['total']],
+        metodoPago:    d[r][ix['metodopago']],
+        metodoEntrega: d[r][ix['metodoentrega']],
+        estadoPedido:  estado,
+        estadoPago:    _estadoPagoWeb(estado, d[r][ix['metodopago']])
+      });
+    }
+  }
+
+  // Pedidos de Mercado Pago (pestaña Pedidos, el email va en las notas)
+  var shM = ssO.getSheetByName('Pedidos');
+  if (shM && shM.getLastRow() >= 2) {
+    var cols = TABS['Pedidos'].map(function(c) { return c.k; });
+    var dm = shM.getDataRange().getValues();
+    for (var m = 1; m < dm.length; m++) {
+      var notas = String(dm[m][cols.indexOf('notas')] || '');
+      if (notas.toLowerCase().indexOf('email: ' + email) < 0) continue;
+      var refM = (notas.match(/ref: ([\w\-]+)/) || [])[1] || dm[m][cols.indexOf('id')];
+      var est = dm[m][cols.indexOf('estado')];
+      orders.push({
+        numero:        refM,
+        fecha:         dm[m][cols.indexOf('fecha')],
+        productos:     dm[m][cols.indexOf('detalle')],
+        total:         dm[m][cols.indexOf('monto')],
+        metodoPago:    'mercadopago',
+        metodoEntrega: '',
+        estadoPedido:  est,
+        estadoPago:    _estadoPagoWeb(est, 'mercadopago')
+      });
+    }
+  }
+
+  orders.forEach(function(o) { if (o.fecha instanceof Date) o.fecha = o.fecha.toISOString(); });
+  orders.sort(function(a, b) { return String(b.fecha) > String(a.fecha) ? 1 : -1; });
+  return { ok:true, orders: orders.slice(0, 50) };
 }
 
 function extPedidoActualizar(p) {

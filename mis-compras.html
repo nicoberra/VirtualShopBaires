@@ -136,6 +136,7 @@
 <script src="js/mejoras-ui.js"></script>
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzDLw6AMeSzr_pXwnzpisWWpnywQTjzjl-V6Lq1YDz7M4fc5kr4YOVuUnj6UYj2lmyE/exec";
+const CRM_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
@@ -168,7 +169,11 @@ function badgeHtml(estadoPago, metodoPago) {
     "PAGO RECHAZADO":          ["badge-rechazado",  "fa-circle-xmark", "Pago rechazado"],
   };
   const [cls, icon, label] = map[estadoPago] || ["badge-pendiente", "fa-clock", estadoPago || "—"];
-  return `<span class="mc-badge ${cls}"><i class="fa-solid ${icon}" style="margin-right:4px;"></i>${label}</span>`;
+  return `<span class="mc-badge ${cls}"><i class="fa-solid ${icon}" style="margin-right:4px;"></i>${escMC(label)}</span>`;
+}
+
+function escMC(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
 async function buscarPedidos() {
@@ -191,12 +196,24 @@ async function buscarPedidos() {
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
 
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getMyOrders&email=${encodeURIComponent(email)}`, { redirect: "follow" });
-    const data = await res.json();
+    // Pedidos web (CRM) + pedidos del sistema anterior; si uno falla se muestra el otro
+    const q = encodeURIComponent(email);
+    const [nuevos, viejos] = await Promise.all([
+      fetch(`${CRM_URL}?action=mis_pedidos&email=${q}`, { redirect: "follow" }).then(r => r.json()).catch(() => null),
+      fetch(`${APPS_SCRIPT_URL}?action=getMyOrders&email=${q}`, { redirect: "follow" }).then(r => r.json()).catch(() => null),
+    ]);
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
 
-    if (!data.ok) { errEl.textContent = data.error || "Error al buscar."; errEl.style.display = "block"; return; }
+    if (!(nuevos && nuevos.ok) && !(viejos && viejos.ok)) {
+      errEl.textContent = (nuevos && nuevos.error) || (viejos && viejos.error) || "Error al buscar.";
+      errEl.style.display = "block";
+      return;
+    }
+    const vistos = new Set();
+    const data = { orders: [ ...((nuevos && nuevos.ok && nuevos.orders) || []), ...((viejos && viejos.ok && viejos.orders) || []) ]
+      .filter(o => { const k = String(o.numero); if (vistos.has(k)) return false; vistos.add(k); return true; })
+      .sort((a, b) => String(b.fecha) > String(a.fecha) ? 1 : -1) };
 
     resEl.style.display = "block";
     if (!data.orders.length) {
@@ -215,16 +232,19 @@ async function buscarPedidos() {
             if (p.color) partes += " · " + p.color;
             if (p.talle) partes += " · " + p.talle;
             partes += " x" + (p.qty || 1);
-            return partes;
+            return escMC(partes);
           }).join(" &nbsp;|&nbsp; ");
         }
-      } catch(e) { productosText = "—"; }
+      } catch(e) {
+        // Pedidos nuevos guardan el detalle como texto: "1x Producto · Color, 2x Otro"
+        productosText = o.productos ? escMC(o.productos) : "—";
+      }
       return `
         <div class="mc-order">
           <div class="mc-order-header">
             <div>
-              <div class="mc-order-num"><i class="fa-solid fa-hashtag" style="color:var(--red);margin-right:4px;font-size:0.85rem;"></i>${o.numero}</div>
-              <div class="mc-order-date">${fmtFecha(o.fecha)}</div>
+              <div class="mc-order-num"><i class="fa-solid fa-hashtag" style="color:var(--red);margin-right:4px;font-size:0.85rem;"></i>${escMC(o.numero)}</div>
+              <div class="mc-order-date">${escMC(fmtFecha(o.fecha))}</div>
             </div>
             ${badgeHtml(o.estadoPago, o.metodoPago)}
           </div>

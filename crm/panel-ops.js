@@ -507,7 +507,7 @@ async function loadProductos(force=false) {
     _productos = r.rows || [];
     _cache[key] = _productos;
     lsGuardar('productos', _productos);
-    if (currentSec === 'productos') { buildProdCats(); filtrarProductos(); }
+    if (currentSec === 'productos') { buildProdCats(); filtrarProductos(true); }   // mantiene la página
   } catch(e) {
     if (local) return;
     $('prod-table').innerHTML = `<div style="padding:20px;text-align:center">

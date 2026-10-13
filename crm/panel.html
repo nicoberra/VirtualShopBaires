@@ -10,7 +10,10 @@
   <meta name="apple-mobile-web-app-title" content="VSB CRM">
   <meta name="theme-color" content="#1a1a2e">
   <link rel="manifest" href="/crm/manifest.webmanifest">
-  <link rel="stylesheet" href="panel.css?v=15">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="panel.css?v=16">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -18,7 +21,7 @@
 <!-- ===== LOGIN ===== -->
 <div id="login-wrap">
   <div id="login-box">
-    <div class="login-logo"><span class="logo-red">VSB</span> CRM</div>
+    <img class="login-logo-img" src="logo-vsb.webp" alt="Virtual Shop Baires" width="720" height="243">
     <h2>Acceso al panel</h2>
     <div class="form-group">
       <input type="password" id="login-pass" placeholder="Contraseña" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
@@ -33,7 +36,7 @@
 
   <!-- SIDEBAR -->
   <nav id="sidebar">
-    <div class="sidebar-logo"><span class="logo-red">VSB</span> CRM <button class="btn-refresh" style="margin-left:auto" onclick="refreshCurrent()" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button></div>
+    <div class="sidebar-logo"><img class="nav-logo-img" src="logo-vsb.webp" alt="Virtual Shop Baires" width="720" height="243"><button class="btn-refresh" style="margin-left:auto" onclick="refreshCurrent()" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button></div>
     <div class="nav-links">
       <a class="nav-link" data-sec="panel"         onclick="goTo('panel')">        <i class="fa-solid fa-gauge-high"></i>    Panel</a>
       <a class="nav-link" data-sec="facturacion"   onclick="goTo('facturacion')">  <i class="fa-solid fa-dollar-sign"></i>   Facturación</a>
@@ -50,7 +53,7 @@
 
   <!-- MOBILE TOP NAV -->
   <div id="mobile-nav">
-    <div class="mobile-logo"><span class="logo-red">VSB</span> CRM</div>
+    <div class="mobile-logo"><img class="nav-logo-img" src="logo-vsb.webp" alt="Virtual Shop Baires" width="720" height="243"></div>
     <button id="btn-refresh-global" class="btn-refresh" onclick="refreshCurrent()" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button>
     <div id="mobile-nav-scroll">
       <button class="mnav-btn" data-sec="panel"        onclick="goTo('panel')">        <i class="fa-solid fa-gauge-high"></i><span class="mnav-label">Panel</span></button>
@@ -111,18 +114,28 @@
 
     <!-- PRODUCTOS -->
     <section id="sec-productos" class="sec">
-      <div class="sec-header">
-        <h1 class="sec-title">Productos</h1>
+      <div class="sec-header prod-header">
+        <div>
+          <h1 class="sec-title">Productos</h1>
+          <p class="sec-sub">Gestioná tu catálogo y disponibilidad.</p>
+        </div>
         <div class="sec-actions">
-          <button class="btn-secondary btn-sm" onclick="abrirModalEditarCats()"><i class="fa-solid fa-tags"></i> Categorías</button>
-          <button class="btn-primary btn-sm" onclick="abrirModalNuevoProd()"><i class="fa-solid fa-plus"></i> Agregar producto</button>
+          <button class="btn-secondary" onclick="abrirModalEditarCats()"><i class="fa-solid fa-tag"></i> Categorías</button>
+          <button class="btn-primary" onclick="abrirModalNuevoProd()"><i class="fa-solid fa-plus"></i> Agregar producto</button>
         </div>
       </div>
-      <div class="toolbar">
-        <input type="search" id="prod-search" placeholder="Buscar producto…" oninput="filtrarProductos()">
-        <div id="prod-cats" class="chip-row"></div>
+      <div class="prod-toolbar">
+        <label class="search-box">
+          <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          <input type="search" id="prod-search" placeholder="Buscar por nombre o SKU…" aria-label="Buscar producto" oninput="filtrarProductos()">
+        </label>
+        <div class="filtros-wrap">
+          <button type="button" class="btn-filtros" id="btn-filtros" onclick="toggleFiltros()" aria-expanded="false" aria-controls="filtros-panel"><i class="fa-solid fa-sliders"></i> Filtros <span id="filtros-n" class="filtros-n" hidden></span></button>
+          <div id="filtros-panel" class="filtros-panel" hidden></div>
+        </div>
       </div>
-      <div class="card table-wrap"><div id="prod-table"></div></div>
+      <div id="prod-cats" class="chip-row prod-chips"></div>
+      <div class="card table-wrap prod-card"><div id="prod-table"></div><div id="prod-pag" class="prod-pag"></div></div>
     </section>
 
     <!-- PEDIDOS -->
@@ -280,73 +293,97 @@
 
 <!-- Modal producto (editar) -->
 <div id="modal-producto" class="modal-backdrop" style="display:none" onclick="cerrarModal(event,'modal-producto')">
-  <div class="modal modal-wide" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <h3 id="mprod-title">Producto</h3>
-      <button class="modal-close" onclick="hide('modal-producto')">&times;</button>
+  <div class="modal modal-prod" role="dialog" aria-modal="true" aria-labelledby="mprod-h" onclick="event.stopPropagation()">
+    <div class="mprod-head">
+      <div class="mprod-head-txt">
+        <h3 id="mprod-h">Editar producto</h3>
+        <p id="mprod-title" class="mprod-head-sub">Producto</p>
+      </div>
+      <button type="button" class="mprod-x" onclick="hide('modal-producto')" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <label>Nombre</label>
-        <input type="text" id="mprod-nombre">
-      </div>
-      <div class="form-group">
-        <label>Categorías <span style="font-size:0.75rem;color:var(--text2)">(tocá para seleccionar, podés elegir varias)</span></label>
-        <div id="mprod-cats-chips" class="cats-chips-wrap"></div>
-      </div>
-      <div class="form-row">
+
+    <div class="mprod-body">
+      <section class="mprod-sec">
+        <h4>Información del producto</h4>
         <div class="form-group">
-          <label>Color / Marca</label>
-          <input type="text" id="mprod-color" placeholder="Ej: Rojo, Sluban">
+          <label for="mprod-nombre">Nombre</label>
+          <input type="text" id="mprod-nombre">
         </div>
         <div class="form-group">
-          <label>Talle / Subtipo</label>
-          <input type="text" id="mprod-talle" placeholder="Ej: XL, Para armar">
+          <label>Categoría</label>
+          <div id="mprod-cats-chips" class="cats-chips-wrap"></div>
         </div>
-      </div>
-      <div class="form-row">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mprod-color">Color / Marca</label>
+            <input type="text" id="mprod-color" placeholder="Ej. Rojo, Sluban">
+          </div>
+          <div class="form-group">
+            <label for="mprod-talle">Talle / Subtipo</label>
+            <input type="text" id="mprod-talle" placeholder="Ej. XL, Para armar">
+          </div>
+        </div>
+        <div id="mprod-variantes"></div>
+      </section>
+
+      <section class="mprod-sec">
+        <h4>Precio e inventario</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="mprod-precio">Precio actual</label>
+            <div class="input-pesos"><span>$</span><input type="number" id="mprod-precio" min="0" step="1" inputmode="numeric"></div>
+          </div>
+          <div class="form-group">
+            <label for="mprod-descuento">Precio anterior (opcional)</label>
+            <div class="input-pesos"><span>$</span><input type="number" id="mprod-descuento" min="0" step="1" inputmode="numeric" placeholder="Sin descuento"></div>
+            <small class="mprod-ayuda">Si lo cargás, la tienda lo muestra tachado al lado del precio actual.</small>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Stock</label>
+            <input type="hidden" id="mprod-stock-num" value="0">
+            <div class="seg seg-grande" role="group" aria-label="Stock">
+              <button type="button" class="seg-btn" data-stock-m="1"><i class="fa-solid fa-circle-check"></i> Con stock</button>
+              <button type="button" class="seg-btn" data-stock-m="0"><i class="fa-solid fa-circle-minus"></i> Sin stock</button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Destacado</label>
+            <label class="dest-tile">
+              <input type="checkbox" id="mprod-destacado" class="sr-only">
+              <span class="dest-ico"><i class="fa-solid fa-star"></i></span>
+              <span class="dest-txt"><b>Producto destacado</b><small>Visible en destacados de la tienda</small></span>
+            </label>
+          </div>
+        </div>
         <div class="form-group">
-          <label>Precio actual ($)</label>
-          <input type="number" id="mprod-precio" min="0" step="1">
+          <label for="mprod-sku">SKU interno, no se muestra en la tienda</label>
+          <input type="text" id="mprod-sku" placeholder="Ej. GAZ-001">
+          <small class="mprod-ayuda">Solo visible internamente</small>
         </div>
-        <div class="form-group">
-          <label>Precio original ($) <span style="font-size:0.75rem;color:var(--text2)">tachado</span></label>
-          <input type="number" id="mprod-descuento" min="0" step="1">
+      </section>
+
+      <section class="mprod-sec">
+        <h4>Descripción e imágenes</h4>
+        <div class="mprod-desc-img">
+          <div class="form-group">
+            <label for="mprod-descripcion">Descripción</label>
+            <textarea id="mprod-descripcion" rows="5" placeholder="Descripción del producto…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Imágenes del producto</label>
+            <div id="fotos-grid"></div>
+            <input type="file" id="foto-input" accept="image/*" multiple class="sr-only" onchange="subirFoto(this)">
+            <small class="mprod-ayuda">La primera es la principal. Con ★ elegís otra.</small>
+          </div>
         </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Stock (unidades)</label>
-          <input type="number" id="mprod-stock-num" min="0" step="1" value="0">
-        </div>
-        <div class="form-group toggles-col">
-          <label>Destacado ⭐</label>
-          <label class="toggle"><input type="checkbox" id="mprod-destacado"><span class="slider"></span></label>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>SKU <span style="font-size:0.75rem;color:var(--text2)">interno, no se muestra en la tienda</span></label>
-        <input type="text" id="mprod-sku" placeholder="SKU / costo">
-      </div>
-      <div class="form-group">
-        <label>Descripción</label>
-        <textarea id="mprod-descripcion" rows="4" placeholder="Descripción del producto…"></textarea>
-      </div>
-      <div class="form-group">
-        <label>Fotos</label>
-        <div id="fotos-grid"></div>
-        <div style="margin-top:10px">
-          <label class="btn-secondary btn-sm" style="cursor:pointer">
-            <i class="fa-solid fa-upload"></i> Subir fotos
-            <input type="file" id="foto-input" accept="image/*" multiple style="display:none" onchange="subirFoto(this)">
-          </label>
-          <small class="text-muted" style="margin-left:10px">La primera foto es la principal. Con ★ elegís otra.</small>
-        </div>
-      </div>
+      </section>
     </div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="hide('modal-producto')">Cerrar</button>
-      <button class="btn-primary" onclick="guardarProducto()">Guardar cambios</button>
+
+    <div class="mprod-foot">
+      <button type="button" class="btn-secondary" onclick="hide('modal-producto')">Cancelar</button>
+      <button type="button" class="btn-primary" id="mprod-guardar" onclick="guardarProducto()">Guardar cambios</button>
     </div>
   </div>
 </div>
@@ -442,8 +479,8 @@
 <!-- Toast -->
 <div id="toast" class="toast"></div>
 
-<script src="panel.js?v=15"></script>
-<script src="productos-crm.js?v=5"></script>
+<script src="panel.js?v=16"></script>
+<script src="productos-crm.js?v=6"></script>
 <script>
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

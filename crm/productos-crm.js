@@ -94,8 +94,16 @@ function abrirModalEditarCats() {
   show('modal-editar-cats', 'flex');
 }
 
-function filtrarProductos() {
+// ── Filtros, páginas y menú "⋯" de la tabla de productos ─────────────
+const PROD_POR_PAG = 25;
+let _prodPag = 1, _prodLista = [];
+const _prodFiltros = { stock: '', destacados: false, sinSku: false, sinFoto: false };
+
+// mantenerPagina=true cuando la lista se actualiza sola (no por una búsqueda o filtro nuevo)
+function filtrarProductos(mantenerPagina) {
+  if (mantenerPagina !== true) _prodPag = 1;
   const q = val('prod-search').toLowerCase();
+  const f = _prodFiltros;
   let list = _productos.filter(p => !HOJAS_NO_PRODUCTO.includes(p._sheet));
   if (_prodCatFil !== 'Todos') list = list.filter(p => p.categoria === _prodCatFil);
   if (q) list = list.filter(p =>
@@ -103,89 +111,246 @@ function filtrarProductos() {
     String(p.color || '').toLowerCase().includes(q) ||
     String(p.marca || '').toLowerCase().includes(q) ||
     String(p.sku || '').toLowerCase().includes(q));
+  if (f.stock === 'con') list = list.filter(p => p.stock);
+  if (f.stock === 'sin') list = list.filter(p => !p.stock);
+  if (f.destacados) list = list.filter(p => p.destacado);
+  if (f.sinSku) list = list.filter(p => !String(p.sku || '').trim());
+  if (f.sinFoto) list = list.filter(p => !p.imagen);
+  actualizarBotonFiltros();
   renderProductos(list);
 }
 
-function renderProductos(list) {
-  const el = $('prod-table');
-  if (!list.length) {
-    el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i>Sin productos</div>';
+function _filtrosActivos() {
+  const f = _prodFiltros;
+  return (f.stock ? 1 : 0) + (f.destacados ? 1 : 0) + (f.sinSku ? 1 : 0) + (f.sinFoto ? 1 : 0);
+}
+function actualizarBotonFiltros() {
+  const n = _filtrosActivos(), b = $('filtros-n'), btn = $('btn-filtros');
+  if (b) { b.hidden = !n; b.textContent = n; }
+  if (btn) btn.classList.toggle('activo', !!n);
+}
+function toggleFiltros(forzar) {
+  const panel = $('filtros-panel'), btn = $('btn-filtros');
+  if (!panel || !btn) return;
+  const abrir = forzar !== undefined ? forzar : panel.hidden;
+  if (abrir === !panel.hidden) return;
+  if (abrir) pintarFiltros();
+  panel.hidden = !abrir;
+  btn.setAttribute('aria-expanded', String(abrir));
+}
+function pintarFiltros() {
+  const f = _prodFiltros, panel = $('filtros-panel');
+  const check = (k, txt) => `<label class="filtros-check"><input type="checkbox" data-f="${k}" ${f[k] ? 'checked' : ''}> ${txt}</label>`;
+  panel.innerHTML = `
+    <div><span class="filtros-tit">Stock</span>
+      <div class="seg" role="group" aria-label="Stock">
+        ${[['', 'Todos'], ['con', 'Con stock'], ['sin', 'Sin stock']].map(([v, t]) =>
+          `<button type="button" class="seg-btn${f.stock === v ? ' on' : ''}" data-stock="${v}" aria-pressed="${f.stock === v}">${t}</button>`).join('')}
+      </div>
+    </div>
+    ${check('destacados', 'Solo destacados')}
+    ${check('sinSku', 'Sin SKU cargado')}
+    ${check('sinFoto', 'Sin foto')}
+    <button type="button" class="filtros-limpiar"${_filtrosActivos() ? '' : ' disabled'}>Limpiar filtros</button>`;
+  panel.querySelectorAll('[data-stock]').forEach(b => b.addEventListener('click', () => {
+    f.stock = b.dataset.stock; pintarFiltros(); filtrarProductos();
+  }));
+  panel.querySelectorAll('[data-f]').forEach(c => c.addEventListener('change', () => {
+    f[c.dataset.f] = c.checked; pintarFiltros(); filtrarProductos();
+  }));
+  panel.querySelector('.filtros-limpiar').addEventListener('click', () => {
+    Object.assign(f, { stock: '', destacados: false, sinSku: false, sinFoto: false });
+    pintarFiltros(); filtrarProductos();
+  });
+}
+
+let _menuAbierto = null;
+function abrirMenuAcciones(btn, items) {
+  if (_menuAbierto && _menuAbierto.btn === btn) { cerrarMenuAcciones(true); return; }
+  cerrarMenuAcciones();
+  const m = document.createElement('div');
+  m.className = 'acc-menu';
+  m.setAttribute('role', 'menu');
+  items.forEach(it => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'acc-item' + (it.peligro ? ' peligro' : '');
+    b.setAttribute('role', 'menuitem');
+    b.innerHTML = `<i class="fa-solid ${it.icon}" aria-hidden="true"></i>${escHtml(it.label)}`;
+    b.addEventListener('click', ev => { ev.stopPropagation(); cerrarMenuAcciones(); it.fn(); });
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect(), w = m.offsetWidth, h = m.offsetHeight;
+  let top = r.bottom + 6;
+  if (top + h > window.innerHeight - 8) { top = r.top - h - 6; m.classList.add('arriba'); }
+  m.style.top = Math.max(8, top) + 'px';
+  m.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';
+  btn.setAttribute('aria-expanded', 'true');
+  _menuAbierto = { m, btn };
+  requestAnimationFrame(() => m.classList.add('abierto'));
+  m.querySelector('button').focus({ preventScroll: true });
+}
+function cerrarMenuAcciones(devolverFoco) {
+  if (!_menuAbierto) return;
+  const { m, btn } = _menuAbierto;
+  _menuAbierto = null;
+  btn.setAttribute('aria-expanded', 'false');
+  m.remove();
+  if (devolverFoco) btn.focus({ preventScroll: true });
+}
+document.addEventListener('click', e => {
+  if (_menuAbierto && !_menuAbierto.m.contains(e.target) && !_menuAbierto.btn.contains(e.target)) cerrarMenuAcciones();
+  const fw = document.querySelector('.filtros-wrap');
+  if (fw && !fw.contains(e.target)) toggleFiltros(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (_menuAbierto) cerrarMenuAcciones(true);
+    else if ($('filtros-panel') && !$('filtros-panel').hidden) { toggleFiltros(false); $('btn-filtros').focus(); }
     return;
   }
-  if (esCelular()) { renderProductosCards(list); return; }
+  if (_menuAbierto && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    e.preventDefault();
+    const items = [..._menuAbierto.m.querySelectorAll('.acc-item')];
+    const i = items.indexOf(document.activeElement);
+    items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
+  }
+});
+window.addEventListener('scroll', () => cerrarMenuAcciones(), true);
+window.addEventListener('resize', () => cerrarMenuAcciones());
 
-  el.innerHTML = `
-    <table>
-      <thead><tr>
-        <th>Producto</th>
-        <th>SKU</th>
-        <th>Color / Variante</th>
-        <th>Precio</th>
-        <th>Stock</th>
-        <th>⭐</th>
-        <th></th>
-      </tr></thead>
-      <tbody id="prod-tbody"></tbody>
-    </table>`;
+function urlTienda(p) {
+  return `https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria || '')}&buscar=${encodeURIComponent(p.nombre || '')}`;
+}
+function celdaAcciones() {
+  return `<td class="td-acc"><div class="acc-wrap">
+    <button type="button" class="btn-editar"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar</button>
+    <button type="button" class="btn-mas" aria-label="Más acciones" aria-haspopup="menu" aria-expanded="false"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></button>
+  </div></td>`;
+}
+function _estrella(p) { return p.destacado ? '<i class="fa-solid fa-star dest-star" title="Destacado" aria-label="Destacado"></i>' : ''; }
 
-  const tbody = $('prod-tbody');
-  const NCOLS = 7;
+function renderProductos(list) {
+  const el = $('prod-table'), pag = $('prod-pag');
+  _prodLista = list;
+  cerrarMenuAcciones();
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i>Sin productos</div>';
+    if (pag) pag.innerHTML = '';
+    return;
+  }
+  if (esCelular()) { if (pag) pag.innerHTML = ''; renderProductosCards(list); return; }
 
   // Filas con el mismo nombre en la misma hoja = un producto con variantes
-  const grupos = [];
-  const porClave = {};
+  const grupos = [], porClave = {};
   list.forEach(p => {
-    const k = p._sheet + '|' + String(p.nombre || '').trim();
+    const k = grupoClave(p);
     if (!porClave[k]) { porClave[k] = []; grupos.push(porClave[k]); }
     porClave[k].push(p);
   });
+  const paginas = Math.max(1, Math.ceil(grupos.length / PROD_POR_PAG));
+  _prodPag = Math.min(Math.max(1, _prodPag), paginas);
+  const desde = (_prodPag - 1) * PROD_POR_PAG;
+  const vista = grupos.slice(desde, desde + PROD_POR_PAG);
 
+  el.innerHTML = `
+    <table class="prod-tabla">
+      <thead><tr>
+        <th>Producto</th><th>SKU</th><th>Variante</th><th>Precio</th><th>Stock</th><th class="th-acc">Acciones</th>
+      </tr></thead>
+      <tbody id="prod-tbody"></tbody>
+    </table>`;
   const frag = document.createDocumentFragment();
-  grupos.forEach(g => {
+  vista.forEach(g => {
     if (g.length === 1) { frag.appendChild(buildProdRow(g[0], false)); return; }
-    const precios = g.map(v => Number(String(v.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0);
-    const min = Math.min(...precios), max = Math.max(...precios);
-    const skus = [...new Set(g.map(v => v.sku).filter(Boolean))];
-    const head = document.createElement('tr');
-    head.className = 'prod-group-row';
-    head.innerHTML = `
-      <td colspan="${NCOLS}">
-        <div class="prod-name-cell">
-          <i class="fa-solid fa-chevron-right prod-group-chev"></i>
-          ${prodThumb((g.find(v => v.imagen) || {}).imagen)}
-          <div class="prod-name-text">
-            <strong>${escHtml(g[0].nombre)}</strong>
-            <div class="prod-sub">
-              <span class="badge">${g.length} variantes</span>
-              ${min === max ? fmtPrecioSheet(min) : fmtPrecioSheet(min) + ' – ' + fmtPrecioSheet(max)}
-              ${skus.length ? ` · SKU ${escHtml(skus.join(', '))}` : ''}
-            </div>
-          </div>
-          <button type="button" class="btn-icon btn-del-grupo" title="Eliminar el producto completo (todas las variantes)" style="color:var(--red);margin-left:auto"><i class="fa-solid fa-trash"></i></button>
-        </div>
-      </td>`;
-    head.querySelector('.btn-del-grupo').addEventListener('click', (ev) => { ev.stopPropagation(); eliminarGrupo(g); });
     const hijos = g.map(v => buildProdRow(v, true));
     const add = document.createElement('tr');
     add.className = 'prod-var-add';
-    add.innerHTML = `<td colspan="${NCOLS}"><button type="button" class="btn-var-add"><i class="fa-solid fa-plus"></i> Agregar variante</button></td>`;
+    add.innerHTML = `<td colspan="6"><button type="button" class="btn-var-add"><i class="fa-solid fa-plus"></i> Agregar variante</button></td>`;
     add.querySelector('button').addEventListener('click', () => abrirAgregarVariante(g));
     hijos.push(add);
-
-    const clave = grupoClave(g[0]);
-    const abierto = _gruposAbiertos.has(clave);
-    hijos.forEach(tr => { tr.hidden = !abierto; });
-    head.classList.toggle('abierto', abierto);
-    head.addEventListener('click', () => {
-      const abrir = hijos[0].hidden;
-      hijos.forEach(tr => { tr.hidden = !abrir; });
-      head.classList.toggle('abierto', abrir);
-      if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
-    });
-    frag.appendChild(head);
+    frag.appendChild(buildGrupoRow(g, hijos));
     hijos.forEach(tr => frag.appendChild(tr));
   });
-  tbody.appendChild(frag);
+  $('prod-tbody').appendChild(frag);
+  pintarPaginacion(grupos.length, desde, vista.length, paginas);
+}
+
+function buildGrupoRow(g, hijos) {
+  const precios = g.map(v => _precioNum(v.precio));
+  const min = Math.min(...precios), max = Math.max(...precios);
+  const skus = [...new Set(g.map(v => String(v.sku || '').trim()).filter(Boolean))];
+  const conStock = g.filter(v => v.stock).length;
+  const opciones = [...new Set(g.map(v => [v.talle, v.color || v.marca].map(x => String(x || '').trim()).filter(Boolean).join(' ')).filter(Boolean))];
+  const stockTxt = conStock === g.length ? 'Con stock' : conStock ? `${conStock} de ${g.length} con stock` : 'Sin stock';
+  const stockCls = conStock === g.length ? 'badge-conf' : conStock ? 'badge-pend' : 'badge-cancel';
+  const tr = document.createElement('tr');
+  tr.className = 'prod-group-row';
+  tr.innerHTML = `
+    <td class="td-nombre">
+      <div class="prod-name-cell">
+        ${prodThumb((g.find(v => v.imagen) || {}).imagen, 64)}
+        <div class="prod-name-text">
+          <strong>${escHtml(g[0].nombre)}</strong>${_estrella(g[0])}
+          <div class="prod-sub"><i class="fa-solid fa-chevron-right prod-group-chev" aria-hidden="true"></i> ${g.length} variantes${opciones.length ? ' · ' + escHtml(opciones.join(' · ')) : ''}</div>
+        </div>
+      </div>
+    </td>
+    <td class="td-sku">${skus.length ? escHtml(skus.join(', ')) : '<span class="text-muted">—</span>'}</td>
+    <td><span class="pill-var">${g.length} variantes</span></td>
+    <td><strong>${min === max ? fmtPrecioSheet(min) : 'desde ' + fmtPrecioSheet(min)}</strong></td>
+    <td><span class="badge ${stockCls}">${stockTxt}</span></td>
+    ${celdaAcciones()}`;
+
+  const clave = grupoClave(g[0]);
+  const fijar = abrir => {
+    hijos.forEach(h => { h.hidden = !abrir; });
+    tr.classList.toggle('abierto', abrir);
+    tr.setAttribute('aria-expanded', String(abrir));
+    if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
+  };
+  fijar(_gruposAbiertos.has(clave));
+  tr.addEventListener('click', e => { if (!e.target.closest('.td-acc')) fijar(hijos[0].hidden); });
+  tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(g[0]));
+  const mas = tr.querySelector('.btn-mas');
+  mas.addEventListener('click', () => abrirMenuAcciones(mas, [
+    { icon: 'fa-arrow-up-right-from-square', label: 'Ver en la tienda', fn: () => window.open(urlTienda(g[0]), '_blank', 'noopener') },
+    { icon: hijos[0].hidden ? 'fa-chevron-down' : 'fa-chevron-up', label: hijos[0].hidden ? 'Ver variantes' : 'Ocultar variantes', fn: () => fijar(hijos[0].hidden) },
+    { icon: 'fa-layer-group', label: 'Agregar variante', fn: () => abrirAgregarVariante(g) },
+    { icon: 'fa-trash', label: 'Eliminar producto completo', peligro: true, fn: () => eliminarGrupo(g) },
+  ]));
+  return tr;
+}
+
+function pintarPaginacion(total, desde, n, paginas) {
+  const el = $('prod-pag');
+  if (!el) return;
+  const nums = [];
+  if (paginas <= 7) for (let i = 1; i <= paginas; i++) nums.push(i);
+  else {
+    const set = new Set([1, paginas, _prodPag - 1, _prodPag, _prodPag + 1]);
+    if (_prodPag <= 4) [2, 3, 4, 5].forEach(x => set.add(x));
+    if (_prodPag >= paginas - 3) [paginas - 4, paginas - 3, paginas - 2, paginas - 1].forEach(x => set.add(x));
+    [...set].filter(x => x >= 1 && x <= paginas).sort((a, b) => a - b).forEach((x, i, arr) => {
+      if (i && x - arr[i - 1] > 1) nums.push('…');
+      nums.push(x);
+    });
+  }
+  el.innerHTML = `
+    <span class="pag-info">Mostrando ${desde + 1}–${desde + n} de ${total} producto${total === 1 ? '' : 's'}</span>
+    ${paginas > 1 ? `<nav class="pag-nav" aria-label="Páginas de productos">
+      <button type="button" class="pag-btn" data-p="${_prodPag - 1}" ${_prodPag === 1 ? 'disabled' : ''} aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></button>
+      ${nums.map(x => x === '…' ? '<span class="pag-gap">…</span>'
+        : `<button type="button" class="pag-btn${x === _prodPag ? ' on' : ''}" data-p="${x}"${x === _prodPag ? ' aria-current="page"' : ''}>${x}</button>`).join('')}
+      <button type="button" class="pag-btn" data-p="${_prodPag + 1}" ${_prodPag === paginas ? 'disabled' : ''} aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button>
+    </nav>` : ''}`;
+  el.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
+    _prodPag = Number(b.dataset.p);
+    renderProductos(_prodLista);
+    const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('sec-productos').scrollIntoView({ behavior: suave ? 'smooth' : 'auto', block: 'start' });
+  }));
 }
 
 const _gruposAbiertos = new Set();
@@ -307,38 +472,34 @@ function abrirAgregarVariante(grupo) {
 }
 
 function buildProdRow(p, esVariante) {
-  const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
+  const precioN = _precioNum(p.precio);
   const colorMarca = String(p.color || p.marca || '').trim();
-  let pVal = precioN, sVal = p.stock ? 1 : 0, hVal = !!p.destacado;
+  const talle = String(p.talle || '').trim();
+  let pVal = precioN, sVal = p.stock ? 1 : 0;
 
   const renderStock = v => (v
     ? '<span class="badge badge-conf">Con stock</span>'
     : '<span class="badge badge-cancel">Sin stock</span>') + '<i class="fa-solid fa-pen edit-hint"></i>';
+  const sub = esVariante ? talle : (p.subcategoria || (_prodCatFil === 'Todos' ? p.categoria : ''));
+  const variante = [talle, colorMarca].filter(Boolean).join(' · ') || 'Único';
 
   const tr = document.createElement('tr');
   if (esVariante) tr.className = 'prod-var-row';
   tr.innerHTML = `
     <td class="td-nombre">
       <div class="prod-name-cell${esVariante ? ' es-variante' : ''}">
-        ${prodThumb(p.imagen, esVariante ? 36 : 44)}
+        ${prodThumb(p.imagen, esVariante ? 44 : 64)}
         <div class="prod-name-text">
-          ${esVariante
-            ? `<strong>${escHtml(colorMarca || '—')}</strong>`
-            : `<strong>${escHtml(p.nombre)}</strong>${p.subcategoria ? `<div class="prod-sub">${escHtml(p.subcategoria)}</div>` : ''}`}
+          <strong>${escHtml(esVariante ? (colorMarca || talle || '—') : p.nombre)}</strong>${_estrella(p)}
+          ${sub ? `<div class="prod-sub">${escHtml(sub)}</div>` : ''}
         </div>
       </div>
     </td>
     <td class="td-editable td-sku">${renderSku(p.sku)}</td>
-    <td>${colorMarca ? `<span class="badge-color">${escHtml(colorMarca)}</span>` : '—'}</td>
+    <td><span class="pill-var">${escHtml(variante)}</span></td>
     <td class="td-editable td-precio"><strong>${fmtPrecioSheet(p.precio)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
-    <td class="td-toggle td-stock">${renderStock(sVal)}</td>
-    <td class="td-center td-toggle td-dest">${hVal ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>'}</td>
-    <td style="white-space:nowrap">
-      <a class="btn-icon" href="https://virtualshopbaires.com.ar/productos.html?cat=${encodeURIComponent(p.categoria||'')}&buscar=${encodeURIComponent(p.nombre||'')}" target="_blank" rel="noopener" title="Ver en tienda"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-      ${esVariante ? '' : '<button class="btn-icon btn-add-var" title="Agregar variante (color, modelo…)"><i class="fa-solid fa-layer-group"></i></button>'}
-      <button class="btn-icon btn-edit-prod" title="Ver / editar completo"><i class="fa-solid fa-pen-to-square"></i></button>
-      <button class="btn-icon btn-del-prod" title="Eliminar producto" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
-    </td>`;
+    <td class="td-toggle td-stock" title="Tocá para cambiar">${renderStock(sVal)}</td>
+    ${celdaAcciones()}`;
 
   tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(p));
   tr.querySelector('.td-precio').addEventListener('click', function() {
@@ -349,19 +510,22 @@ function buildProdRow(p, esVariante) {
     sVal = sVal ? 0 : 1; p.stock = !!sVal;
     this.innerHTML = renderStock(sVal);
     actualizarCampo(p, 'stock', !!sVal)
-      .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); })
+      .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); })
       .catch(() => { sVal = sVal ? 0 : 1; p.stock = !!sVal; this.innerHTML = renderStock(sVal); toast('Error al guardar stock', 'err'); });
   });
-  tr.querySelector('.td-dest').addEventListener('click', function() {
-    hVal = !hVal; p.destacado = hVal;
-    this.innerHTML = hVal ? '<span class="text-yellow" style="font-size:1.1rem">★</span>' : '<span class="text-muted">☆</span>';
-    actualizarCampo(p, 'destacado', hVal)
-      .then(() => toast('Destacado actualizado ✓')).catch(() => toast('Error', 'err'));
-  });
-  tr.querySelector('.btn-edit-prod').addEventListener('click', () => editarProducto(p));
-  const btnVar = tr.querySelector('.btn-add-var');
-  if (btnVar) btnVar.addEventListener('click', () => abrirAgregarVariante([p]));
-  tr.querySelector('.btn-del-prod').addEventListener('click', () => eliminarProducto(p));
+  tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(p));
+  const mas = tr.querySelector('.btn-mas');
+  mas.addEventListener('click', () => abrirMenuAcciones(mas, [
+    { icon: 'fa-arrow-up-right-from-square', label: 'Ver en la tienda', fn: () => window.open(urlTienda(p), '_blank', 'noopener') },
+    ...(esVariante ? [] : [{ icon: 'fa-layer-group', label: 'Agregar variante', fn: () => abrirAgregarVariante([p]) }]),
+    { icon: 'fa-star', label: p.destacado ? 'Quitar de destacados' : 'Marcar como destacado', fn: () => {
+      const nuevo = !p.destacado; p.destacado = nuevo;
+      actualizarCampo(p, 'destacado', nuevo)
+        .then(r => { if (r && r.ok === false) throw new Error(r.error); toast(nuevo ? 'Destacado ✓' : 'Ya no es destacado ✓'); lsGuardar('productos', _productos); filtrarProductos(true); })
+        .catch(() => { p.destacado = !nuevo; toast('No se pudo guardar', 'err'); });
+    } },
+    { icon: 'fa-trash', label: esVariante ? 'Eliminar esta variante' : 'Eliminar producto', peligro: true, fn: () => eliminarProducto(p) },
+  ]));
   return tr;
 }
 
@@ -435,13 +599,16 @@ function editarProducto(p) {
   $('mprod-descripcion').value   = p.descripcion || '';
   if ($('mprod-sku')) $('mprod-sku').value = p.sku || '';
 
-  const precioN = Number(String(p.precio||0).replace(/[^\d.,]/g,'').replace(',','.')) || 0;
-  $('mprod-precio').value      = precioN;
-  $('mprod-descuento').value   = 0;
-  $('mprod-stock-num').value   = p.stock ? 1 : 0;
+  // En la tienda: "descuento" es el precio que se cobra y "precio" el que se muestra tachado
+  const base = _precioNum(p.precio), desc = _precioNum(p.descuento);
+  const conRebaja = desc > 0 && desc < base;
+  $('mprod-precio').value      = conRebaja ? desc : base;
+  $('mprod-descuento').value   = conRebaja ? base : '';
+  setStockModal(!!p.stock);
   $('mprod-destacado').checked = !!p.destacado;
+  $('mprod-destacado').closest('.dest-tile').classList.toggle('on', !!p.destacado);
 
-  // Categoría: es la pestaña de la planilla (solo lectura)
+  // Categoría: la del producto (se elige al crearlo)
   const wrap = $('mprod-cats-chips');
   wrap.innerHTML = `<span class="cat-chip cat-chip-sel">${escHtml(p.categoria || p._sheet)}</span>`;
 
@@ -475,9 +642,16 @@ async function guardarProducto() {
   const talle       = $('mprod-talle').value.trim();
   const descripcion = $('mprod-descripcion').value.trim();
   const sku         = $('mprod-sku') ? $('mprod-sku').value.trim() : (p.sku || '');
-  const precio      = Number($('mprod-precio').value) || 0;
+  const actual      = Number($('mprod-precio').value) || 0;
+  const anterior    = Number($('mprod-descuento').value) || 0;
   const stock       = (Number($('mprod-stock-num').value) || 0) > 0;
   const destacado   = $('mprod-destacado').checked;
+  if (actual <= 0) { toast('Poné el precio actual', 'err'); $('mprod-precio').focus(); return; }
+  if (anterior && anterior <= actual) { toast('El precio anterior tiene que ser mayor que el actual', 'err'); $('mprod-descuento').focus(); return; }
+  // Con precio anterior: se guarda como precio (tachado) y el actual como descuento
+  const precio    = anterior ? anterior : actual;
+  const descuento = anterior ? actual : '';
+  const descAntes = _precioNum(p.descuento) > 0 ? _precioNum(p.descuento) : '';
 
   // De esta variante
   const propios = [
@@ -487,6 +661,7 @@ async function guardarProducto() {
     { campo:'precio',       valor: precio },
     { campo:'stock',        valor: stock },
   ];
+  if (String(descuento) !== String(descAntes)) propios.push({ campo:'descuento', valor: descuento });
   // De todo el producto (todas las variantes)
   const comunes = [
     { campo:'descripcion', valor: descripcion },
@@ -494,6 +669,8 @@ async function guardarProducto() {
   ];
   if (nombre && nombre !== p.nombre) comunes.unshift({ campo:'producto', valor: nombre });
 
+  const btn = $('mprod-guardar');
+  btn.disabled = true; btn.textContent = 'Guardando…';
   try {
     for (const u of propios) {
       const r = await actualizarCampo(p, u.campo, u.valor);
@@ -505,15 +682,35 @@ async function guardarProducto() {
         if (r && r.ok === false && !/Campo no encontrado/.test(r.error || '')) throw new Error(r.error);
       }
     }
-    Object.assign(p, { color, talle, sku, precio, stock });
+    Object.assign(p, { color, talle, sku, precio, descuento, stock });
     vars.forEach(v => Object.assign(v, { nombre: nombre || v.nombre, descripcion, destacado }));
-    toast('Producto guardado en Sheets ✓');
+    lsGuardar('productos', _productos);
+    toast('Producto guardado ✓');
     hide('modal-producto');
-    filtrarProductos();
+    filtrarProductos(true);
   } catch(e) {
     toast('Error al guardar: ' + e.message, 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Guardar cambios';
   }
 }
+
+// Stock y destacado de la ficha
+function setStockModal(con) {
+  $('mprod-stock-num').value = con ? 1 : 0;
+  document.querySelectorAll('[data-stock-m]').forEach(b => {
+    const on = (b.dataset.stockM === '1') === con;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-stock-m]');
+  if (b) setStockModal(b.dataset.stockM === '1');
+});
+document.addEventListener('change', e => {
+  if (e.target.id === 'mprod-destacado') e.target.closest('.dest-tile').classList.toggle('on', e.target.checked);
+});
 
 // ─── FOTOS DEL PRODUCTO (las mismas que muestra la tienda) ──────
 
@@ -558,17 +755,13 @@ async function cargarFotos(p) {
 function renderFotos(p) {
   const grid = $('fotos-grid');
   const vars = hermanos(p).filter(v => v.imagen);
-  const fotosHTML = _fotosProd.length
-    ? _fotosProd.map((url, i) => `
-        <div class="foto-item">
+  const fotosHTML = _fotosProd.map((url, i) => `
+        <div class="foto-tile">
           <img src="${escHtml(url)}" alt="Foto ${i + 1}" loading="lazy">
-          ${i === 0 ? '<span class="foto-first-badge">Principal</span>' : ''}
-          <div class="foto-acciones">
-            ${i > 0 ? `<button type="button" class="foto-btn" data-acc="principal" data-i="${i}" title="Hacer principal"><i class="fa-solid fa-star"></i></button>` : ''}
-            <button type="button" class="foto-btn foto-btn-del" data-acc="quitar" data-i="${i}" title="Quitar de la tienda"><i class="fa-solid fa-xmark"></i></button>
-          </div>
+          ${i === 0 ? '<span class="foto-principal">Principal</span>' : `<button type="button" class="foto-btn foto-btn-star" data-acc="principal" data-i="${i}" title="Hacer principal" aria-label="Hacer principal"><i class="fa-solid fa-star"></i></button>`}
+          <button type="button" class="foto-btn foto-btn-x" data-acc="quitar" data-i="${i}" title="Quitar de la tienda" aria-label="Quitar foto"><i class="fa-solid fa-xmark"></i></button>
         </div>`).join('')
-    : '<p class="text-muted" style="font-size:0.82rem">Este producto todavía no tiene fotos en la tienda.</p>';
+    + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span></label>`);
 
   const varsHTML = vars.length > 1 || (vars.length === 1 && !_fotosProd.includes(vars[0].imagen))
     ? `<div class="fotos-variantes">
@@ -586,7 +779,7 @@ function renderFotos(p) {
     ? '<p class="text-muted" style="font-size:.75rem;color:var(--red)">Para subir o cambiar fotos falta configurar GH_TOKEN en el Apps Script del CRM.</p>'
     : '';
 
-  grid.innerHTML = `<div class="fotos-grid">${fotosHTML}</div>${varsHTML}${aviso}`;
+  grid.innerHTML = `<div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => accionFoto(p, b.dataset.acc, Number(b.dataset.i)));
   });

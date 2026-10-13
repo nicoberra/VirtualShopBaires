@@ -1,19 +1,26 @@
 const selectedVariants = {};
 const WA_NUMBER = "5491149457266";
 
-function getFavoritos() { return JSON.parse(localStorage.getItem("vsb_favoritos") || "[]"); }
-function isFavorito(id) { return getFavoritos().includes(id); }
+function getFavoritos() { try { return JSON.parse(localStorage.getItem("vsb_favoritos") || "[]"); } catch (e) { return []; } }
+// Clave estable (categoría + nombre): el id numérico cambia cuando cambia el catálogo.
+// Los favoritos viejos guardados con id se siguen reconociendo.
+function favClave(p) { return (String(p.categoria || "") + "|" + String(p.nombre || "")).toLowerCase().trim(); }
+function esFavorito(p, favs) { favs = favs || getFavoritos(); return favs.includes(favClave(p)) || favs.includes(p.id); }
+function isFavorito(id) { const p = PRODUCTOS.find(x => x.id === id); return !!p && esFavorito(p); }
 function toggleFavorito(id, btn) {
+  const p = PRODUCTOS.find(x => x.id === id);
+  if (!p) return;
+  const clave = favClave(p);
   let favs = getFavoritos();
-  const idx = favs.indexOf(id);
-  if (idx === -1) {
-    favs.push(id);
+  const ya = esFavorito(p, favs);
+  favs = favs.filter(f => f !== clave && f !== id);
+  if (!ya) {
+    favs.push(clave);
     btn.classList.add("fav-active");
     btn.innerHTML = '<i class="fa-solid fa-heart"></i>';
     btn.title = "Quitar de favoritos";
     showToast("❤️ Guardado en favoritos");
   } else {
-    favs.splice(idx, 1);
     btn.classList.remove("fav-active");
     btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
     btn.title = "Guardar en favoritos";
@@ -404,7 +411,7 @@ function renderProductCard(p) {
 
 function openProductModal(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
-  if (!p) return;
+  if (!p) { if (typeof showToast === "function") showToast("Ese producto ya no está disponible", "error"); return; }
 
   // Sincronizar estado de variantes con la tarjeta
   if (p.tieneVariantes && !selectedVariants[pid]) selectedVariants[pid] = {};

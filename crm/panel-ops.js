@@ -191,12 +191,14 @@ function loadSection(sec) {
 
 async function loadPanel() {
   const cards = $('panel-ops-cards');
-  cards.innerHTML = '<div class="stat-card" style="grid-column:1/-1"><div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div></div>';
+  cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
+  $('panel-ops-pedidos-rec').innerHTML = uiCargando(5);
+  $('panel-ops-clientes-rec').innerHTML = uiCargando(5);
   try {
     const [clientes, productos, pedidos] = await Promise.all([
-      getData('list', 'Clientes', false).catch(() => []),
-      getData('ext_productos_list', null, false).catch(() => []),
-      (_pedidos.length ? Promise.resolve(_pedidos) : crm({ action: 'ext_pedidos_listar' }).then(r => Array.isArray(r) ? [...r].reverse() : [])).catch(() => []),
+      getData('list', 'Clientes', false),
+      getData('ext_productos_list', null, false),
+      _pedidos.length ? Promise.resolve(_pedidos) : crm({ action: 'ext_pedidos_listar' }).then(r => Array.isArray(sinError(r)) ? [...r].reverse() : []),
     ]);
     if (!_clientes.length  && clientes.length)  _clientes  = clientes;
     if (!_productos.length && productos.length) _productos = productos;
@@ -227,7 +229,7 @@ async function loadPanel() {
         pedWrap.appendChild(item);
       });
     } else {
-      pedWrap.innerHTML = '<div class="empty-state"><i class="fa-solid fa-inbox"></i>Sin pedidos</div>';
+      pedWrap.innerHTML = uiVacio('fa-inbox', 'Todavía no hay pedidos', 'Los pedidos de la tienda van a aparecer acá.', { texto: 'Ir a Pedidos', onclick: "goTo('pedidos')" });
     }
 
     // Clientes recientes
@@ -243,10 +245,12 @@ async function loadPanel() {
         cliWrap.appendChild(item);
       });
     } else {
-      cliWrap.innerHTML = '<div class="empty-state"><i class="fa-solid fa-user"></i>Sin clientes</div>';
+      cliWrap.innerHTML = uiVacio('fa-user', 'Todavía no hay clientes', 'Cuando alguien compre o se registre va a aparecer acá.', { texto: 'Ir a Clientes', onclick: "goTo('clientes')" });
     }
   } catch(e) {
-    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1"><p class="text-muted">Error al cargar: ${hx(e.message)}</p></div>`;
+    cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1">${uiError(e.message, 'loadPanel()')}</div>`;
+    $('panel-ops-pedidos-rec').innerHTML = '';
+    $('panel-ops-clientes-rec').innerHTML = '';
   }
 }
 
@@ -258,7 +262,7 @@ async function getData(action, tab, force = false) {
   if (!force && _cache[key]) return _cache[key];
   const params = { action };
   if (tab) params.tab = tab;
-  const res = await crm(params);
+  const res = sinError(await crm(params));
   const data = res.rows || res.stats || res.fotos || [];
   _cache[key] = data;
   return data;
@@ -315,7 +319,7 @@ async function loadClientes(force=false) {
     _clientes = local.d; _cache['list:Clientes'] = _clientes; filtrarClientes();
     if (Date.now() - local.t < LS_TTL) return;
   } else {
-    $('cli-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+    $('cli-table').innerHTML = uiCargando(6);
   }
   try {
     _clientes = await getData('list','Clientes',true);
@@ -323,10 +327,7 @@ async function loadClientes(force=false) {
     if (currentSec === 'clientes') filtrarClientes();
   } catch(e) {
     if (local) return;
-    $('cli-table').innerHTML = `<div style="padding:20px;text-align:center">
-      <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
-      <button class="btn-secondary" onclick="loadClientes(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
-    </div>`;
+    $('cli-table').innerHTML = uiError(e.message, 'loadClientes(true)');
   }
 }
 
@@ -344,7 +345,7 @@ function filtrarClientes() {
 
 function renderClientes(list) {
   const el = $('cli-table');
-  if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-users"></i>Sin clientes</div>'; return; }
+  if (!list.length) { el.innerHTML = val('cli-search') ? uiVacio('fa-magnifying-glass', 'Sin resultados', 'No hay clientes que coincidan con la búsqueda.', { texto: 'Limpiar búsqueda', onclick: "$('cli-search').value='';filtrarClientes()" }) : uiVacio('fa-users', 'Todavía no hay clientes', 'Cuando alguien compre o se registre en la tienda va a aparecer acá.', { texto: 'Agregar cliente', icono: 'fa-plus', onclick: 'abrirModalCliente()' }); return; }
   el.innerHTML = `
     <table>
       <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Compras</th><th></th></tr></thead>
@@ -391,7 +392,7 @@ function verHistorialCliente(cli) {
   $('mhist-title').textContent = `${nombreCompleto} — ${ped.length} pedido${ped.length !== 1 ? 's' : ''}`;
   const body = $('mhist-body');
   if (!ped.length) {
-    body.innerHTML = '<div class="empty-state" style="padding:30px 0"><i class="fa-solid fa-bag-shopping"></i><p>Sin pedidos registrados</p></div>';
+    body.innerHTML = uiVacio('fa-bag-shopping', 'Sin pedidos registrados', 'Este cliente todavía no hizo compras.');
   } else {
     const sorted = [...ped].sort((a,b) => new Date(b.fecha||0) - new Date(a.fecha||0));
     body.innerHTML = sorted.map(p => {
@@ -506,21 +507,19 @@ async function loadProductos(force=false) {
     _productos = local.d; _cache[key] = _productos; buildProdCats(); filtrarProductos();
     if (Date.now() - local.t < LS_TTL) return;
   } else {
-    $('prod-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando productos…</div>';
+    $('prod-table').innerHTML = uiCargando(6, true);
   }
   try {
     if (force) delete _cache[key];
     const r = (!force && _cache[key] && !local) ? { rows: _cache[key] } : await crm({ action:'ext_productos_list' });
+    sinError(r);
     _productos = r.rows || [];
     _cache[key] = _productos;
     lsGuardar('productos', _productos);
     if (currentSec === 'productos') { buildProdCats(); filtrarProductos(true); }   // mantiene la página
   } catch(e) {
     if (local) return;
-    $('prod-table').innerHTML = `<div style="padding:20px;text-align:center">
-      <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
-      <button class="btn-secondary" onclick="loadProductos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
-    </div>`;
+    $('prod-table').innerHTML = uiError(e.message, 'loadProductos(true)');
   }
 }
 
@@ -582,19 +581,16 @@ async function loadPedidos(force=false, silent=false) {
     _pedidos = local.d; filtrarPedidos();
     if (Date.now() - local.t < LS_TTL) return;
   } else if (!silent) {
-    $('ped-table').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i> Cargando…</div>';
+    $('ped-table').innerHTML = uiCargando(6);
   }
   try {
-    const raw = await crm({ action: 'ext_pedidos_listar' });
+    const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
     _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
     lsGuardar('pedidos', _pedidos);
     filtrarPedidos();
   } catch(e) {
     if (local || silent) return;
-    $('ped-table').innerHTML = `<div style="padding:20px;text-align:center">
-      <p class="text-muted" style="margin-bottom:12px">No se pudo cargar</p>
-      <button class="btn-secondary" onclick="loadPedidos(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
-    </div>`;
+    $('ped-table').innerHTML = uiError(e.message, 'loadPedidos(true)');
   }
 }
 
@@ -616,7 +612,7 @@ function filtrarPedidos() {
 
 function renderPedidos(list) {
   const el = $('ped-table');
-  if (!list.length) { el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-bag-shopping"></i>Sin pedidos</div>'; return; }
+  if (!list.length) { el.innerHTML = uiVacio('fa-bag-shopping', 'No hay pedidos para mostrar', 'Probá con otro período o estado, o quitá la búsqueda.', { texto: 'Ver todos', onclick: "$('ped-search').value='';$('ped-estado-fil').value='';setPedPeriodo('todos')" }); return; }
 
   const t = document.createElement('table');
   const thead = t.createTHead();

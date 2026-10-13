@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     html, body { overflow-x: hidden; }
@@ -217,7 +217,7 @@ async function buscarPedidos() {
 
     resEl.style.display = "block";
     if (!data.orders.length) {
-      resEl.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-box-open"></i><p>No encontramos pedidos con ese email.</p></div>`;
+      resEl.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-box-open"></i><p>No encontramos pedidos con ese email.</p><p style="font-size:.85rem;margin-top:6px;">Revisá que sea el mismo email que usaste al comprar.</p><a href="productos.html" class="estado-vacio-btn">Ver productos</a></div>`;
       return;
     }
 

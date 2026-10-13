@@ -103,7 +103,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <link rel="stylesheet" href="css/styles.css?v=3" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="dns-prefetch" href="https://script.google.com" />
@@ -640,8 +640,8 @@
 
 <script>
 </script>
-<script src="js/sheets.js?v=12"></script>
-<script src="js/productos.js?v=4"></script>
+<script src="js/sheets.js?v=13"></script>
+<script src="js/productos.js?v=5"></script>
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
 <script src="js/mejoras-ui.js"></script>
@@ -869,13 +869,17 @@
   }
 
   cargarProductos().then(productos => {
+    if (CATALOGO_ERROR) return;   // queda el aviso de error con Reintentar
     construirCarruselCategorias(productos, CATEGORIAS);
     // Mostrar productos destacados
     const destacados = productos.filter(p => p.destacado);
     document.getElementById("featured-products").innerHTML = destacados.length
       ? destacados.map(renderProductCard).join("")
-      : `<div style="grid-column:1/-1;text-align:center;padding:40px 0;color:var(--gray-light);">
-           <p>No hay productos destacados todavía.</p>
+      : `<div class="estado-vacio" style="grid-column:1/-1;">
+           <i class="fa-solid fa-star" aria-hidden="true"></i>
+           <p class="estado-vacio-tit">Pronto vas a ver acá los destacados</p>
+           <p>Mientras tanto, mirá todo el catálogo.</p>
+           <a href="productos.html" class="estado-vacio-btn">Ver todos los productos</a>
          </div>`;
   });
 </script>

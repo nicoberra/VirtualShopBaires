@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     html, body { overflow-x: hidden; }
@@ -54,9 +54,9 @@
 
 <div class="topbar">
   <div class="container">
-    <span>ðŸ”’ Compra 100% segura</span>
+    <span>🔒 Compra 100% segura</span>
     <span>|</span>
-    <span>ðŸ“¦ Importador directo</span>
+    <span>📦 Importador directo</span>
     <span>|</span>
     <span>âš¡ Respuesta rápida</span>
   </div>
@@ -110,12 +110,12 @@
 
 <div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
 <div class="cart-panel" id="cart-panel">
-  <div class="cart-header"><h2>ðŸ›’ Tu carrito</h2><button class="cart-close" onclick="closeCart()">âœ•</button></div>
+  <div class="cart-header"><h2>🛒 Tu carrito</h2><button class="cart-close" onclick="closeCart()">✕</button></div>
   <div class="cart-items" id="cart-items"></div>
   <div class="cart-footer">
     <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
-    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra â†’</button>
-    <div class="mp-logo">ðŸ”’ Pago seguro Â· transferencia bancaria</div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
   </div>
 </div>
 
@@ -149,7 +149,7 @@ function renderLogin() {
         <button class="mc-btn-red" id="l-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar</button>
       </div>
       <div class="mc-msg error" id="l-err" style="display:none;"></div>
-      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">¿No tenés cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis â†’</a></p>
+      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">¿No tenés cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis →</a></p>
     </div>`;
   document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 }
@@ -236,7 +236,7 @@ async function doChangePass(email) {
     const newHash = await hashPass(newPass, email);
     const res  = await fetch(`${APPS_URL}?action=changePassword&email=${encodeURIComponent(email)}&oldHash=${oldHash}&newHash=${newHash}`, { redirect: 'follow' });
     const data = await res.json();
-    if (data.ok) { msg.textContent = 'âœ“ Contraseña actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
+    if (data.ok) { msg.textContent = '✓ Contraseña actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
     else { msg.textContent = data.error || 'Error al cambiar Contraseña.'; msg.className = 'mc-msg error'; }
   } catch { msg.textContent = 'Error de conexión.'; msg.className = 'mc-msg error'; }
   msg.style.display = 'block';

@@ -83,7 +83,7 @@ function abrirModalEditarCats() {
             <button class="btn-danger btn-sm btn-del-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-trash"></i> Eliminar</button>
           </span>
         </div>`).join('')
-    : '<p class="text-muted">No hay categorías todavía.</p>';
+    : uiVacio('fa-tags', 'Todavía no hay categorías', 'Creá la primera para empezar a cargar productos.', { texto: 'Crear categoría', icono: 'fa-plus', onclick: "$('nueva-cat-nombre').focus()" });
   lista.querySelectorAll('.btn-ver-cat').forEach(btn => {
     btn.addEventListener('click', () => { hide('modal-editar-cats'); setProdCat(btn.dataset.cat); });
   });
@@ -236,7 +236,10 @@ function renderProductos(list) {
   _prodLista = list;
   cerrarMenuAcciones();
   if (!list.length) {
-    el.innerHTML = '<div class="empty-state"><i class="fa-solid fa-box-open"></i>Sin productos</div>';
+    const hayFiltro = val('prod-search') || _prodCatFil !== 'Todos' || _filtrosActivos();
+    el.innerHTML = hayFiltro
+      ? uiVacio('fa-magnifying-glass', 'No encontramos productos', 'Probá con otra búsqueda, categoría o filtro.', { texto: 'Ver todos', onclick: "$('prod-search').value='';Object.assign(_prodFiltros,{stock:'',destacados:false,sinSku:false,sinFoto:false});setProdCat('Todos')" })
+      : uiVacio('fa-box-open', 'Todavía no hay productos', 'Cargá el primero y va a aparecer en la tienda.', { texto: 'Agregar producto', icono: 'fa-plus', onclick: 'abrirModalNuevoProd()' });
     if (pag) pag.innerHTML = '';
     return;
   }

@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=3" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     html, body { overflow-x: hidden; }
@@ -92,7 +92,8 @@
   </div>
 </div>
 
-<script src="js/productos.js"></script>
+<script src="js/sheets.js?v=13"></script>
+<script src="js/productos.js?v=5"></script>
 <script src="js/cart.js"></script>
 <script src="js/main.js"></script>
 <script src="js/mejoras-ui.js"></script>
@@ -114,15 +115,27 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  const favProducts = PRODUCTOS.filter(p => favIds.includes(p.id));
+  // Cargando: siluetas con la forma de las tarjetas
+  container.innerHTML = `<div class="fav-grid" aria-label="Cargando favoritos" role="status">${'<div class="sk-card"><div class="sk-card-img"></div><div class="sk-card-l1"></div><div class="sk-card-l2"></div></div>'.repeat(Math.min(favIds.length, 8))}</div>`;
+  cargarProductos().then(() => {
+    if (window.CATALOGO_ERROR) {
+      container.innerHTML = `<div class="fav-empty"><i class="fa-solid fa-wifi"></i><h2>No pudimos cargar tus favoritos</h2><p>Revisá tu conexión e intentá de nuevo.</p><button type="button" onclick="location.reload()" class="fav-btn-accion">Reintentar</button></div>`;
+      return;
+    }
+    mostrarFavoritos(favIds, container);
+  });
+});
+
+function mostrarFavoritos(favIds, container) {
+  const favProducts = PRODUCTOS.filter(p => esFavorito(p, favIds));
 
   if (!favProducts.length) {
-    container.innerHTML = `<div class="fav-empty"><i class="fa-regular fa-heart"></i><h2>No se encontraron productos guardados</h2><a href="productos.html" style="display:inline-block;margin-top:16px;background:var(--red);color:#fff;padding:10px 24px;border-radius:50px;font-weight:700;text-decoration:none;">Ver productos →</a></div>`;
+    container.innerHTML = `<div class="fav-empty"><i class="fa-regular fa-heart"></i><h2>Tus favoritos ya no están disponibles</h2><p>Puede que se hayan agotado o cambiado. Mirá lo que hay ahora.</p><a href="productos.html" style="display:inline-block;margin-top:16px;background:var(--red);color:#fff;padding:10px 24px;border-radius:50px;font-weight:700;text-decoration:none;">Ver productos →</a></div>`;
     return;
   }
 
   container.innerHTML = `<div class="fav-grid">${favProducts.map(p => renderFavCard(p)).join("")}</div>`;
-});
+}
 
 function renderFavCard(p) {
   const img = p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:100%;height:160px;object-fit:cover;border-radius:10px 10px 0 0;" />` : `<div style="height:160px;background:var(--black-2);border-radius:10px 10px 0 0;display:flex;align-items:center;justify-content:center;"><i class="fa-solid fa-box-open" style="font-size:2rem;color:var(--gray-light);"></i></div>`;

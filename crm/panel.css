@@ -1310,3 +1310,42 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
 }
 /* El menú inferior no se muestra en la pantalla de ingreso */
 #app[style*="none"] ~ .mnav-abajo { display: none !important; }
+
+/* ── Estados de la interfaz: cargando / vacío / error ── */
+.sk-lista { display: flex; flex-direction: column; padding: 4px 0; }
+.sk-fila { display: flex; align-items: center; gap: 14px; padding: 14px 6px; border-bottom: 1px solid var(--border); }
+.sk-fila:last-child { border-bottom: 0; }
+.sk-foto { width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0; }
+.sk-txt { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.sk-l1 { height: 12px; width: 55%; }
+.sk-l2 { height: 10px; width: 32%; }
+.sk-pill { width: 70px; height: 22px; border-radius: 999px; flex-shrink: 0; }
+.sk-lista .crm-skeleton { background: var(--bg4); animation: sk-pulso 1.3s ease-in-out infinite; }
+.sk-fila:nth-child(2n) .crm-skeleton { animation-delay: .15s; }
+.sk-fila:nth-child(3n) .crm-skeleton { animation-delay: .3s; }
+@keyframes sk-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+.empty-state, .estado-error {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  padding: 36px 20px; color: var(--text2); animation: estado-in .25s ease both;
+}
+.empty-state > i, .estado-error > i { font-size: 2rem; margin-bottom: 6px; display: block; opacity: .75; }
+.estado-error > i { color: #d97706; opacity: 1; }
+.empty-tit { color: var(--text); font-size: 1rem; font-weight: 700; }
+.empty-txt { font-size: .88rem; max-width: 340px; line-height: 1.45; }
+.empty-btn { margin-top: 10px; gap: 8px; border-radius: 10px; font-weight: 700; }
+@keyframes estado-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* Hover / press / foco en botones comunes */
+.btn-secondary:hover, .btn-icon:hover { border-color: #b9c0cf; }
+.btn-primary:focus-visible, .btn-secondary:focus-visible, .btn-icon:focus-visible, .btn-danger:focus-visible,
+.chip:focus-visible, .tab-btn:focus-visible, .nav-link:focus-visible, .btn-refresh:focus-visible, .cat-chip:focus-visible {
+  outline: 2px solid var(--red); outline-offset: 2px;
+}
+.btn-icon:active, .btn-danger:active, .tab-btn:active, .chip:active, .btn-refresh:active, .cat-chip:active { transform: scale(.97); }
+.btn-primary:disabled, .btn-secondary:disabled, .btn-danger:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-lista .crm-skeleton, .empty-state, .estado-error { animation: none; }
+  .btn-icon:active, .btn-danger:active, .tab-btn:active, .chip:active, .btn-refresh:active, .cat-chip:active { transform: none; }
+}

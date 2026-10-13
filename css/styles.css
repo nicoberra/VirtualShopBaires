@@ -3155,3 +3155,35 @@ footer {
   .cart-panel { transition-duration: .01ms; }
 }
 /* fin PULIDO SKILLS */
+
+/* ===== ESTADOS: cargando / vacío ===== */
+.sk-card {
+  background: var(--black-3); border: 1px solid var(--border-default); border-radius: var(--radius);
+  overflow: hidden; display: flex; flex-direction: column; gap: 10px; padding-bottom: 16px;
+}
+.sk-card-img { aspect-ratio: 1 / 1; background: var(--black-2); }
+.sk-card-l1, .sk-card-l2, .sk-card-l3 { height: 12px; border-radius: 6px; background: var(--black-4); margin: 0 14px; }
+.sk-card-l1 { width: 75%; margin-top: 4px; }
+.sk-card-l2 { width: 45%; }
+.sk-card-l3 { width: 35%; height: 18px; }
+.sk-card > div { animation: sk-pulso 1.3s ease-in-out infinite; }
+.sk-card:nth-child(2n) > div { animation-delay: .15s; }
+.sk-card:nth-child(3n) > div { animation-delay: .3s; }
+@keyframes sk-pulso { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+.estado-vacio { text-align: center; padding: 48px 20px; color: var(--gray); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.estado-vacio > i { font-size: 2rem; color: var(--red); margin-bottom: 6px; }
+.estado-vacio-tit { color: var(--white); font-weight: 700; font-size: 1.05rem; }
+.estado-vacio-btn, .fav-btn-accion {
+  display: inline-block; margin-top: 14px; background: var(--red); color: #fff; border: 0; cursor: pointer;
+  padding: 11px 24px; border-radius: var(--radius-pill); font-weight: 700; font-size: .92rem; text-decoration: none;
+  transition: background-color .2s ease, transform .15s ease;
+}
+.estado-vacio-btn:hover, .fav-btn-accion:hover { background: var(--red-dark); }
+.estado-vacio-btn:active, .fav-btn-accion:active { transform: scale(.97); }
+.estado-vacio-btn:focus-visible, .fav-btn-accion:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sk-card > div { animation: none; }
+  .estado-vacio-btn:active, .fav-btn-accion:active { transform: none; }
+}

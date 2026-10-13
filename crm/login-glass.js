@@ -14,7 +14,7 @@
   const tit   = document.getElementById('login-tit');
   const sub   = document.getElementById('login-sub');
   const TXT   = { tit: tit.textContent, sub: sub.textContent };
-  const MAX = 16, MIN = 4;   // la clave actual es de 4: si es más larga, aparecen más casillas
+  const MAX = 16, MIN = 4;
   const sinMovimiento = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let ocupado = false;
 

@@ -36,6 +36,7 @@ const DRIVE_FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxS-UBfke2GiPSuEwhPTbivnbP4b3S3GAYm22qXPtxe68ORtHdRgaQnTDD13EK-jjgV_w/exec";
 
 let PRODUCTOS  = [];
+var CATALOGO_ERROR = false;   // true si no se pudo cargar: las páginas no pisan el aviso de error
 let CATEGORIAS = ["Todos"];
 let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 
@@ -390,10 +391,12 @@ async function cargarProductos() {
     CATEGORIAS = ["Todos", ...catsConProductos, ...catsExternas];
 
     _writeCache(_CACHE_DATA, { productos: PRODUCTOS, categorias: CATEGORIAS, imageMap: IMAGE_MAP });
+    CATALOGO_ERROR = false;
     ocultarCargando();
     return PRODUCTOS;
   } catch (e) {
     console.error("Error cargando productos:", e);
+    CATALOGO_ERROR = true;
     ocultarCargando();
     mostrarError();
     return [];
@@ -406,20 +409,21 @@ async function cargarProductos() {
 
 function mostrarCargando() {
   document.querySelectorAll("#featured-products, #products-container").forEach(el => {
-    el.innerHTML = `
-      <div style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--gray-light);">
-        <i class="fa-solid fa-spinner fa-spin" style="font-size:2rem; color:var(--red);"></i>
-        <p style="margin-top:16px;">Cargando productos...</p>
-      </div>`;
+    // Siluetas con la forma de las tarjetas (no "Cargando...")
+    el.setAttribute("aria-busy", "true");
+    el.innerHTML = '<div class="sk-card" aria-hidden="true"><div class="sk-card-img"></div><div class="sk-card-l1"></div><div class="sk-card-l2"></div><div class="sk-card-l3"></div></div>'
+      .repeat(el.id === "featured-products" ? 4 : 8);
   });
 }
 
-function ocultarCargando() {}
+function ocultarCargando() {
+  document.querySelectorAll("#featured-products, #products-container").forEach(el => el.removeAttribute("aria-busy"));
+}
 
 function mostrarError() {
   document.querySelectorAll("#featured-products, #products-container").forEach(el => {
     el.innerHTML = `
-      <div style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--gray-light);">
+      <div role="alert" style="grid-column:1/-1; text-align:center; padding:60px 0; color:var(--gray-light);">
         <i class="fa-solid fa-wifi" style="font-size:2rem; color:var(--red);"></i>
         <p style="margin-top:16px; font-weight:600; color:var(--white);">No pudimos cargar los productos</p>
         <p style="margin-top:6px; font-size:0.88rem;">Revisá tu conexión y recargá la página, o consultanos directamente por WhatsApp.</p>

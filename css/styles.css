@@ -3662,3 +3662,6 @@ body { background: #f4f5f7; }
 .precio-transfer-off { font-size: .66rem; font-weight: 800; letter-spacing: .03em; color: var(--red-dark); background: var(--red-light); border-radius: 5px; padding: 1px 5px; }
 .modal-info .precio-transfer { font-size: .9rem; margin-top: -6px; }
 @media (max-width: 640px) { .product-card .precio-transfer { font-size: .72rem; } }
+.modal-desc .desc-tit { margin-top: 10px; font-weight: 700; color: var(--ink); }
+.modal-desc .desc-tit + ul { margin-top: 4px; }
+.modal-desc .desc-garantia { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6fb; color: var(--accent); font-weight: 600; font-size: .84rem; }

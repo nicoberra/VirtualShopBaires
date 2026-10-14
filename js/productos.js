@@ -143,10 +143,28 @@ function _escHTML(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&l
 function descripcionHTML(texto) {
   const t = String(texto || "").trim();
   if (!t) return "";
-  const partes = t.split(/\s+-\s+/).map(x => x.trim()).filter(Boolean);
-  const cuerpo = (partes.length >= 3 && partes.every(x => x.length < 160))
-    ? `<p>${_escHTML(partes[0])}</p><ul>${partes.slice(1).map(x => `<li>${_escHTML(x)}</li>`).join("")}</ul>`
-    : t.split(/\n{2,}/).map(x => `<p>${_escHTML(x).replace(/\n/g, "<br>")}</p>`).join("");
+  let cuerpo;
+  if (/^- /m.test(t) && /\n/.test(t)) {
+    // Formato nuevo: bloques separados por línea en blanco; "Título:" y listas con "- "
+    cuerpo = t.split(/\n{2,}/).map(bloque => {
+      const lineas = bloque.split("\n").map(x => x.trim()).filter(Boolean);
+      let html = "", items = [];
+      const cerrar = () => { if (items.length) { html += `<ul>${items.map(x => `<li>${_escHTML(x)}</li>`).join("")}</ul>`; items = []; } };
+      lineas.forEach(l => {
+        if (l.startsWith("- ")) items.push(l.slice(2));
+        else if (/^[^.]{2,40}:$/.test(l)) { cerrar(); html += `<p class="desc-tit">${_escHTML(l)}</p>`; }
+        else if (/^Garantía:/i.test(l)) { cerrar(); html += `<p class="desc-garantia">${_escHTML(l)}</p>`; }
+        else { cerrar(); html += `<p>${_escHTML(l)}</p>`; }
+      });
+      cerrar();
+      return html;
+    }).join("");
+  } else {
+    const partes = t.split(/\s+-\s+/).map(x => x.trim()).filter(Boolean);
+    cuerpo = (partes.length >= 3 && partes.every(x => x.length < 160))
+      ? `<p>${_escHTML(partes[0])}</p><ul>${partes.slice(1).map(x => `<li>${_escHTML(x)}</li>`).join("")}</ul>`
+      : t.split(/\n{2,}/).map(x => `<p>${_escHTML(x).replace(/\n/g, "<br>")}</p>`).join("");
+  }
   const larga = t.length > 360;
   return `<div class="modal-desc${larga ? " modal-desc-corta" : ""}" id="modal-desc">${cuerpo}</div>` +
     (larga ? `<button type="button" class="modal-desc-mas" aria-controls="modal-desc" aria-expanded="false"

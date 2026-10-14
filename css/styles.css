@@ -3231,3 +3231,24 @@ footer {
 @media (prefers-reduced-motion: reduce) {
   .nav-cats-panel, .nav-cats-grid, .nav-cats-btn i, .header-dropdown-nav .nav-cat { transition: none; }
 }
+
+/* ===== Estado de compra (mismo mensaje en tarjeta y detalle) ===== */
+.compra-estado {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  font-size: 0.8rem; font-weight: 600; line-height: 1.35;
+  padding: 7px 10px; border-radius: 8px;
+  color: #5b4a12; background: #fdf6e3; border: 1px solid #f1e3b5;
+}
+.compra-estado[hidden] { display: none; }
+.compra-estado[data-estado="sinstock"] { color: #4b5563; background: #f3f4f6; border-color: #e5e7eb; }
+.compra-estado a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.compra-estado a:hover { color: var(--red); }
+.compra-estado-aviso { animation: compra-aviso 0.5s ease; }
+@keyframes compra-aviso {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compra-estado-aviso { animation: none; outline: 2px solid currentColor; outline-offset: 1px; }
+}

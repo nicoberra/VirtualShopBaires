@@ -127,6 +127,51 @@ function isVariantComplete(pid) {
   return true;
 }
 
+// ─── ESTADO DE COMPRA (uno solo para tarjeta, detalle y "Comprar ahora") ────
+// listo: se puede comprar · elegir: falta color/talle · sinstock: no hay disponibilidad real
+function varianteElegida(p) {
+  const sel = selectedVariants[p.id] || {};
+  return p.variantes.find(v => (!p.colores.length || v.color === sel.color) && (!p.talles.length || v.talle === sel.talle)) || null;
+}
+function estadoCompra(pid) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return { estado: "sinstock" };
+  if (!p.tieneVariantes) return { estado: p.disponible === false ? "sinstock" : "listo" };
+  if (!p.variantes.some(v => v.stock)) return { estado: "sinstock" };       // ninguna opción disponible
+  if (!isVariantComplete(pid)) {
+    const falta = [p.colores.length > 1 ? "una opción" : "", p.talles.length > 1 ? "el talle" : ""].filter(Boolean).join(" y ");
+    return { estado: "elegir", falta };
+  }
+  const v = varianteElegida(p);
+  return (v && v.stock) ? { estado: "listo", variante: v } : { estado: "sinstock", variante: v, opcion: true };
+}
+function _waConsulta(p) {
+  return "https://wa.me/5491149457266?text=" + encodeURIComponent("Hola! Quería consultar por: " + p.nombre);
+}
+function htmlEstadoCompra(p, e) {
+  if (e.estado === "listo") return "";
+  if (e.estado === "elegir") return `<i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Elegí ${e.falta} para comprar`;
+  return `<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ${e.opcion ? "Esta opción no tiene stock" : "Sin stock por el momento"} · ` +
+         `<a href="${_waConsulta(p)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Consultanos</a>`;
+}
+// Aplica el estado a un contenedor (tarjeta o detalle): ambos botones y el mensaje juntos
+function pintarEstadoCompra(root, pid) {
+  if (!root) return;
+  const p = PRODUCTOS.find(x => x.id === pid);
+  const e = estadoCompra(pid), ok = e.estado === "listo";
+  root.querySelectorAll(".btn-add, .btn-wa-product").forEach(b => {
+    b.disabled = !ok;
+    b.classList.toggle("btn-variant-disabled", !ok);
+    b.dataset.ready = ok ? "true" : "false";
+  });
+  const add = root.querySelector(".btn-add");
+  if (add) add.innerHTML = e.estado === "sinstock"
+    ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock'
+    : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito';
+  const msg = root.querySelector(".compra-estado");
+  if (msg && p) { msg.innerHTML = htmlEstadoCompra(p, e); msg.hidden = ok; msg.dataset.estado = e.estado; }
+}
+
 function selectVariant(pid, type, value, btn) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!selectedVariants[pid]) selectedVariants[pid] = {};
@@ -202,11 +247,6 @@ function updateVariantState(pid) {
   }
 
   const priceEl = card.querySelector('.price-main');
-  const addBtn  = card.querySelector('.btn-add');
-  const waBtn   = card.querySelector('.btn-wa-product');
-  const hint    = card.querySelector('.variant-hint');
-
-  if (hint) hint.style.display = complete ? 'none' : 'flex';
 
   // Mostrar precio parcial: si solo hay un talle seleccionado, buscar precio de ese talle
   // (útil cuando el precio varía por talle y el color no importa para el precio)
@@ -235,25 +275,8 @@ function updateVariantState(pid) {
       if (oldPriceEl) oldPriceEl.remove();
     }
 
-    const inStock = variant.stock;
-    if (addBtn) {
-      addBtn.disabled = !inStock;
-      addBtn.classList.toggle('btn-variant-disabled', !inStock);
-      addBtn.innerHTML = inStock
-        ? '<i class="fa-solid fa-cart-plus"></i> Agregar al carrito'
-        : '<i class="fa-solid fa-ban"></i> Sin stock';
-    }
-    if (waBtn) {
-      waBtn.classList.toggle('btn-variant-disabled', !inStock);
-      waBtn.dataset.ready  = inStock ? 'true' : 'false';
-      waBtn.dataset.color  = sel.color || '';
-      waBtn.dataset.talle  = sel.talle || '';
-      waBtn.dataset.precio = variant.precio || '';
-    }
-  } else {
-    if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
-    if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
   }
+  pintarEstadoCompra(card, pid);
 }
 
 function addToCartWithVariant(pid) {
@@ -278,10 +301,18 @@ function buyWithWA(pid) {
   if (!p) return false;
   const card  = document.querySelector(`.product-card[data-id="${pid}"]`);
   const waBtn = card?.querySelector('.btn-wa-product');
-  if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  if (!waBtn || estadoCompra(pid).estado !== 'listo') { avisarEstadoCompra(card, pid); return false; }
   addToCartWithVariant(pid);
   window.location.href = 'checkout.html';
   return false;
+}
+
+// Si algo impide comprar, se muestra y se resalta el motivo (nunca un clic "mudo")
+function avisarEstadoCompra(root, pid) {
+  pintarEstadoCompra(root, pid);
+  const msg = root && root.querySelector('.compra-estado');
+  if (!msg) return;
+  msg.classList.remove('compra-estado-aviso'); void msg.offsetWidth; msg.classList.add('compra-estado-aviso');
 }
 
 function cardImgNav(btn, dir) {
@@ -381,31 +412,18 @@ function renderProductCard(p) {
     }
   }
 
-  const needsColor = p.colores.length > 1;
-  const needsTalle = p.talles.length > 1;
-  const hintText   = [needsColor ? 'color' : '', needsTalle ? 'talle' : ''].filter(Boolean).join(' y ');
-  const hintHTML   = hasVariants && !alreadyComplete
-    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná ${hintText} para continuar</div>`
-    : "";
+  const ec = estadoCompra(p.id), puede = ec.estado === "listo";
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${puede ? " hidden" : ""}>${htmlEstadoCompra(p, ec)}</div>`;
 
   const addBtnHTML = `
-    <button class="btn-add${btnDisabled ? ' btn-variant-disabled' : ''}"
-            onclick="addToCartWithVariant(${p.id})"
-            ${btnDisabled ? 'disabled' : ''}>
-      <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+    <button type="button" class="btn-add${puede ? '' : ' btn-variant-disabled'}"
+            onclick="addToCartWithVariant(${p.id})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+      ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock' : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = hasVariants
-    ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}"
-               onclick="return buyWithWA(${p.id})"
-               data-ready="${!btnDisabled ? 'true' : 'false'}"
-               data-color="${sel.color || ''}"
-               data-talle="${sel.talle || ''}"
-               data-precio="${displayPrice || ''}">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
-       </button>`
-    : `<button class="btn-wa-product" onclick="Cart.add(${p.id}); window.location.href='checkout.html';">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
+  const waBtnHTML = `<button type="button" class="btn-wa-product${puede ? '' : ' btn-variant-disabled'}"
+               onclick="return buyWithWA(${p.id})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+         <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
 
   const isFav = isFavorito(p.id);
@@ -512,32 +530,21 @@ function openProductModal(pid) {
     }
   }
 
-  const needsColor = p.colores.length > 1;
-  const needsTalle = p.talles.length > 1;
-  const hintText   = [needsColor ? 'color' : '', needsTalle ? 'talle' : ''].filter(Boolean).join(' y ');
-  const hintHTML   = p.tieneVariantes && !alreadyComplete
-    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná ${hintText} para continuar</div>`
-    : "";
+  const ec = estadoCompra(pid), puede = ec.estado === "listo";
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${puede ? " hidden" : ""}>${htmlEstadoCompra(p, ec)}</div>`;
 
   const oldPriceHTML = displayOldPrice
     ? `<span class="price-old" id="modal-old-price">${formatPrecio(displayOldPrice)}</span>` : "";
 
   const addBtnHTML = `
-    <button class="btn-add${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-add"
-            onclick="addToCartFromModal(${pid})" ${btnDisabled ? 'disabled' : ''}>
-      <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+    <button type="button" class="btn-add${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-add"
+            onclick="addToCartFromModal(${pid})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+      ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock' : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = p.tieneVariantes
-    ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-wa"
-               onclick="return buyWithWAModal(${pid})"
-               data-ready="${!btnDisabled ? 'true' : 'false'}"
-               data-color="${sel.color || ''}" data-talle="${sel.talle || ''}"
-               data-precio="${displayPrice || ''}">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
-       </button>`
-    : `<button class="btn-wa-product" onclick="Cart.add(${pid}); window.location.href='checkout.html';">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
+  const waBtnHTML = `<button type="button" class="btn-wa-product${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-wa"
+               onclick="return buyWithWAModal(${pid})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+         <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
 
   const modal = document.getElementById('product-modal');
@@ -584,9 +591,6 @@ function updateModalVariantState(pid) {
 
   const priceEl    = document.getElementById('modal-price');
   const oldPriceEl = document.getElementById('modal-old-price');
-  const addBtn     = document.getElementById('modal-btn-add');
-  const waBtn      = document.getElementById('modal-btn-wa');
-  const hint       = document.querySelector('#product-modal .variant-hint');
 
   // Deshabilitar variantes no disponibles en el modal
   if (sel.color && p.talles.length > 0) {
@@ -606,8 +610,6 @@ function updateModalVariantState(pid) {
     });
   }
 
-  if (hint) hint.style.display = complete ? 'none' : 'flex';
-
   // Mostrar precio parcial en modal también
   if (!complete && priceEl) {
     let parcialVariant = null;
@@ -626,13 +628,8 @@ function updateModalVariantState(pid) {
       else priceEl?.insertAdjacentHTML('afterend', `<span class="price-old" id="modal-old-price">${formatPrecio(variant.precioOriginal)}</span>`);
     } else { if (oldPriceEl) oldPriceEl.remove(); }
 
-    const inStock = variant.stock;
-    if (addBtn) { addBtn.disabled = !inStock; addBtn.classList.toggle('btn-variant-disabled', !inStock); }
-    if (waBtn)  { waBtn.classList.toggle('btn-variant-disabled', !inStock); waBtn.dataset.ready = inStock ? 'true' : 'false'; waBtn.dataset.color = sel.color || ''; waBtn.dataset.talle = sel.talle || ''; waBtn.dataset.precio = variant.precio || ''; }
-  } else {
-    if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
-    if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
   }
+  pintarEstadoCompra(document.querySelector('#product-modal .modal-box'), pid);
 }
 
 function addToCartFromModal(pid) {
@@ -641,8 +638,7 @@ function addToCartFromModal(pid) {
 }
 
 function buyWithWAModal(pid) {
-  const waBtn = document.getElementById('modal-btn-wa');
-  if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  if (estadoCompra(pid).estado !== 'listo') { avisarEstadoCompra(document.querySelector('#product-modal .modal-box'), pid); return false; }
   addToCartWithVariant(pid);
   window.location.href = 'checkout.html';
   return false;

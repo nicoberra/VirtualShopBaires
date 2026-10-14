@@ -3644,3 +3644,14 @@ body { background: #f4f5f7; }
 .campo-error { margin: 6px 0 0; font-size: .82rem; font-weight: 600; color: #b42318; display: flex; gap: 6px; align-items: center; }
 .campo-error::before { content: "\f06a"; font-family: "Font Awesome 6 Free"; font-weight: 900; }
 [aria-invalid="true"] { border-color: #b42318 !important; box-shadow: 0 0 0 3px rgba(180, 35, 24, .12) !important; }
+
+/* Detalle en celular: foto arriba y datos abajo (la regla vieja quedaba pisada por la general) */
+@media (max-width: 768px) {
+  .modal-box { flex-direction: column; max-height: 92dvh; border-radius: 16px 16px 0 0; width: 100%; background: #fff; }
+  .modal-img { width: 100%; min-width: 0; height: 240px; flex-shrink: 0; border-bottom: 1px solid var(--line); }
+  .modal-img img { padding: 12px; }
+  .modal-info { padding: 18px 16px 22px; gap: 10px; overflow-y: auto; }
+  .modal-img-prev { left: 8px; }
+  .modal-img-next { right: 8px; }
+  .modal-nombre { font-size: 1.12rem; }
+}

@@ -63,5 +63,11 @@ const pedidos = [
   const playa = gs._rankOrden(prods, pts).filter(p => p.categoria === "Playa").map(p => p.id);
   assert.deepEqual(camping, [2, 3, 1]); assert.deepEqual(playa, [5, 4]);
   ok("al filtrar por categoría el orden también va de más a menos popular");
+
+  const conMl = prods.map(p => p.id === 1 ? { ...p, ventas_ml: 500 } : p);
+  const ptsMl = gs._rankPuntajes(conMl, v, inter);
+  assert.equal(ptsMl[1], 500);
+  assert.equal(gs._rankOrden(conMl, ptsMl)[0].id, 1);
+  ok("las ventas de Mercado Libre suman 1 punto por unidad (el más vendido en ML sube arriba)");
 }
 console.log(`\n${n} pruebas OK`);

@@ -164,7 +164,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v10-catfoto1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v11-rankingml1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1405,10 +1405,11 @@ var SBP = {
 
 // ─── RANKING DE PRODUCTOS (más vendidos y con más interés, arriba) ────
 // Puntaje = unidades vendidas (últimos 180 días) × 10 + carritos × 3 + favoritos × 2 + vistas × 1
+// + unidades vendidas en Mercado Libre (productos.ventas_ml, se carga desde los Excels de ML).
 // (interacciones de los últimos 60 días). Ordena "productos.orden" en Supabase: la tienda
 // ya lista por ese orden, así que vale para "Todos" y para cada categoría.
 // Pública pero inofensiva: solo recalcula, y como mucho una vez por hora.
-var RANK_PESOS = { venta: 10, carrito: 3, favorito: 2, vista: 1 };
+var RANK_PESOS = { venta: 10, carrito: 3, favorito: 2, vista: 1, ml: 1 };
 var RANK_DIAS_VENTAS = 180, RANK_DIAS_INTERES = 60;
 
 function _rankFecha(s) {
@@ -1440,7 +1441,7 @@ function _rankPuntajes(prods, ventas, interacciones) {
   var porNombre = {};
   prods.forEach(function(p) { var k = _normKey(p.nombre); (porNombre[k] = porNombre[k] || []).push(p); });
   var pts = {};
-  prods.forEach(function(p) { pts[p.id] = (ventas[_normKey(p.nombre)] || 0) * RANK_PESOS.venta; });
+  prods.forEach(function(p) { pts[p.id] = (ventas[_normKey(p.nombre)] || 0) * RANK_PESOS.venta + (Number(p.ventas_ml) || 0) * RANK_PESOS.ml; });
   (interacciones || []).forEach(function(i) {
     var lista = porNombre[_normKey(i.nombre)];
     if (!lista) return;
@@ -1465,7 +1466,7 @@ function actualizarRanking(p) {
   try {
     var prods = [];
     for (var desde = 0; ; desde += 1000) {
-      var pag = _sbR(_sb('get', 'productos?select=id,categoria,nombre,orden&order=orden,id&offset=' + desde + '&limit=1000'), 'Productos');
+      var pag = _sbR(_sb('get', 'productos?select=id,categoria,nombre,orden,ventas_ml&order=orden,id&offset=' + desde + '&limit=1000'), 'Productos');
       prods = prods.concat(pag);
       if (pag.length < 1000) break;
     }

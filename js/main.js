@@ -322,3 +322,73 @@ document.addEventListener("DOMContentLoaded", () => {
   if (document.readyState === 'complete') setTimeout(limpiar, 800);
   else window.addEventListener('load', () => setTimeout(limpiar, 800));
 })();
+
+// Menú: botón "Categorías" que despliega la lista (al pasar el mouse en compu, al tocar en celular)
+document.addEventListener("DOMContentLoaded", () => {
+  const fila = document.querySelector("#header-dropdown-nav > .container");
+  if (!fila || fila.querySelector(".nav-cats-btn")) return;
+  const vieja = document.querySelector("#header-dropdown-nav .dropdown-cats-section");
+  if (vieja) vieja.remove();   // reemplaza la lista fija de la portada
+
+  const ICONO = { "Mascotas": "🐾", "Fitness y musculacion": "💪", "Pilates y Yoga": "🧘", "Muebles para el hogar": "🪑",
+    "Bazar, baño y cocina": "🍳", "Camping": "⛺", "Playa": "🏖️", "Herramientas": "🔧", "Inflables": "🛟",
+    "Juguetes": "🧸", "Autos a escala": "🏎️", "Jardin y aire libre": "🌿" };
+  const CORTO = { "Bazar, baño y cocina": "Bazar y cocina", "Muebles para el hogar": "Muebles",
+    "Fitness y musculacion": "Fitness", "Jardin y aire libre": "Jardín" };
+  const EXTERNAS = { "Herramientas": "https://sanou.com.ar" };
+  const BASE = ["Mascotas", "Fitness y musculacion", "Pilates y Yoga", "Muebles para el hogar",
+    "Bazar, baño y cocina", "Camping", "Playa"];
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "nav-cats-btn";
+  btn.setAttribute("aria-expanded", "false");
+  btn.setAttribute("aria-controls", "nav-cats-panel");
+  btn.innerHTML = 'Categorías <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>';
+  const panel = document.createElement("div");
+  panel.className = "nav-cats-panel";
+  panel.id = "nav-cats-panel";
+  panel.innerHTML = '<div class="nav-cats-inner"><div class="nav-cats-grid"></div></div>';
+  const grid = panel.querySelector(".nav-cats-grid");
+
+  const productos = [...fila.querySelectorAll("a")].find(a => /productos\.html$/.test(a.getAttribute("href") || ""));
+  (productos || fila.firstElementChild).after(btn);
+  fila.appendChild(panel);
+
+  const esc = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  function pintar(cats) {
+    const lista = [...new Set([...cats, ...Object.keys(EXTERNAS)])];
+    grid.innerHTML = lista.map(c => {
+      const ext = EXTERNAS[c];
+      const href = ext || "productos.html?cat=" + encodeURIComponent(c).replace(/%20/g, "+");
+      return `<a href="${esc(href)}" class="nav-cat"${ext ? ' target="_blank" rel="noopener"' : ""} tabindex="-1">` +
+             `<span aria-hidden="true">${ICONO[c] || "🛍️"}</span>${esc(CORTO[c] || c)}</a>`;
+    }).join("");
+  }
+  pintar(BASE);
+  if (typeof SUPABASE_URL !== "undefined") {
+    fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre&visible=eq.true&order=orden`, { headers: { apikey: SUPABASE_PUB } })
+      .then(r => r.ok ? r.json() : null)
+      .then(f => { if (Array.isArray(f) && f.length) { pintar(f.map(x => x.nombre)); abrir(btn.getAttribute("aria-expanded") === "true"); } })
+      .catch(() => {});
+  }
+
+  function abrir(si) {
+    btn.setAttribute("aria-expanded", si ? "true" : "false");
+    panel.classList.toggle("open", si);
+    grid.querySelectorAll("a").forEach(a => { a.tabIndex = si ? 0 : -1; });
+  }
+  btn.addEventListener("click", () => abrir(btn.getAttribute("aria-expanded") !== "true"));
+
+  // Compu (mouse): se abre al pasar por encima y se cierra al salir
+  const conMouse = window.matchMedia("(hover: hover) and (pointer: fine)");
+  let t = null;
+  const entrar = () => { if (!conMouse.matches) return; clearTimeout(t); abrir(true); };
+  const salir = () => { if (!conMouse.matches) return; clearTimeout(t); t = setTimeout(() => abrir(false), 250); };
+  [btn, panel].forEach(el => { el.addEventListener("mouseenter", entrar); el.addEventListener("mouseleave", salir); });
+
+  // Al cerrar el menú principal, se cierra también
+  const nav = document.getElementById("header-dropdown-nav");
+  new MutationObserver(() => { if (!nav.classList.contains("open")) abrir(false); }).observe(nav, { attributes: true, attributeFilter: ["class"] });
+  panel.addEventListener("keydown", e => { if (e.key === "Escape") { e.stopPropagation(); abrir(false); btn.focus(); } });
+});

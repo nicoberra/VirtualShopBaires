@@ -12,6 +12,22 @@ function fotoEstilo(url) {
 }
 function ponerFoto(imgEl, url) { imgEl.src = fotoSrc(url); imgEl.style.cssText = fotoEstilo(url); }
 
+// Interés de los clientes para ordenar por popularidad: ver la ficha, agregar al carrito,
+// marcar favorito. Una vez por producto y tipo en cada visita; sin datos personales.
+function registrarInteraccion(p, tipo) {
+  try {
+    if (!p || typeof SUPABASE_URL === "undefined") return;
+    const k = "vsb_int_" + tipo + "_" + favClave(p);
+    if (sessionStorage.getItem(k)) return;
+    sessionStorage.setItem(k, "1");
+    fetch(SUPABASE_URL + "/rest/v1/interacciones", {
+      method: "POST", keepalive: true,
+      headers: { apikey: SUPABASE_PUB, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ categoria: String(p.categoria || "").slice(0, 80), nombre: String(p.nombre || "").slice(0, 200), tipo })
+    }).catch(() => {});
+  } catch (e) {}
+}
+
 function getFavoritos() { try { return JSON.parse(localStorage.getItem("vsb_favoritos") || "[]"); } catch (e) { return []; } }
 // Clave estable (categoría + nombre): el id numérico cambia cuando cambia el catálogo.
 // Los favoritos viejos guardados con id se siguen reconociendo.
@@ -27,6 +43,7 @@ function toggleFavorito(id, btn) {
   favs = favs.filter(f => f !== clave && f !== id);
   if (!ya) {
     favs.push(clave);
+    registrarInteraccion(p, "favorito");
     btn.classList.add("fav-active");
     btn.innerHTML = '<i class="fa-solid fa-heart"></i>';
     btn.title = "Quitar de favoritos";
@@ -422,6 +439,7 @@ function renderProductCard(p) {
 function openProductModal(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p) { if (typeof showToast === "function") showToast("Ese producto ya no está disponible", "error"); return; }
+  registrarInteraccion(p, "vista");
 
   // Sincronizar estado de variantes con la tarjeta
   if (p.tieneVariantes && !selectedVariants[pid]) selectedVariants[pid] = {};

@@ -22,6 +22,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Ordenar productos por popularidad (más vendidos y con más interés arriba)
+        # Pide al CRM que recalcule el orden (acción pública que solo reordena; sin claves)
+        run: |
+          curl -sSL --max-time 300 "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec?action=ranking_actualizar" | head -c 600 || true
+          echo
       - name: Generar páginas
         run: python tools/generar_seo.py
       - name: Publicar si hubo cambios

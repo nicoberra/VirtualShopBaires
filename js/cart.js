@@ -61,6 +61,7 @@ const Cart = (() => {
   function add(id, variant, precio) {
     const p = PRODUCTOS.find(x => x.id === id);
     if (!p) return;
+    if (typeof registrarInteraccion === "function") registrarInteraccion(p, "carrito");
 
     const color     = variant?.color || null;
     const talle     = variant?.talle || null;

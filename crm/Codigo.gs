@@ -163,11 +163,12 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v8-confianza1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v9-ranking1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
     else if (accion === 'olvidarDispositivo')   out = olvidarDispositivo(p);
+    else if (accion === 'ranking_actualizar')   out = actualizarRanking(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
     else if (accion === 'mis_pedidos')          out = misPedidos(p);
     else if (accion === 'catalogo')             out = catalogoPublico();
@@ -1373,6 +1374,100 @@ var SBP = {
     return r;
   }
 };
+
+// ─── RANKING DE PRODUCTOS (más vendidos y con más interés, arriba) ────
+// Puntaje = unidades vendidas (últimos 180 días) × 10 + carritos × 3 + favoritos × 2 + vistas × 1
+// (interacciones de los últimos 60 días). Ordena "productos.orden" en Supabase: la tienda
+// ya lista por ese orden, así que vale para "Todos" y para cada categoría.
+// Pública pero inofensiva: solo recalcula, y como mucho una vez por hora.
+var RANK_PESOS = { venta: 10, carrito: 3, favorito: 2, vista: 1 };
+var RANK_DIAS_VENTAS = 180, RANK_DIAS_INTERES = 60;
+
+function _rankFecha(s) {
+  var d = (s instanceof Date) ? s : new Date(String(s || '').replace(' ', 'T'));
+  return isNaN(d) ? null : d;
+}
+function _rankEsPrueba(o) {
+  return /borrar|prueba|test\b|@test\./i.test([o.nombre, o.apellido, o.email, o.observaciones, o.cliente].join(' '));
+}
+// Unidades vendidas por nombre normalizado. Los nombres más largos se buscan primero,
+// así "Silla X4 Azul" no suma también a "Silla".
+function _rankVentas(pedidos, nombres, desde) {
+  var orden = nombres.slice().sort(function(a, b) { return b.length - a.length; });
+  var ventas = {};
+  pedidos.forEach(function(o) {
+    if (/cancel/i.test(String(o.estado || '')) || _rankEsPrueba(o)) return;
+    var f = _rankFecha(o.timestamp || o.fecha);
+    if (f && f < desde) return;
+    var txt = ' ' + _normKey(o.productos || o.detalle || o.producto || '') + ' ';
+    orden.forEach(function(n) {
+      if (!n) return;
+      var re = new RegExp(' (\\d{1,3})x ' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?= )', 'g');
+      txt = txt.replace(re, function(_, q) { ventas[n] = (ventas[n] || 0) + Number(q); return ' '; });
+    });
+  });
+  return ventas;
+}
+function _rankPuntajes(prods, ventas, interacciones) {
+  var porNombre = {};
+  prods.forEach(function(p) { var k = _normKey(p.nombre); (porNombre[k] = porNombre[k] || []).push(p); });
+  var pts = {};
+  prods.forEach(function(p) { pts[p.id] = (ventas[_normKey(p.nombre)] || 0) * RANK_PESOS.venta; });
+  (interacciones || []).forEach(function(i) {
+    var lista = porNombre[_normKey(i.nombre)];
+    if (!lista) return;
+    var p = lista.length > 1 ? (lista.filter(function(x) { return _normKey(x.categoria) === _normKey(i.categoria); })[0] || lista[0]) : lista[0];
+    pts[p.id] += RANK_PESOS[i.tipo] || 0;
+  });
+  return pts;
+}
+// Nuevo orden: mayor puntaje primero; empates (y sin datos) mantienen el orden que tenían
+function _rankOrden(prods, pts) {
+  return prods.slice().sort(function(a, b) {
+    return (pts[b.id] - pts[a.id]) || (Number(a.orden) - Number(b.orden)) || (a.id - b.id);
+  });
+}
+
+function actualizarRanking(p) {
+  var cache = CacheService.getScriptCache();
+  if (cache.get('ranking_hecho')) return { ok: true, omitido: 'Ya se actualizó en la última hora' };
+  if (!_productosEnSupabase() || !SB_KEY) return { ok: false, error: 'El ranking necesita los productos en Supabase' };
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(5000)) return { ok: true, omitido: 'Ya se está actualizando' };
+  try {
+    var prods = [];
+    for (var desde = 0; ; desde += 1000) {
+      var pag = _sbR(_sb('get', 'productos?select=id,categoria,nombre,orden&order=orden,id&offset=' + desde + '&limit=1000'), 'Productos');
+      prods = prods.concat(pag);
+      if (pag.length < 1000) break;
+    }
+    var ahora = Date.now();
+    var nombres = prods.map(function(x) { return _normKey(x.nombre); });
+    var ventas = _rankVentas(extPedidosListar({ todos: 1 }) || [], nombres, new Date(ahora - RANK_DIAS_VENTAS * 86400000));
+
+    var interacciones = [], desdeI = new Date(ahora - RANK_DIAS_INTERES * 86400000).toISOString();
+    for (var o = 0; o < 50000; o += 1000) {
+      var r = _sb('get', 'interacciones?select=categoria,nombre,tipo&creado=gte.' + encodeURIComponent(desdeI) + '&order=id&offset=' + o + '&limit=1000');
+      if (r.code !== 200 || !Array.isArray(r.json)) break;     // si la tabla todavía no existe, sigue solo con ventas
+      interacciones = interacciones.concat(r.json);
+      if (r.json.length < 1000) break;
+    }
+    var pts = _rankPuntajes(prods, ventas, interacciones);
+    var nuevo = _rankOrden(prods, pts);
+    var cambios = [];
+    nuevo.forEach(function(x, i) { if (Number(x.orden) !== i) cambios.push({ id: x.id, categoria: x.categoria, nombre: x.nombre, orden: i }); });
+    for (var c = 0; c < cambios.length; c += 500)
+      _sbR(_sb('post', 'productos?on_conflict=id', cambios.slice(c, c + 500), 'resolution=merge-duplicates,return=minimal'), 'Orden');
+    // Interacciones viejas: ya no suman, se borran para que la tabla no crezca
+    _sb('delete', 'interacciones?creado=lt.' + encodeURIComponent(new Date(ahora - 180 * 86400000).toISOString()), undefined, 'return=minimal');
+
+    cache.put('ranking_hecho', '1', 3600);
+    _catalogoInvalidar();
+    var top = nuevo.filter(function(x) { return pts[x.id] > 0; }).slice(0, 10).map(function(x) { return x.nombre + ' (' + pts[x.id] + ')'; });
+    return { ok: true, productos: prods.length, conPuntaje: nuevo.filter(function(x) { return pts[x.id] > 0; }).length,
+             interacciones: interacciones.length, movidos: cambios.length, top: top };
+  } finally { lock.releaseLock(); }
+}
 
 // Copia TODOS los productos de la planilla a Supabase. Ejecutar a mano desde el editor
 // (elegir migrarProductosASupabase → Ejecutar). Se puede repetir: reemplaza lo que haya.

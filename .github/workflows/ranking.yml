@@ -1,0 +1,22 @@
+name: Ranking de productos (más vendidos arriba)
+
+# Recalcula el orden de la tienda (ventas de la web + ventas de Mercado Libre + interés)
+# todos los sábados a las 6:00 (Argentina). También se puede lanzar a mano desde Actions.
+on:
+  schedule:
+    - cron: "0 9 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ordenar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pedir al CRM que reordene
+        # Acción pública que solo reordena (como mucho una vez por hora); sin claves
+        run: |
+          r=$(curl -sSL --max-time 300 "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec?action=ranking_actualizar")
+          echo "$r" | head -c 1500; echo
+          echo "$r" | grep -q '"ok":true' || { echo "El ranking no se pudo actualizar"; exit 1; }

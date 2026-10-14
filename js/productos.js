@@ -47,11 +47,13 @@ function toggleFavorito(id, btn) {
     btn.classList.add("fav-active");
     btn.innerHTML = '<i class="fa-solid fa-heart"></i>';
     btn.title = "Quitar de favoritos";
+    btn.setAttribute("aria-label", "Quitar de favoritos"); btn.setAttribute("aria-pressed", "true");
     showToast("❤️ Guardado en favoritos");
   } else {
     btn.classList.remove("fav-active");
     btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
     btn.title = "Guardar en favoritos";
+    btn.setAttribute("aria-label", "Guardar en favoritos"); btn.setAttribute("aria-pressed", "false");
     showToast("Quitado de favoritos");
   }
   localStorage.setItem("vsb_favoritos", JSON.stringify(favs));

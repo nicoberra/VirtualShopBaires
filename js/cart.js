@@ -44,12 +44,12 @@ const Cart = (() => {
             ${varHTML}
             <div class="item-price">${formatPrecio(item.precio)}</div>
             <div class="cart-item-qty">
-              <button class="qty-btn" onclick="Cart.decQty('${item.cartKey}')">−</button>
-              <span>${item.qty}</span>
-              <button class="qty-btn" onclick="Cart.incQty('${item.cartKey}')">+</button>
+              <button type="button" class="qty-btn" aria-label="Restar una unidad" onclick="Cart.decQty('${item.cartKey}')">−</button>
+              <span aria-label="Cantidad">${item.qty}</span>
+              <button type="button" class="qty-btn" aria-label="Sumar una unidad" onclick="Cart.incQty('${item.cartKey}')">+</button>
             </div>
           </div>
-          <button class="remove-item" onclick="Cart.remove('${item.cartKey}')">✕</button>
+          <button type="button" class="remove-item" aria-label="Quitar del carrito" onclick="Cart.remove('${item.cartKey}')">✕</button>
         </div>`;
     }).join("");
 

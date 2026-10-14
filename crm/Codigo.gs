@@ -164,7 +164,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v11-rankingml1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v12-rankingml2' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1485,8 +1485,18 @@ function actualizarRanking(p) {
     var nuevo = _rankOrden(prods, pts);
     var cambios = [];
     nuevo.forEach(function(x, i) { if (Number(x.orden) !== i) cambios.push({ id: x.id, categoria: x.categoria, nombre: x.nombre, orden: i }); });
-    for (var c = 0; c < cambios.length; c += 500)
-      _sbR(_sb('post', 'productos?on_conflict=id', cambios.slice(c, c + 500), 'resolution=merge-duplicates,return=minimal'), 'Orden');
+    // Un PATCH por producto (el id es identidad: no se puede "upsertear"), de a 50 en paralelo
+    var hdr = { apikey: SB_KEY, Prefer: 'return=minimal' };
+    if (/^eyJ/.test(SB_KEY)) hdr.Authorization = 'Bearer ' + SB_KEY;
+    for (var c = 0; c < cambios.length; c += 50) {
+      var reqs = cambios.slice(c, c + 50).map(function(x) {
+        return { url: SB_URL + '/rest/v1/productos?id=eq.' + x.id, method: 'patch', headers: hdr,
+                 contentType: 'application/json', payload: JSON.stringify({ orden: x.orden }), muteHttpExceptions: true };
+      });
+      UrlFetchApp.fetchAll(reqs).forEach(function(r) {
+        if (r.getResponseCode() >= 300) throw 'Orden (' + r.getResponseCode() + '): ' + r.getContentText().slice(0, 200);
+      });
+    }
     // Interacciones viejas: ya no suman, se borran para que la tabla no crezca
     _sb('delete', 'interacciones?creado=lt.' + encodeURIComponent(new Date(ahora - 180 * 86400000).toISOString()), undefined, 'return=minimal');
 

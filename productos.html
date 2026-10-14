@@ -91,7 +91,12 @@
   <div class="container">
     <div class="shop-layout">
 
-      <aside class="sidebar">
+      <div class="filtros-fondo" id="filtros-fondo" onclick="cerrarFiltros()" hidden></div>
+      <aside class="sidebar" id="filtros-panel" aria-label="Filtros">
+        <div class="filtros-cabecera">
+          <span class="filtros-titulo">Filtros</span>
+          <button type="button" class="filtros-cerrar" onclick="cerrarFiltros()" aria-label="Cerrar filtros"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        </div>
         <h3>Categoría</h3>
         <div class="filter-group" id="cat-filters"></div>
 
@@ -108,10 +113,14 @@
         <input type="checkbox" id="filter-offer" style="display:none">
 
         <button class="btn-filter" onclick="resetFilters()" style="margin-top:8px;">Limpiar filtros</button>
+        <button type="button" class="filtros-ver" onclick="cerrarFiltros()">Ver resultados</button>
       </aside>
 
       <div>
         <div class="sort-bar">
+          <button type="button" class="filtros-abrir" id="filtros-abrir" onclick="abrirFiltros()" aria-controls="filtros-panel" aria-expanded="false">
+            <i class="fa-solid fa-sliders" aria-hidden="true"></i> Filtros
+          </button>
           <span class="results-count" id="results-count"></span>
           <select id="sort-select" onchange="applyFilters()">
             <option value="default">Ordenar: Destacados</option>
@@ -120,7 +129,11 @@
             <option value="name">Nombre A–Z</option>
           </select>
         </div>
-        <div class="products-grid" id="products-container"></div>
+        <div class="products-grid" id="products-container" aria-live="polite"></div>
+        <div class="ver-mas" id="ver-mas" hidden>
+          <p class="ver-mas-txt" id="ver-mas-txt"></p>
+          <button type="button" class="ver-mas-btn" id="ver-mas-btn" onclick="mostrarMas()">Ver más productos</button>
+        </div>
       </div>
     </div>
   </div>
@@ -314,7 +327,9 @@
     const sort = document.getElementById("sort-select").value;
     const onlyNew = document.getElementById("filter-new").checked;
     const onlyOffer = document.getElementById("filter-offer").checked;
-    const buscar = (document.getElementById("search-input").value || "").toLowerCase();
+    // Búsqueda sin importar tildes ni mayúsculas ("baño" = "bano")
+    const sinTildes = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const buscar = sinTildes(document.getElementById("search-input").value).trim();
 
     let results = PRODUCTOS.filter(p => {
       if (selectedCat !== "Todos" && p.categoria !== selectedCat) return false;
@@ -322,7 +337,7 @@
       if (p.precio > maxPrice) return false;
       if (onlyNew && p.badge !== "new" && p.badge !== "nuevo") return false;
       if (onlyOffer && p.badge !== "offer" && p.badge !== "oferta") return false;
-      if (buscar && !p.nombre.toLowerCase().includes(buscar) && !p.categoria.toLowerCase().includes(buscar) && !p.descripcion.toLowerCase().includes(buscar)) return false;
+      if (buscar && !sinTildes(p.nombre + " " + p.categoria + " " + p.descripcion).includes(buscar)) return false;
       return true;
     });
 
@@ -352,15 +367,56 @@
     }
 
     document.getElementById("results-count").textContent = `${results.length} producto${results.length !== 1 ? "s" : ""}`;
-    document.getElementById("products-container").innerHTML = results.length
-      ? results.map(renderProductCard).join("")
-      : `<div style="grid-column:1/-1;text-align:center;padding:80px 0;color:var(--gray-light);">
-           <i class="fa-solid fa-magnifying-glass" style="font-size:2.5rem; color:var(--red);"></i>
-           <p style="margin-top:16px;font-weight:600;color:var(--white);">No encontramos resultados</p>
-           <p style="margin-top:6px;font-size:0.88rem;">Probá con otras palabras o cambiá los filtros.</p>
-           <button onclick="resetFilters()" style="margin-top:18px;background:var(--red);color:#fff;border:none;padding:10px 22px;border-radius:50px;font-weight:700;cursor:pointer;font-size:0.88rem;">Limpiar filtros</button>
+    _resultados = results;
+    _mostrados = 0;
+    const cont = document.getElementById("products-container");
+    if (!results.length) {
+      cont.innerHTML = `<div class="sin-resultados">
+           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+           <p class="sin-resultados-tit">No encontramos resultados${buscar ? ` para “${buscar.replace(/</g, "&lt;")}”` : ""}</p>
+           <p class="sin-resultados-txt">Probá con otras palabras o cambiá los filtros.</p>
+           <button type="button" onclick="resetFilters()">Limpiar filtros</button>
          </div>`;
+      document.getElementById("ver-mas").hidden = true;
+      return;
+    }
+    cont.innerHTML = "";
+    mostrarMas();
   }
+
+  // De a 24 tarjetas: la página carga rápido y el contador sigue mostrando el total real
+  const POR_TANDA = 24;
+  let _resultados = [], _mostrados = 0;
+  function mostrarMas() {
+    const cont = document.getElementById("products-container");
+    const tanda = _resultados.slice(_mostrados, _mostrados + POR_TANDA);
+    const primeraNueva = _mostrados;
+    cont.insertAdjacentHTML("beforeend", tanda.map(renderProductCard).join(""));
+    _mostrados += tanda.length;
+    const quedan = _resultados.length - _mostrados;
+    document.getElementById("ver-mas").hidden = quedan <= 0;
+    document.getElementById("ver-mas-txt").textContent = `Mostrando ${_mostrados} de ${_resultados.length} productos`;
+    document.getElementById("ver-mas-btn").textContent = `Ver ${Math.min(quedan, POR_TANDA)} productos más`;
+    // Al pedir más, el foco va a la primera tarjeta nueva (teclado y lectores de pantalla)
+    if (primeraNueva > 0) { const c = cont.children[primeraNueva]; if (c) c.focus({ preventScroll: true }); }
+  }
+
+  // Celular: filtros en un panel que sube desde abajo
+  function abrirFiltros() {
+    document.body.classList.add("filtros-abiertos");
+    document.getElementById("filtros-fondo").hidden = false;
+    document.getElementById("filtros-abrir").setAttribute("aria-expanded", "true");
+    setTimeout(() => document.querySelector("#filtros-panel .filtros-cerrar").focus(), 50);
+  }
+  function cerrarFiltros() {
+    if (!document.body.classList.contains("filtros-abiertos")) return;
+    document.body.classList.remove("filtros-abiertos");
+    document.getElementById("filtros-fondo").hidden = true;
+    const b = document.getElementById("filtros-abrir");
+    b.setAttribute("aria-expanded", "false");
+    if (getComputedStyle(b).display !== "none") b.focus();
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarFiltros(); });
 
   function resetFilters() {
     selectedCat = "Todos";

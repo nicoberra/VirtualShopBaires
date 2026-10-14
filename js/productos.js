@@ -129,6 +129,18 @@ function isVariantComplete(pid) {
 
 // ─── ESTADO DE COMPRA (uno solo para tarjeta, detalle y "Comprar ahora") ────
 // listo: se puede comprar · elegir: falta color/talle · sinstock: no hay disponibilidad real
+function nombreVisible(p) {
+  return String(p.nombre || "").replace(/\s*\[[^\]]*\]\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+function _escAttr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+// Botón principal de la tarjeta: si falta elegir opción, abre el detalle (nunca queda "mudo")
+function accionTarjeta(pid) {
+  const e = estadoCompra(pid);
+  if (e.estado === "elegir") return openProductModal(pid);
+  if (e.estado === "listo") return addToCartWithVariant(pid);
+}
+
 function varianteElegida(p) {
   const sel = selectedVariants[p.id] || {};
   return p.variantes.find(v => (!p.colores.length || v.color === sel.color) && (!p.talles.length || v.talle === sel.talle)) || null;
@@ -159,17 +171,23 @@ function pintarEstadoCompra(root, pid) {
   if (!root) return;
   const p = PRODUCTOS.find(x => x.id === pid);
   const e = estadoCompra(pid), ok = e.estado === "listo";
+  const enTarjeta = root.classList.contains("product-card");
   root.querySelectorAll(".btn-add, .btn-wa-product").forEach(b => {
-    b.disabled = !ok;
-    b.classList.toggle("btn-variant-disabled", !ok);
+    const activo = ok || (enTarjeta && e.estado === "elegir" && b.classList.contains("btn-add"));
+    b.disabled = !activo;
+    b.classList.toggle("btn-variant-disabled", !activo);
     b.dataset.ready = ok ? "true" : "false";
+    if (enTarjeta && b.classList.contains("btn-wa-product")) b.hidden = !ok;
   });
   const add = root.querySelector(".btn-add");
   if (add) add.innerHTML = e.estado === "sinstock"
     ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock'
-    : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito';
+    : (enTarjeta && e.estado === "elegir")
+      ? '<i class="fa-solid fa-sliders" aria-hidden="true"></i> Elegir opción'
+      : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito';
   const msg = root.querySelector(".compra-estado");
-  if (msg && p) { msg.innerHTML = htmlEstadoCompra(p, e); msg.hidden = ok; msg.dataset.estado = e.estado; }
+  const mostrar = !ok && !(enTarjeta && e.estado === "elegir");
+  if (msg && p) { msg.innerHTML = mostrar ? htmlEstadoCompra(p, e) : ""; msg.hidden = !mostrar; msg.dataset.estado = e.estado; }
 }
 
 function selectVariant(pid, type, value, btn) {
@@ -366,7 +384,7 @@ function renderProductCard(p) {
   const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
   const hasMultiImgs = imgs.length > 1;
   const imgHTML = imgs.length > 0
-    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${p.nombre}" loading="lazy" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
+    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${_escAttr(nombreVisible(p))}" loading="lazy" decoding="async" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
   const carouselHTML = hasMultiImgs
     ? `<button class="card-arrow card-arrow-prev" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button class="card-arrow card-arrow-next" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
@@ -412,44 +430,51 @@ function renderProductCard(p) {
     }
   }
 
-  const ec = estadoCompra(p.id), puede = ec.estado === "listo";
-  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${puede ? " hidden" : ""}>${htmlEstadoCompra(p, ec)}</div>`;
+  const ec = estadoCompra(p.id), puede = ec.estado === "listo", elegir = ec.estado === "elegir";
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${(puede || elegir) ? " hidden" : ""}>${(puede || elegir) ? "" : htmlEstadoCompra(p, ec)}</div>`;
+  const nom = nombreVisible(p);
 
   const addBtnHTML = `
-    <button type="button" class="btn-add${puede ? '' : ' btn-variant-disabled'}"
-            onclick="addToCartWithVariant(${p.id})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
-      ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock' : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
+    <button type="button" class="btn-add${(puede || elegir) ? '' : ' btn-variant-disabled'}"
+            onclick="accionTarjeta(${p.id})" data-ready="${puede}" ${(puede || elegir) ? '' : 'disabled'}>
+      ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock'
+        : elegir ? '<i class="fa-solid fa-sliders" aria-hidden="true"></i> Elegir opción'
+        : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = `<button type="button" class="btn-wa-product${puede ? '' : ' btn-variant-disabled'}"
-               onclick="return buyWithWA(${p.id})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+  const waBtnHTML = `<button type="button" class="btn-wa-product" onclick="return buyWithWA(${p.id})"
+               data-ready="${puede}"${puede ? '' : ' hidden disabled'}>
          <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
 
   const isFav = isFavorito(p.id);
-  const favBtn = `<button class="fav-btn${isFav ? ' fav-active' : ''}" onclick="event.stopPropagation();toggleFavorito(${p.id},this)" title="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}"><i class="fa-${isFav ? 'solid' : 'regular'} fa-heart"></i></button>`;
+  const favBtn = `<button type="button" class="fav-btn${isFav ? ' fav-active' : ''}" onclick="event.stopPropagation();toggleFavorito(${p.id},this)" title="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}" aria-label="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}" aria-pressed="${isFav}"><i class="fa-${isFav ? 'solid' : 'regular'} fa-heart" aria-hidden="true"></i></button>`;
+  const opciones = p.tieneVariantes && p.variantes.length > 1 ? `<span class="card-opciones">${p.variantes.length} opciones</span>` : "";
 
+  // Tarjeta compacta: categoría, nombre (2 líneas), precio y acciones. Descripción y variantes van al detalle.
   return `
-    <div class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})">
+    <article class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})"
+             tabindex="0" aria-label="${_escAttr(nom)}"
+             onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();openProductModal(${p.id})}">
       <div class="product-img">${imgHTML}${carouselHTML}${badgeHTML}${favBtn}</div>
       <div class="product-info">
         <div class="product-info-top">
-          <div class="category">${p.categoria}</div>
-          <h3>${p.nombre}</h3>
-          ${descHTML}
-          ${variantesHTML}
+          <div class="category">${p.categoria}${opciones}</div>
+          <h3 title="${_escAttr(nom)}">${nom}</h3>
         </div>
         <div class="product-info-bottom" onclick="event.stopPropagation()">
-          ${hintHTML}
           <div class="product-price">
             <span class="price-main">${formatPrecio(displayPrice)}</span>
             ${oldPriceHTML}
           </div>
-          ${addBtnHTML}
-          ${waBtnHTML}
+          ${hintHTML}
+          <div class="card-actions">
+            ${addBtnHTML}
+            ${waBtnHTML}
+          </div>
         </div>
       </div>
-    </div>`;
+    </article>`;
 }
 
 // ─── MODAL DE PRODUCTO ───────────────────────────────────────────────────────
@@ -554,7 +579,7 @@ function openProductModal(pid) {
       <div class="modal-img" style="position:relative;">${imgHTML}${badgeHTML}</div>
       <div class="modal-info">
         <div class="category" style="font-size:0.75rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${p.categoria}</div>
-        <h2 class="modal-nombre">${p.nombre}</h2>
+        <h2 class="modal-nombre">${nombreVisible(p)}</h2>
         ${p.descripcion ? `<p class="modal-desc">${p.descripcion}</p>` : ""}
         <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
         ${hintHTML}

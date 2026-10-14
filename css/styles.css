@@ -3603,3 +3603,25 @@ body { background: #f4f5f7; }
 .ml-rep-section .section-header h2, .ml-rep-section h2 { color: var(--ink) !important; }
 .ml-rep-section .section-header h2 span, .ml-rep-section h2 span { color: var(--red) !important; }
 .ml-rep-section .section-header p { color: var(--ink-2) !important; }
+
+/* Celular: primero el título y los botones, después el video (más chico) */
+@media (max-width: 480px) {
+  .hero-video-bg { background: #fff !important; padding-bottom: 24px; }
+  .hero-video-bg > .container { order: 1; padding-top: 18px; }
+  .hero-badges-top { order: 0; margin: 16px 0 0; }
+  .hero-video-grid { order: 2; height: 360px !important; margin-top: 18px; }
+  .hero-video-grid .hero-phone-frame,
+  .hero-video-grid .hero-phone-frame:nth-child(1),
+  .hero-video-grid .hero-phone-frame:nth-child(4) {
+    width: 168px !important; height: 340px !important; top: 6px !important; border-radius: 34px !important;
+    box-shadow: 0 0 0 1px rgba(17, 24, 39, .16), 0 14px 30px rgba(17, 24, 39, .16) !important;
+  }
+  .hero-video-grid .hero-phone-frame video { border-radius: 33px !important; }
+  .hero-video-grid .hero-phone-frame::before { width: 60px !important; height: 17px !important; top: 9px !important; }
+  .hero-video-bg .hero-slogan { color: var(--ink); text-shadow: none; font-size: 1.85rem; line-height: 1.1; }
+  .hero-video-bg .hero-slogan .highlight { color: var(--red); }
+  .hero-video-bg .hero-subtitle { color: var(--ink-2); text-shadow: none; }
+  .hero-badge-off { box-shadow: none; }
+  .hero-badge-direct { background: #f3f4f6; color: var(--ink-2); border: 1px solid var(--line); }
+}
+@media (max-width: 480px) { .hero-video-bg > .container { background: transparent !important; } }

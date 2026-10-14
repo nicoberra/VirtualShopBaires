@@ -164,7 +164,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v12-rankingml2' };
+    else if (accion === 'version')              out = { ok:true, version: 'v13-fotos1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1388,18 +1388,28 @@ var SBP = {
   },
 
   // Fotos: se guardan en el repo y en el manifest como siempre, y además en Supabase
+  // Las fotos viven en Supabase (productos.imagenes): se suma la nueva a las que ya tiene
   producto_foto_subir: function(p) {
-    var r = productoFotoSubir(p);
-    if (r.ok) _sbImagenesSet(String(p.categoria).trim(), String(p.nombre).trim(), r.fotos);
-    return r;
+    var categoria = String(p.categoria || '').trim(), nombre = String(p.nombre || '').trim();
+    if (!categoria || !nombre || !p.data) return { ok: false, error: 'Faltan categoría, nombre o foto' };
+    var act = _sbR(_sb('get', 'productos?select=imagenes&categoria=eq.' + encodeURIComponent(categoria) +
+      '&nombre=eq.' + encodeURIComponent(nombre)), 'Fotos');
+    if (!act.length) return { ok: false, error: 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.' };
+    var url = _sbFotoGH(categoria, nombre, p.data);
+    var fotos = (act[0].imagenes || []).concat([url]);
+    _sbImagenesSet(categoria, nombre, fotos);
+    return { ok: true, url: url, fotos: fotos };
   },
   ext_variantes_set: function() {   // ya no se usa desde el CRM: que no escriba en la planilla vieja
     return { ok: false, error: 'Acción no disponible con los productos en Supabase' };
   },
   producto_fotos_set: function(p) {
-    var r = productoFotosSet(p);
-    if (r.ok) _sbImagenesSet(String(p.categoria).trim(), String(p.nombre).trim(), r.fotos);
-    return r;
+    var urls;
+    try { urls = JSON.parse(p.urls || '[]'); } catch (e) { return { ok: false, error: 'urls inválidas' }; }
+    if (!Array.isArray(urls) || !String(p.categoria || '').trim() || !String(p.nombre || '').trim()) return { ok: false, error: 'Faltan parámetros' };
+    _sbImagenesSet(String(p.categoria).trim(), String(p.nombre).trim(), urls);
+    try { productoFotosSet(p); } catch (e) {}   // el manifest viejo queda igual que Supabase (respaldo)
+    return { ok: true, fotos: urls };
   }
 };
 

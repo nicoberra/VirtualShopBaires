@@ -801,6 +801,16 @@ function _fotosDelManifest(man, categoria, nombre) {
   return Array.isArray(v) ? v.slice() : (v ? [v] : []);
 }
 
+// Lectura pública (la misma clave que usa la tienda): solo ve productos visibles
+const _SB_URL = 'https://dtsixnqwwrbwybulpuxo.supabase.co', _SB_PUB = 'sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM';
+async function _fotosDeSupabase(categoria, nombre) {
+  const q = `${_SB_URL}/rest/v1/productos?select=imagenes&categoria=eq.${encodeURIComponent(categoria)}&nombre=eq.${encodeURIComponent(nombre)}`;
+  const r = await fetch(q, { headers: { apikey: _SB_PUB }, cache: 'no-store' });
+  if (!r.ok) return [];
+  const f = await r.json();
+  return (f[0] && f[0].imagenes) || [];
+}
+
 async function cargarFotos(p) {
   const grid = $('fotos-grid');
   grid.innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i></div>';
@@ -808,8 +818,9 @@ async function cargarFotos(p) {
     if (_ghOk === null) {
       try { _ghOk = !!(await crmEnviar({ action: 'gh_estado' })).gh; } catch (e) { _ghOk = false; }
     }
-    const man = await _leerManifestTienda();
-    _fotosProd = _fotosDelManifest(man, p._sheet || p.categoria, p.nombre);
+    // Las fotos salen de Supabase, igual que en la tienda (el manifest viejo queda de respaldo)
+    _fotosProd = await _fotosDeSupabase(p._sheet || p.categoria, p.nombre);
+    if (!_fotosProd.length) _fotosProd = _fotosDelManifest(await _leerManifestTienda(), p._sheet || p.categoria, p.nombre);
     renderFotos(p);
   } catch (e) {
     grid.innerHTML = '<p class="text-muted">No se pudieron cargar las fotos</p>';

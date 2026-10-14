@@ -331,7 +331,7 @@
         <p class="hero-subtitle">Productos importados con precio de importador: autos a escala, inflables, fitness, camping y hogar.</p>
         <div class="hero-buttons">
           <a href="productos.html" class="btn-primary">Ver productos →</a>
-          <a href="https://wa.me/5491149457266" target="_blank" class="btn-wa"><i class="fa-brands fa-whatsapp"></i> Consultar por WhatsApp</a>
+          <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="btn-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
         </div>
       </div>
     </div>
@@ -375,6 +375,21 @@
 </section>
 
 
+<!-- PRODUCTOS DESTACADOS -->
+<section class="products-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Lo más vendido</span>
+      <h2>Productos importados <span>destacados</span></h2>
+      <p>Los favoritos de nuestros clientes</p>
+    </div>
+    <div class="products-grid" id="featured-products"></div>
+    <div style="text-align:center; margin-top: 8px;">
+      <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
+    </div>
+  </div>
+</section>
+
 <!-- REPUTACIÓN MERCADOLIBRE -->
 <section class="ml-rep-section">
   <div class="container">
@@ -416,21 +431,6 @@
         <div class="ml-trust-item"><i class="fa-solid fa-circle-check ml-check"></i> Despachos a tiempo</div>
         <div class="ml-trust-item"><i class="fa-solid fa-star ml-star"></i> MercadoLíder Platinum</div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- PRODUCTOS DESTACADOS -->
-<section class="products-section">
-  <div class="container">
-    <div class="section-header">
-      <span class="section-label">Lo más vendido</span>
-      <h2>Productos importados <span>destacados</span></h2>
-      <p>Los favoritos de nuestros clientes</p>
-    </div>
-    <div class="products-grid" id="featured-products"></div>
-    <div style="text-align:center; margin-top: 8px;">
-      <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
     </div>
   </div>
 </section>
@@ -821,9 +821,12 @@
   }
 
   setTimeout(function() {
+    let visto = false;
+    try { visto = localStorage.getItem('vsb_bienvenida_vista') === '1'; localStorage.setItem('vsb_bienvenida_vista', '1'); } catch (e) {}
+    if (visto) return;
     const userData = JSON.parse(localStorage.getItem('vsb_user') || 'null');
     mostrarToast(userData && userData.nombre ? userData.nombre : null);
-  }, 1800);
+  }, 2500);
 
   // Carrusel de categorías: solo las que tienen productos (+ las externas)
   const CAT_IMG = {
@@ -880,7 +883,11 @@
     if (CATALOGO_ERROR) return;   // queda el aviso de error con Reintentar
     construirCarruselCategorias(productos, CATEGORIAS);
     // Mostrar productos destacados
-    const destacados = productos.filter(p => p.destacado);
+    // "Lo más vendido": los primeros del ranking (ventas web + Mercado Libre + interés)
+    const conOrden = productos.filter(p => typeof p.orden === "number");
+    const destacados = conOrden.length
+      ? [...conOrden].sort((a, b) => a.orden - b.orden).slice(0, 8)
+      : productos.filter(p => p.destacado);
     document.getElementById("featured-products").innerHTML = destacados.length
       ? destacados.map(renderProductCard).join("")
       : `<div class="estado-vacio" style="grid-column:1/-1;">

@@ -93,12 +93,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const hamburger = document.getElementById("hamburger");
   const dropdownNav = document.getElementById("header-dropdown-nav");
 
+  // En compu (>= 1024px) el menú está siempre a la vista
+  const navFijo = window.matchMedia("(min-width: 1024px)");
+  function navAccesible() { if (dropdownNav) dropdownNav.setAttribute("aria-hidden", navFijo.matches || dropdownNav.classList.contains("open") ? "false" : "true"); }
+  navAccesible();
+  navFijo.addEventListener("change", navAccesible);
+
   if (hamburger && dropdownNav) {
     function setMenuOpen(open) {
       dropdownNav.classList.toggle("open", open);
       hamburger.classList.toggle("open", open);
       hamburger.setAttribute("aria-expanded", open ? "true" : "false");
-      dropdownNav.setAttribute("aria-hidden", open ? "false" : "true");
+      navAccesible();
     }
 
     hamburger.addEventListener("click", (e) => {

@@ -1178,6 +1178,7 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
 
 /* ── Celular: menú inferior flotante con píldora deslizante ── */
 .mnav-abajo { display: none; }
+@media (min-width: 769px) { #mobile-nav-scroll.mnav-abajo { display: none !important; } }   /* en la compu va el menú lateral */
 @media (max-width: 768px) {
   #mobile-nav { display: flex; flex-direction: row; align-items: center; justify-content: space-between; grid-template-columns: none; }
   #mobile-nav .mobile-logo { padding: 10px 16px; }

@@ -73,8 +73,8 @@
     }
     .co-payment-option:last-child { margin-bottom: 0; }
     .co-payment-option:has(input:checked) {
-      border-color: #C8F135;
-      background: #FAFFF0;
+      border-color: #1B2B4B;
+      background: #F4F6FB;
     }
     .co-payment-option input[type="radio"] {
       accent-color: #1B2B8B;
@@ -87,8 +87,8 @@
     .co-pay-sub { font-size: 0.78rem; color: #6B7280; font-weight: 400; margin-top: 2px; display: block; }
     .co-pay-badge {
       display: inline-block;
-      background: rgba(200,241,53,0.35);
-      color: #3A6800;
+      background: rgba(204,18,18,0.08);
+      color: #A00E0E;
       font-size: 0.69rem;
       font-weight: 700;
       padding: 2px 8px;
@@ -158,13 +158,13 @@
     /* Botón confirmar */
     .co-btn-submit {
       display: block; width: 100%; margin-top: 16px;
-      padding: 15px; background: #C8F135; color: #1A1A2E;
+      padding: 15px; background: #CC1212; color: #fff;
       border: none; border-radius: 50px;
       font-size: 0.95rem; font-weight: 800; cursor: pointer;
       transition: background 0.15s, transform 0.1s;
       font-family: inherit;
     }
-    .co-btn-submit:hover { background: #B5D900; }
+    .co-btn-submit:hover { background: #A00E0E; }
     .co-btn-submit:active { transform: scale(0.98); }
     .co-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
     .co-security { text-align: center; font-size: 0.72rem; color: #9CA3AF; margin-top: 8px; }
@@ -176,7 +176,7 @@
 
     /* Estado confirmación */
     .co-confirmation { max-width: 600px; margin: 0 auto; padding: 0 16px; }
-    .co-confirm-header { background: #C8F135; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+    .co-confirm-header { background: #FDECEC; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
     .co-confirm-header h2 { color: #1A1A2E; margin: 0 0 6px; font-size: 1.25rem; }
     .co-confirm-header p { color: #374151; margin: 0; font-size: 0.9rem; }
     .co-order-num-box { background: #1B2B8B; color: #fff; border-radius: 10px; padding: 14px 20px; text-align: center; margin-bottom: 12px; }
@@ -231,8 +231,8 @@
       padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; background: #fff; border: 1px solid #E1E5EB; color: #4B5563;
     }
     .co-envio-result strong { color: #1A1A2E; font-size: 1rem; font-variant-numeric: tabular-nums; }
-    .co-envio-result.ok { border-color: #A7F3D0; background: #ECFDF5; color: #065F46; }
-    .co-envio-result.ok strong { color: #065F46; }
+    .co-envio-result.ok { border-color: #C7CFDF; background: #F4F6FB; color: #1B2B4B; }
+    .co-envio-result.ok strong { color: #1B2B4B; }
     .co-envio-result.viacargo { border-color: #FDE68A; background: #FFFBEB; color: #92400E; }
     .co-envio-result.viacargo strong { color: #92400E; }
     .co-price-envio { color: #1A1A2E; }
@@ -308,7 +308,7 @@
 
     <!-- Pago en efectivo -->
     <div id="cash-section" style="display:none;" class="co-bank-box">
-      <h3><i class="fa-solid fa-money-bill-wave" style="color:#166534;margin-right:6px;"></i>Pago en efectivo al retirar</h3>
+      <h3><i class="fa-solid fa-money-bill-wave" style="color:#1B2B4B;margin-right:6px;"></i>Pago en efectivo al retirar</h3>
       <p style="font-size:0.9rem;color:#374151;margin:0 0 8px;">Abonás cuando retirás el pedido en nuestro depósito.</p>
       <p style="font-size:0.85rem;color:#6B7280;margin:0;"><i class="fa-solid fa-location-dot" style="color:#1B2B8B;margin-right:4px;"></i>Marcelo Gamboa 6306, Versalles, CABA</p>
       <p style="font-size:0.82rem;color:#6B7280;margin:6px 0 0;"><i class="fa-solid fa-clock" style="color:#1B2B8B;margin-right:4px;"></i>Lunes a viernes · 9 a 17 hs · Coordiná el retiro por WhatsApp</p>
@@ -333,7 +333,7 @@
       <button id="btn-upload" class="co-btn-upload" onclick="uploadProof()">
         <i class="fa-solid fa-paper-plane" style="margin-right:6px;"></i>Enviar comprobante
       </button>
-      <div id="upload-success" style="display:none;margin-top:12px;padding:12px 16px;background:#F0FFF4;border:1px solid #86EFAC;border-radius:8px;text-align:center;color:#166534;font-weight:600;font-size:0.88rem;">
+      <div id="upload-success" style="display:none;margin-top:12px;padding:12px 16px;background:#F4F6FB;border:1px solid #C7CFDF;border-radius:8px;text-align:center;color:#1B2B4B;font-weight:600;font-size:0.88rem;">
         <i class="fa-solid fa-check-circle"></i> Comprobante recibido. ¡Gracias! Te avisaremos por email.
       </div>
     </div>
@@ -580,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <p style="color:#6B7280;max-width:420px;margin:0 auto 28px;font-size:0.95rem;">Por ahora podés hacer tu compra directamente por WhatsApp.</p>
         <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
           <a href="https://wa.me/5491149457266?text=${waMsg}" target="_blank"
-            style="display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;font-size:1rem;">
+            style="display:inline-flex;align-items:center;gap:10px;background:#1B2B4B;color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;font-size:1rem;">
             <i class="fa-brands fa-whatsapp"></i> Hacer la compra por WhatsApp
           </a>
           <a href="productos.html" style="color:#6B7280;font-size:0.88rem;text-decoration:underline;">← Seguir viendo productos</a>

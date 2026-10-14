@@ -66,6 +66,11 @@
     <div class="header-inner">
       <div class="header-left">
         <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
+          <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+        </form>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">

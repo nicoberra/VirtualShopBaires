@@ -67,6 +67,11 @@
     <div class="header-inner">
       <div class="header-left">
         <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
+          <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+        </form>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">
@@ -144,8 +149,8 @@ function renderLogin() {
     <div class="mc-card">
       <h2><i class="fa-solid fa-right-to-bracket"></i>Iniciá Sesión</h2>
       <div class="mc-field-row">
-        <input type="email" id="l-email" placeholder="Tu email" autocomplete="email" />
-        <input type="password" id="l-pass" placeholder="Contraseña" autocomplete="current-password" />
+        <input type="email" id="l-email" aria-label="Email" placeholder="Tu email" autocomplete="email" />
+        <input type="password" id="l-pass" aria-label="Contraseña" placeholder="Contraseña" autocomplete="current-password" />
         <button class="mc-btn-red" id="l-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar</button>
       </div>
       <div class="mc-msg error" id="l-err" style="display:none;"></div>
@@ -205,9 +210,9 @@ function renderLoggedIn(user) {
     <div class="mc-card">
       <h2><i class="fa-solid fa-lock"></i>Cambiar Contraseña</h2>
       <div class="mc-field-row">
-        <input type="password" id="cp-old" placeholder="Contraseña actual" />
-        <input type="password" id="cp-new" placeholder="Nueva Contraseña (mín. 6 caracteres)" />
-        <input type="password" id="cp-new2" placeholder="Repetir nueva Contraseña" />
+        <input type="password" id="cp-old" aria-label="Contraseña actual" placeholder="Contraseña actual" />
+        <input type="password" id="cp-new" aria-label="Nueva contraseña (mínimo 6 caracteres)" placeholder="Nueva Contraseña (mín. 6 caracteres)" />
+        <input type="password" id="cp-new2" aria-label="Repetir nueva contraseña" placeholder="Repetir nueva Contraseña" />
         <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar Contraseña</button>
       </div>
       <div class="mc-msg" id="cp-msg" style="display:none;"></div>

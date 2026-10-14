@@ -609,7 +609,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
+// Con centavos se muestran siempre dos decimales ($14.399,10, no $14.399,1). El monto no cambia.
+function fmt(n) {
+  const x = Number(n), dec = Math.round(x * 100) % 100 !== 0;
+  return "$" + x.toLocaleString("es-AR", { minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: 2 });
+}
 
 // ─── Envíos por zona (CABA y GBA). Interior: Vía Cargo ───────────────
 const ZONAS_ENVIO = [
@@ -797,6 +801,23 @@ function onPaymentChange() {
 
 function v(id) { return document.getElementById(id).value.trim(); }
 
+// Muestra el error debajo del campo, lo marca y lleva el foco ahí (en vez de alert)
+function errorCampo(id, msg) {
+  document.querySelectorAll(".campo-error").forEach(e => e.remove());
+  document.querySelectorAll("[aria-invalid='true']").forEach(e => e.removeAttribute("aria-invalid"));
+  const el = document.getElementById(id);
+  if (!el) { if (typeof showToast === "function") showToast(msg, "error"); return; }
+  const err = document.createElement("p");
+  err.className = "campo-error"; err.id = id + "-error"; err.setAttribute("role", "alert"); err.textContent = msg;
+  el.setAttribute("aria-invalid", "true");
+  el.setAttribute("aria-describedby", err.id);
+  el.insertAdjacentElement("afterend", err);
+  el.focus({ preventScroll: true });
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.addEventListener("input", () => { err.remove(); el.removeAttribute("aria-invalid"); }, { once: true });
+  el.addEventListener("change", () => { err.remove(); el.removeAttribute("aria-invalid"); }, { once: true });
+}
+
 async function submitOrder() {
   const nombre   = v("f-nombre");
   const apellido = v("f-apellido");
@@ -806,15 +827,15 @@ async function submitOrder() {
   const entrega  = v("f-entrega");
   const notes    = v("f-notes");
 
-  if (nombre.length < 2) return alert("Por favor ingresá tu nombre.");
-  if (apellido.length < 2) return alert("Por favor ingresá tu apellido.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert("Por favor ingresá un email válido.");
-  if (telefono.length < 7) return alert("Por favor ingresá tu número de teléfono.");
-  if (dni.length < 7) return alert("Por favor ingresá tu DNI o CUIT.");
-  if (!entrega) return alert("Por favor seleccioná el método de entrega.");
+  if (nombre.length < 2) return errorCampo("f-nombre", "Ingresá tu nombre.");
+  if (apellido.length < 2) return errorCampo("f-apellido", "Ingresá tu apellido.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return errorCampo("f-email", "Revisá el email: tiene que ser del tipo nombre@correo.com.");
+  if (telefono.length < 7) return errorCampo("f-phone", "Ingresá tu teléfono con código de área.");
+  if (dni.length < 7) return errorCampo("f-dni", "Ingresá tu DNI o CUIT.");
+  if (!entrega) return errorCampo("f-entrega", "Elegí cómo querés recibir tu pedido.");
 
   const envio = calcEnvio();
-  if (entrega === "envio" && envio.estado === "pendiente") return alert(envio.msg);
+  if (entrega === "envio" && envio.estado === "pendiente") return errorCampo(document.getElementById("f-localidad") && !v("f-localidad") ? "f-localidad" : "f-provincia", envio.msg);
   const envioTxt = envio.estado === "zona" ? `Envío ${envio.zona.nombre} (${envio.partido}): ${fmt(envio.costo)}`
     : envio.estado === "viacargo" ? `Envío a coordinar (Vía Cargo)${envio.partido ? " · " + envio.partido : ""}` : "";
 
@@ -863,11 +884,11 @@ async function submitOrder() {
   payload.numeroCalle = v("f-numero-calle");
   payload.piso        = v("f-piso");
   payload.cp          = v("f-cp");
-  if (!payload.provincia) return alert("Seleccioná la provincia.");
-  if (!payload.localidad) return alert("Ingresá la localidad.");
-  if (!payload.calle)     return alert("Ingresá la calle.");
-  if (!payload.numeroCalle) return alert("Ingresá el número de la calle.");
-  if (!payload.cp)        return alert("Ingresá el código postal.");
+  if (!payload.provincia) return errorCampo("f-provincia", "Elegí la provincia.");
+  if (!payload.localidad) return errorCampo("f-localidad", "Ingresá la localidad.");
+  if (!payload.calle)     return errorCampo("f-calle", "Ingresá la calle.");
+  if (!payload.numeroCalle) return errorCampo("f-numero-calle", "Ingresá el número de la calle.");
+  if (!payload.cp)        return errorCampo("f-cp", "Ingresá el código postal.");
 
   const btn = document.getElementById("btn-submit");
   btn.disabled = true;

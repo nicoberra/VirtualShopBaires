@@ -3639,3 +3639,8 @@ body { background: #f4f5f7; }
 .seo-grid .seo-card b { color: var(--ink); font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .seo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; } }
 .seo-intro { color: var(--ink-2) !important; }
+
+/* Formularios: error junto al campo */
+.campo-error { margin: 6px 0 0; font-size: .82rem; font-weight: 600; color: #b42318; display: flex; gap: 6px; align-items: center; }
+.campo-error::before { content: "\f06a"; font-family: "Font Awesome 6 Free"; font-weight: 900; }
+[aria-invalid="true"] { border-color: #b42318 !important; box-shadow: 0 0 0 3px rgba(180, 35, 24, .12) !important; }

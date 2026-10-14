@@ -412,7 +412,7 @@ function renderProductCard(p) {
     ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${_escAttr(nombreVisible(p))}" loading="lazy" decoding="async" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
   const carouselHTML = hasMultiImgs
-    ? `<button class="card-arrow card-arrow-prev" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button class="card-arrow card-arrow-next" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
+    ? `<button type="button" class="card-arrow card-arrow-prev" aria-label="Foto anterior" tabindex="-1" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button type="button" class="card-arrow card-arrow-next" aria-label="Foto siguiente" tabindex="-1" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
     : '';
 
   const descHTML = p.descripcion
@@ -530,8 +530,8 @@ function openProductModal(pid) {
   const imgHTML = imgs.length
     ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" />
        ${imgs.length > 1 ? `
-         <button class="modal-img-prev" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left"></i></button>
-         <button class="modal-img-next" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right"></i></button>
+         <button type="button" class="modal-img-prev" aria-label="Foto anterior" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+         <button type="button" class="modal-img-next" aria-label="Foto siguiente" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
          <div class="modal-img-dots" id="modal-img-dots">
            ${imgs.map((_,i) => `<span class="modal-dot${i===0?' active':''}" onclick="modalGaleriaGo(${p.id},${i})"></span>`).join('')}
          </div>` : ''}
@@ -600,11 +600,11 @@ function openProductModal(pid) {
   const modal = document.getElementById('product-modal');
   modal.innerHTML = `
     <div class="modal-box" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" class="modal-close" onclick="closeProductModal()" aria-label="Cerrar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
       <div class="modal-img" style="position:relative;">${imgHTML}${badgeHTML}</div>
       <div class="modal-info">
         <div class="category" style="font-size:0.75rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${p.categoria}</div>
-        <h2 class="modal-nombre">${nombreVisible(p)}</h2>
+        <h2 class="modal-nombre" id="modal-nombre">${nombreVisible(p)}</h2>
         ${descripcionHTML(p.descripcion)}
         <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
         ${hintHTML}
@@ -619,10 +619,29 @@ function openProductModal(pid) {
       </div>
     </div>`;
 
-  document.getElementById('product-modal').classList.add('open');
+  if (!modal.classList.contains('open')) _modalOrigen = document.activeElement;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'modal-nombre');
+  modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   mostrarImagenVariante(pid);
+  setTimeout(() => { const c = modal.querySelector('.modal-close'); if (c) c.focus(); }, 60);
 }
+
+// Detalle accesible: Escape cierra, el foco no se escapa y vuelve a la tarjeta al cerrar
+let _modalOrigen = null;
+document.addEventListener('keydown', e => {
+  const modal = document.getElementById('product-modal');
+  if (!modal || !modal.classList.contains('open')) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeProductModal(); return; }
+  if (e.key !== 'Tab') return;
+  const f = [...modal.querySelectorAll('button:not([disabled]), a[href], select, input, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+  if (!f.length) return;
+  const primero = f[0], ultimo = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
+  else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
+});
 
 function selectVariantModal(pid, type, value, btn) {
   selectVariant(pid, type, value, btn);           // actualiza selectedVariants y la tarjeta
@@ -698,6 +717,8 @@ function closeProductModal() {
   document.getElementById('product-modal').classList.remove('open');
   document.body.style.overflow = '';
   _galeriaIdx = 0;
+  if (_modalOrigen && document.contains(_modalOrigen)) _modalOrigen.focus({ preventScroll: true });
+  _modalOrigen = null;
 }
 
 // ─── GALERÍA DE IMÁGENES EN MODAL ────────────────────────────────────────────

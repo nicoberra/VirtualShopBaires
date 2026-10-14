@@ -103,7 +103,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="css/styles.css?v=5" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="dns-prefetch" href="https://script.google.com" />
@@ -331,7 +331,7 @@
         <p class="hero-subtitle">Productos importados con precio de importador: autos a escala, inflables, fitness, camping y hogar.</p>
         <div class="hero-buttons">
           <a href="productos.html" class="btn-primary">Ver productos →</a>
-          <a href="https://wa.me/5491149457266" target="_blank" class="btn-wa"><i class="fa-brands fa-whatsapp"></i> Consultar por WhatsApp</a>
+          <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="btn-wa"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
         </div>
       </div>
     </div>
@@ -367,13 +367,28 @@
         <div class="fi-icon-wrap"><i class="fa-solid fa-box-open fi-icon"></i></div>
         <div>
           <div class="fi-title">Importador directo</div>
-          <div class="fi-desc">Productos 100% originales y garantizados</div>
+          <div class="fi-desc">Productos originales, con garantía clara en cada uno</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
+
+<!-- PRODUCTOS DESTACADOS -->
+<section class="products-section">
+  <div class="container">
+    <div class="section-header">
+      <span class="section-label">Lo más vendido</span>
+      <h2>Productos importados <span>destacados</span></h2>
+      <p>Los favoritos de nuestros clientes</p>
+    </div>
+    <div class="products-grid" id="featured-products"></div>
+    <div style="text-align:center; margin-top: 8px;">
+      <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
+    </div>
+  </div>
+</section>
 
 <!-- REPUTACIÓN MERCADOLIBRE -->
 <section class="ml-rep-section">
@@ -420,34 +435,19 @@
   </div>
 </section>
 
-<!-- PRODUCTOS DESTACADOS -->
-<section class="products-section">
-  <div class="container">
-    <div class="section-header">
-      <span class="section-label">Lo más vendido</span>
-      <h2>Productos importados <span>destacados</span></h2>
-      <p>Los favoritos de nuestros clientes</p>
-    </div>
-    <div class="products-grid" id="featured-products"></div>
-    <div style="text-align:center; margin-top: 8px;">
-      <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
-    </div>
-  </div>
-</section>
-
 <!-- POR QUÉ ELEGIRNOS -->
 <section class="why-us">
   <div class="container">
     <div class="section-header">
       <span class="section-label">¿Por qué nosotros?</span>
-      <h2>Tu compra, <span>garantizada</span></h2>
+      <h2>Tu compra, <span>respaldada</span></h2>
       <p>Razones para elegir Virtual Shop Baires</p>
     </div>
     <div class="why-grid">
       <div class="why-card">
         <div class="wi"><i class="fa-solid fa-shield-halved"></i></div>
-        <h3>Garantía en todos los productos</h3>
-        <p>Importamos directamente de fábrica. Cada producto tiene garantía y soporte post-venta.</p>
+        <h3>Garantía clara en cada producto</h3>
+        <p>La garantía es la que indica la descripción de cada producto; si no la indica, es de 1 mes. En marcas reconocidas, como los inflables Bestway e Intex, rige la del fabricante. Siempre con soporte post-venta.</p>
       </div>
       <div class="why-card">
         <div class="wi"><i class="fa-solid fa-tag"></i></div>
@@ -499,8 +499,8 @@
         <p>Enterate primero de los nuevos productos, ofertas y descuentos exclusivos.</p>
       </div>
       <form class="newsletter-form" onsubmit="suscribirse(event)">
-        <input type="text" id="ns-nombre" placeholder="Tu nombre (opcional)" autocomplete="given-name" />
-        <input type="email" id="ns-email" placeholder="Tu email" required autocomplete="email" />
+        <input type="text" id="ns-nombre" aria-label="Tu nombre (opcional)" placeholder="Tu nombre (opcional)" autocomplete="given-name" />
+        <input type="email" id="ns-email" aria-label="Tu email" placeholder="Tu email" required autocomplete="email" />
         <button type="submit" id="ns-btn"><i class="fa-solid fa-paper-plane"></i> Suscribirme</button>
       </form>
       <div id="ns-msg" style="display:none;margin-top:14px;font-size:0.9rem;text-align:center;"></div>
@@ -641,9 +641,9 @@
 <script>
 </script>
 <script src="js/sheets.js?v=14"></script>
-<script src="js/productos.js?v=7"></script>
-<script src="js/cart.js?v=3"></script>
-<script src="js/main.js"></script>
+<script src="js/productos.js?v=8"></script>
+<script src="js/cart.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
   // Mapa de categoría → ícono FA (para las más comunes)
@@ -821,9 +821,12 @@
   }
 
   setTimeout(function() {
+    let visto = false;
+    try { visto = localStorage.getItem('vsb_bienvenida_vista') === '1'; localStorage.setItem('vsb_bienvenida_vista', '1'); } catch (e) {}
+    if (visto) return;
     const userData = JSON.parse(localStorage.getItem('vsb_user') || 'null');
     mostrarToast(userData && userData.nombre ? userData.nombre : null);
-  }, 1800);
+  }, 2500);
 
   // Carrusel de categorías: solo las que tienen productos (+ las externas)
   const CAT_IMG = {
@@ -880,7 +883,11 @@
     if (CATALOGO_ERROR) return;   // queda el aviso de error con Reintentar
     construirCarruselCategorias(productos, CATEGORIAS);
     // Mostrar productos destacados
-    const destacados = productos.filter(p => p.destacado);
+    // "Lo más vendido": los primeros del ranking (ventas web + Mercado Libre + interés)
+    const conOrden = productos.filter(p => typeof p.orden === "number");
+    const destacados = conOrden.length
+      ? [...conOrden].sort((a, b) => a.orden - b.orden).slice(0, 8)
+      : productos.filter(p => p.destacado);
     document.getElementById("featured-products").innerHTML = destacados.length
       ? destacados.map(renderProductCard).join("")
       : `<div class="estado-vacio" style="grid-column:1/-1;">

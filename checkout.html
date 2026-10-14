@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="css/styles.css?v=5" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
@@ -73,8 +73,8 @@
     }
     .co-payment-option:last-child { margin-bottom: 0; }
     .co-payment-option:has(input:checked) {
-      border-color: #C8F135;
-      background: #FAFFF0;
+      border-color: #1B2B4B;
+      background: #F4F6FB;
     }
     .co-payment-option input[type="radio"] {
       accent-color: #1B2B8B;
@@ -87,8 +87,8 @@
     .co-pay-sub { font-size: 0.78rem; color: #6B7280; font-weight: 400; margin-top: 2px; display: block; }
     .co-pay-badge {
       display: inline-block;
-      background: rgba(200,241,53,0.35);
-      color: #3A6800;
+      background: rgba(204,18,18,0.08);
+      color: #A00E0E;
       font-size: 0.69rem;
       font-weight: 700;
       padding: 2px 8px;
@@ -158,13 +158,13 @@
     /* Botón confirmar */
     .co-btn-submit {
       display: block; width: 100%; margin-top: 16px;
-      padding: 15px; background: #C8F135; color: #1A1A2E;
+      padding: 15px; background: #CC1212; color: #fff;
       border: none; border-radius: 50px;
       font-size: 0.95rem; font-weight: 800; cursor: pointer;
       transition: background 0.15s, transform 0.1s;
       font-family: inherit;
     }
-    .co-btn-submit:hover { background: #B5D900; }
+    .co-btn-submit:hover { background: #A00E0E; }
     .co-btn-submit:active { transform: scale(0.98); }
     .co-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
     .co-security { text-align: center; font-size: 0.72rem; color: #9CA3AF; margin-top: 8px; }
@@ -176,7 +176,7 @@
 
     /* Estado confirmación */
     .co-confirmation { max-width: 600px; margin: 0 auto; padding: 0 16px; }
-    .co-confirm-header { background: #C8F135; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
+    .co-confirm-header { background: #FDECEC; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 16px; }
     .co-confirm-header h2 { color: #1A1A2E; margin: 0 0 6px; font-size: 1.25rem; }
     .co-confirm-header p { color: #374151; margin: 0; font-size: 0.9rem; }
     .co-order-num-box { background: #1B2B8B; color: #fff; border-radius: 10px; padding: 14px 20px; text-align: center; margin-bottom: 12px; }
@@ -231,8 +231,8 @@
       padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; background: #fff; border: 1px solid #E1E5EB; color: #4B5563;
     }
     .co-envio-result strong { color: #1A1A2E; font-size: 1rem; font-variant-numeric: tabular-nums; }
-    .co-envio-result.ok { border-color: #A7F3D0; background: #ECFDF5; color: #065F46; }
-    .co-envio-result.ok strong { color: #065F46; }
+    .co-envio-result.ok { border-color: #C7CFDF; background: #F4F6FB; color: #1B2B4B; }
+    .co-envio-result.ok strong { color: #1B2B4B; }
     .co-envio-result.viacargo { border-color: #FDE68A; background: #FFFBEB; color: #92400E; }
     .co-envio-result.viacargo strong { color: #92400E; }
     .co-price-envio { color: #1A1A2E; }
@@ -308,7 +308,7 @@
 
     <!-- Pago en efectivo -->
     <div id="cash-section" style="display:none;" class="co-bank-box">
-      <h3><i class="fa-solid fa-money-bill-wave" style="color:#166534;margin-right:6px;"></i>Pago en efectivo al retirar</h3>
+      <h3><i class="fa-solid fa-money-bill-wave" style="color:#1B2B4B;margin-right:6px;"></i>Pago en efectivo al retirar</h3>
       <p style="font-size:0.9rem;color:#374151;margin:0 0 8px;">Abonás cuando retirás el pedido en nuestro depósito.</p>
       <p style="font-size:0.85rem;color:#6B7280;margin:0;"><i class="fa-solid fa-location-dot" style="color:#1B2B8B;margin-right:4px;"></i>Marcelo Gamboa 6306, Versalles, CABA</p>
       <p style="font-size:0.82rem;color:#6B7280;margin:6px 0 0;"><i class="fa-solid fa-clock" style="color:#1B2B8B;margin-right:4px;"></i>Lunes a viernes · 9 a 17 hs · Coordiná el retiro por WhatsApp</p>
@@ -333,7 +333,7 @@
       <button id="btn-upload" class="co-btn-upload" onclick="uploadProof()">
         <i class="fa-solid fa-paper-plane" style="margin-right:6px;"></i>Enviar comprobante
       </button>
-      <div id="upload-success" style="display:none;margin-top:12px;padding:12px 16px;background:#F0FFF4;border:1px solid #86EFAC;border-radius:8px;text-align:center;color:#166534;font-weight:600;font-size:0.88rem;">
+      <div id="upload-success" style="display:none;margin-top:12px;padding:12px 16px;background:#F4F6FB;border:1px solid #C7CFDF;border-radius:8px;text-align:center;color:#1B2B4B;font-weight:600;font-size:0.88rem;">
         <i class="fa-solid fa-check-circle"></i> Comprobante recibido. ¡Gracias! Te avisaremos por email.
       </div>
     </div>
@@ -553,8 +553,8 @@
   </div>
 </div>
 
-<script src="js/cart.js?v=3"></script>
-<script src="js/main.js"></script>
+<script src="js/cart.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
@@ -580,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <p style="color:#6B7280;max-width:420px;margin:0 auto 28px;font-size:0.95rem;">Por ahora podés hacer tu compra directamente por WhatsApp.</p>
         <div style="display:flex;flex-direction:column;align-items:center;gap:14px;">
           <a href="https://wa.me/5491149457266?text=${waMsg}" target="_blank"
-            style="display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;font-size:1rem;">
+            style="display:inline-flex;align-items:center;gap:10px;background:#1B2B4B;color:#fff;padding:14px 32px;border-radius:50px;font-weight:700;text-decoration:none;font-size:1rem;">
             <i class="fa-brands fa-whatsapp"></i> Hacer la compra por WhatsApp
           </a>
           <a href="productos.html" style="color:#6B7280;font-size:0.88rem;text-decoration:underline;">← Seguir viendo productos</a>
@@ -609,7 +609,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
+// Con centavos se muestran siempre dos decimales ($14.399,10, no $14.399,1). El monto no cambia.
+function fmt(n) {
+  const x = Number(n), dec = Math.round(x * 100) % 100 !== 0;
+  return "$" + x.toLocaleString("es-AR", { minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: 2 });
+}
 
 // ─── Envíos por zona (CABA y GBA). Interior: Vía Cargo ───────────────
 const ZONAS_ENVIO = [
@@ -797,6 +801,23 @@ function onPaymentChange() {
 
 function v(id) { return document.getElementById(id).value.trim(); }
 
+// Muestra el error debajo del campo, lo marca y lleva el foco ahí (en vez de alert)
+function errorCampo(id, msg) {
+  document.querySelectorAll(".campo-error").forEach(e => e.remove());
+  document.querySelectorAll("[aria-invalid='true']").forEach(e => e.removeAttribute("aria-invalid"));
+  const el = document.getElementById(id);
+  if (!el) { if (typeof showToast === "function") showToast(msg, "error"); return; }
+  const err = document.createElement("p");
+  err.className = "campo-error"; err.id = id + "-error"; err.setAttribute("role", "alert"); err.textContent = msg;
+  el.setAttribute("aria-invalid", "true");
+  el.setAttribute("aria-describedby", err.id);
+  el.insertAdjacentElement("afterend", err);
+  el.focus({ preventScroll: true });
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.addEventListener("input", () => { err.remove(); el.removeAttribute("aria-invalid"); }, { once: true });
+  el.addEventListener("change", () => { err.remove(); el.removeAttribute("aria-invalid"); }, { once: true });
+}
+
 async function submitOrder() {
   const nombre   = v("f-nombre");
   const apellido = v("f-apellido");
@@ -806,15 +827,15 @@ async function submitOrder() {
   const entrega  = v("f-entrega");
   const notes    = v("f-notes");
 
-  if (nombre.length < 2) return alert("Por favor ingresá tu nombre.");
-  if (apellido.length < 2) return alert("Por favor ingresá tu apellido.");
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert("Por favor ingresá un email válido.");
-  if (telefono.length < 7) return alert("Por favor ingresá tu número de teléfono.");
-  if (dni.length < 7) return alert("Por favor ingresá tu DNI o CUIT.");
-  if (!entrega) return alert("Por favor seleccioná el método de entrega.");
+  if (nombre.length < 2) return errorCampo("f-nombre", "Ingresá tu nombre.");
+  if (apellido.length < 2) return errorCampo("f-apellido", "Ingresá tu apellido.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return errorCampo("f-email", "Revisá el email: tiene que ser del tipo nombre@correo.com.");
+  if (telefono.length < 7) return errorCampo("f-phone", "Ingresá tu teléfono con código de área.");
+  if (dni.length < 7) return errorCampo("f-dni", "Ingresá tu DNI o CUIT.");
+  if (!entrega) return errorCampo("f-entrega", "Elegí cómo querés recibir tu pedido.");
 
   const envio = calcEnvio();
-  if (entrega === "envio" && envio.estado === "pendiente") return alert(envio.msg);
+  if (entrega === "envio" && envio.estado === "pendiente") return errorCampo(document.getElementById("f-localidad") && !v("f-localidad") ? "f-localidad" : "f-provincia", envio.msg);
   const envioTxt = envio.estado === "zona" ? `Envío ${envio.zona.nombre} (${envio.partido}): ${fmt(envio.costo)}`
     : envio.estado === "viacargo" ? `Envío a coordinar (Vía Cargo)${envio.partido ? " · " + envio.partido : ""}` : "";
 
@@ -863,11 +884,11 @@ async function submitOrder() {
   payload.numeroCalle = v("f-numero-calle");
   payload.piso        = v("f-piso");
   payload.cp          = v("f-cp");
-  if (!payload.provincia) return alert("Seleccioná la provincia.");
-  if (!payload.localidad) return alert("Ingresá la localidad.");
-  if (!payload.calle)     return alert("Ingresá la calle.");
-  if (!payload.numeroCalle) return alert("Ingresá el número de la calle.");
-  if (!payload.cp)        return alert("Ingresá el código postal.");
+  if (!payload.provincia) return errorCampo("f-provincia", "Elegí la provincia.");
+  if (!payload.localidad) return errorCampo("f-localidad", "Ingresá la localidad.");
+  if (!payload.calle)     return errorCampo("f-calle", "Ingresá la calle.");
+  if (!payload.numeroCalle) return errorCampo("f-numero-calle", "Ingresá el número de la calle.");
+  if (!payload.cp)        return errorCampo("f-cp", "Ingresá el código postal.");
 
   const btn = document.getElementById("btn-submit");
   btn.disabled = true;

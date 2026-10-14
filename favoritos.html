@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css?v=4" />
+  <link rel="stylesheet" href="css/styles.css?v=5" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     html, body { overflow-x: hidden; }
@@ -41,6 +41,11 @@
     <div class="header-inner">
       <div class="header-left">
         <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
+          <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+        </form>
       </div>
       <a href="index.html" class="logo"><img src="logo.png" alt="Virtual Shop Baires" /></a>
       <div class="header-actions">
@@ -93,9 +98,9 @@
 </div>
 
 <script src="js/sheets.js?v=14"></script>
-<script src="js/productos.js?v=7"></script>
-<script src="js/cart.js?v=3"></script>
-<script src="js/main.js"></script>
+<script src="js/productos.js?v=8"></script>
+<script src="js/cart.js?v=4"></script>
+<script src="js/main.js?v=5"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {

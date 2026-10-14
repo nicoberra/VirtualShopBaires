@@ -47,11 +47,13 @@ function toggleFavorito(id, btn) {
     btn.classList.add("fav-active");
     btn.innerHTML = '<i class="fa-solid fa-heart"></i>';
     btn.title = "Quitar de favoritos";
+    btn.setAttribute("aria-label", "Quitar de favoritos"); btn.setAttribute("aria-pressed", "true");
     showToast("❤️ Guardado en favoritos");
   } else {
     btn.classList.remove("fav-active");
     btn.innerHTML = '<i class="fa-regular fa-heart"></i>';
     btn.title = "Guardar en favoritos";
+    btn.setAttribute("aria-label", "Guardar en favoritos"); btn.setAttribute("aria-pressed", "false");
     showToast("Quitado de favoritos");
   }
   localStorage.setItem("vsb_favoritos", JSON.stringify(favs));
@@ -127,6 +129,91 @@ function isVariantComplete(pid) {
   return true;
 }
 
+// ─── ESTADO DE COMPRA (uno solo para tarjeta, detalle y "Comprar ahora") ────
+// listo: se puede comprar · elegir: falta color/talle · sinstock: no hay disponibilidad real
+const _COLORES = /^(azul|rojo|roja|verde|negro|negra|blanco|blanca|gris|amarillo|amarilla|naranja|rosa|rosado|violeta|lila|celeste|marr[oó]n|beige|dorado|plateado|bord[oó]|turquesa|fucsia|multicolor(es)?|transparente|crema|natural|nude|coral|menta|[uú]nico|surtido|varios)\b/i;
+function etiquetaVariante(p) {
+  if (p.categoria === "Autos a escala") return "Modelo";
+  const vals = (p.colores || []).filter(Boolean);
+  return vals.length && vals.every(v => _COLORES.test(String(v).trim())) ? "Color" : "Opción";
+}
+
+// Descripción legible: "a - b - c" se muestra como lista; el texto no cambia
+function _escHTML(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function descripcionHTML(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return "";
+  const partes = t.split(/\s+-\s+/).map(x => x.trim()).filter(Boolean);
+  const cuerpo = (partes.length >= 3 && partes.every(x => x.length < 160))
+    ? `<p>${_escHTML(partes[0])}</p><ul>${partes.slice(1).map(x => `<li>${_escHTML(x)}</li>`).join("")}</ul>`
+    : t.split(/\n{2,}/).map(x => `<p>${_escHTML(x).replace(/\n/g, "<br>")}</p>`).join("");
+  const larga = t.length > 360;
+  return `<div class="modal-desc${larga ? " modal-desc-corta" : ""}" id="modal-desc">${cuerpo}</div>` +
+    (larga ? `<button type="button" class="modal-desc-mas" aria-controls="modal-desc" aria-expanded="false"
+               onclick="const d=document.getElementById('modal-desc');const a=d.classList.toggle('modal-desc-corta');this.setAttribute('aria-expanded',String(!a));this.textContent=a?'Ver descripción completa':'Ver menos'">Ver descripción completa</button>` : "");
+}
+
+function nombreVisible(p) {
+  return String(p.nombre || "").replace(/\s*\[[^\]]*\]\s*/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+function _escAttr(s) { return String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+
+// Botón principal de la tarjeta: si falta elegir opción, abre el detalle (nunca queda "mudo")
+function accionTarjeta(pid) {
+  const e = estadoCompra(pid);
+  if (e.estado === "elegir") return openProductModal(pid);
+  if (e.estado === "listo") return addToCartWithVariant(pid);
+}
+
+function varianteElegida(p) {
+  const sel = selectedVariants[p.id] || {};
+  return p.variantes.find(v => (!p.colores.length || v.color === sel.color) && (!p.talles.length || v.talle === sel.talle)) || null;
+}
+function estadoCompra(pid) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return { estado: "sinstock" };
+  if (!p.tieneVariantes) return { estado: p.disponible === false ? "sinstock" : "listo" };
+  if (!p.variantes.some(v => v.stock)) return { estado: "sinstock" };       // ninguna opción disponible
+  if (!isVariantComplete(pid)) {
+    const falta = [p.colores.length > 1 ? "una opción" : "", p.talles.length > 1 ? "el talle" : ""].filter(Boolean).join(" y ");
+    return { estado: "elegir", falta };
+  }
+  const v = varianteElegida(p);
+  return (v && v.stock) ? { estado: "listo", variante: v } : { estado: "sinstock", variante: v, opcion: true };
+}
+function _waConsulta(p) {
+  return "https://wa.me/5491149457266?text=" + encodeURIComponent("Hola! Quería consultar por: " + p.nombre);
+}
+function htmlEstadoCompra(p, e) {
+  if (e.estado === "listo") return "";
+  if (e.estado === "elegir") return `<i class="fa-solid fa-hand-pointer" aria-hidden="true"></i> Elegí ${e.falta} para comprar`;
+  return `<i class="fa-solid fa-circle-info" aria-hidden="true"></i> ${e.opcion ? "Esta opción no tiene stock" : "Sin stock por el momento"} · ` +
+         `<a href="${_waConsulta(p)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Consultanos</a>`;
+}
+// Aplica el estado a un contenedor (tarjeta o detalle): ambos botones y el mensaje juntos
+function pintarEstadoCompra(root, pid) {
+  if (!root) return;
+  const p = PRODUCTOS.find(x => x.id === pid);
+  const e = estadoCompra(pid), ok = e.estado === "listo";
+  const enTarjeta = root.classList.contains("product-card");
+  root.querySelectorAll(".btn-add, .btn-wa-product").forEach(b => {
+    const activo = ok || (enTarjeta && e.estado === "elegir" && b.classList.contains("btn-add"));
+    b.disabled = !activo;
+    b.classList.toggle("btn-variant-disabled", !activo);
+    b.dataset.ready = ok ? "true" : "false";
+    if (enTarjeta && b.classList.contains("btn-wa-product")) b.hidden = !ok;
+  });
+  const add = root.querySelector(".btn-add");
+  if (add) add.innerHTML = e.estado === "sinstock"
+    ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock'
+    : (enTarjeta && e.estado === "elegir")
+      ? '<i class="fa-solid fa-sliders" aria-hidden="true"></i> Elegir opción'
+      : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito';
+  const msg = root.querySelector(".compra-estado");
+  const mostrar = !ok && !(enTarjeta && e.estado === "elegir");
+  if (msg && p) { msg.innerHTML = mostrar ? htmlEstadoCompra(p, e) : ""; msg.hidden = !mostrar; msg.dataset.estado = e.estado; }
+}
+
 function selectVariant(pid, type, value, btn) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!selectedVariants[pid]) selectedVariants[pid] = {};
@@ -158,8 +245,9 @@ function selectVariant(pid, type, value, btn) {
   }
 
   btn.closest('.variant-options').querySelectorAll('.variant-btn')
-    .forEach(b => b.classList.remove('selected'));
+    .forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-pressed', 'false'); });
   btn.classList.add('selected');
+  btn.setAttribute('aria-pressed', 'true');
   updateVariantState(pid);
 }
 
@@ -202,11 +290,6 @@ function updateVariantState(pid) {
   }
 
   const priceEl = card.querySelector('.price-main');
-  const addBtn  = card.querySelector('.btn-add');
-  const waBtn   = card.querySelector('.btn-wa-product');
-  const hint    = card.querySelector('.variant-hint');
-
-  if (hint) hint.style.display = complete ? 'none' : 'flex';
 
   // Mostrar precio parcial: si solo hay un talle seleccionado, buscar precio de ese talle
   // (útil cuando el precio varía por talle y el color no importa para el precio)
@@ -235,25 +318,8 @@ function updateVariantState(pid) {
       if (oldPriceEl) oldPriceEl.remove();
     }
 
-    const inStock = variant.stock;
-    if (addBtn) {
-      addBtn.disabled = !inStock;
-      addBtn.classList.toggle('btn-variant-disabled', !inStock);
-      addBtn.innerHTML = inStock
-        ? '<i class="fa-solid fa-cart-plus"></i> Agregar al carrito'
-        : '<i class="fa-solid fa-ban"></i> Sin stock';
-    }
-    if (waBtn) {
-      waBtn.classList.toggle('btn-variant-disabled', !inStock);
-      waBtn.dataset.ready  = inStock ? 'true' : 'false';
-      waBtn.dataset.color  = sel.color || '';
-      waBtn.dataset.talle  = sel.talle || '';
-      waBtn.dataset.precio = variant.precio || '';
-    }
-  } else {
-    if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
-    if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
   }
+  pintarEstadoCompra(card, pid);
 }
 
 function addToCartWithVariant(pid) {
@@ -278,10 +344,18 @@ function buyWithWA(pid) {
   if (!p) return false;
   const card  = document.querySelector(`.product-card[data-id="${pid}"]`);
   const waBtn = card?.querySelector('.btn-wa-product');
-  if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  if (!waBtn || estadoCompra(pid).estado !== 'listo') { avisarEstadoCompra(card, pid); return false; }
   addToCartWithVariant(pid);
   window.location.href = 'checkout.html';
   return false;
+}
+
+// Si algo impide comprar, se muestra y se resalta el motivo (nunca un clic "mudo")
+function avisarEstadoCompra(root, pid) {
+  pintarEstadoCompra(root, pid);
+  const msg = root && root.querySelector('.compra-estado');
+  if (!msg) return;
+  msg.classList.remove('compra-estado-aviso'); void msg.offsetWidth; msg.classList.add('compra-estado-aviso');
 }
 
 function cardImgNav(btn, dir) {
@@ -335,10 +409,10 @@ function renderProductCard(p) {
   const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
   const hasMultiImgs = imgs.length > 1;
   const imgHTML = imgs.length > 0
-    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${p.nombre}" loading="lazy" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
+    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${_escAttr(nombreVisible(p))}" loading="lazy" decoding="async" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
   const carouselHTML = hasMultiImgs
-    ? `<button class="card-arrow card-arrow-prev" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button class="card-arrow card-arrow-next" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
+    ? `<button type="button" class="card-arrow card-arrow-prev" aria-label="Foto anterior" tabindex="-1" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button type="button" class="card-arrow card-arrow-next" aria-label="Foto siguiente" tabindex="-1" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`
     : '';
 
   const descHTML = p.descripcion
@@ -350,13 +424,13 @@ function renderProductCard(p) {
     if (p.colores.length > MAX_BOTONES_VARIANTE) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           ${variantSelectHTML(p.id, 'color', p.colores, sel.color)}
         </div>`;
     } else if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
               <button class="variant-btn${sel.color === c ? ' selected' : ''}"
@@ -381,57 +455,51 @@ function renderProductCard(p) {
     }
   }
 
-  const needsColor = p.colores.length > 1;
-  const needsTalle = p.talles.length > 1;
-  const hintText   = [needsColor ? 'color' : '', needsTalle ? 'talle' : ''].filter(Boolean).join(' y ');
-  const hintHTML   = hasVariants && !alreadyComplete
-    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná ${hintText} para continuar</div>`
-    : "";
+  const ec = estadoCompra(p.id), puede = ec.estado === "listo", elegir = ec.estado === "elegir";
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${(puede || elegir) ? " hidden" : ""}>${(puede || elegir) ? "" : htmlEstadoCompra(p, ec)}</div>`;
+  const nom = nombreVisible(p);
 
   const addBtnHTML = `
-    <button class="btn-add${btnDisabled ? ' btn-variant-disabled' : ''}"
-            onclick="addToCartWithVariant(${p.id})"
-            ${btnDisabled ? 'disabled' : ''}>
-      <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+    <button type="button" class="btn-add${(puede || elegir) ? '' : ' btn-variant-disabled'}"
+            onclick="accionTarjeta(${p.id})" data-ready="${puede}" ${(puede || elegir) ? '' : 'disabled'}>
+      ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock'
+        : elegir ? '<i class="fa-solid fa-sliders" aria-hidden="true"></i> Elegir opción'
+        : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = hasVariants
-    ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}"
-               onclick="return buyWithWA(${p.id})"
-               data-ready="${!btnDisabled ? 'true' : 'false'}"
-               data-color="${sel.color || ''}"
-               data-talle="${sel.talle || ''}"
-               data-precio="${displayPrice || ''}">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
-       </button>`
-    : `<button class="btn-wa-product" onclick="Cart.add(${p.id}); window.location.href='checkout.html';">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
+  const waBtnHTML = `<button type="button" class="btn-wa-product" onclick="return buyWithWA(${p.id})"
+               data-ready="${puede}"${puede ? '' : ' hidden disabled'}>
+         <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
 
   const isFav = isFavorito(p.id);
-  const favBtn = `<button class="fav-btn${isFav ? ' fav-active' : ''}" onclick="event.stopPropagation();toggleFavorito(${p.id},this)" title="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}"><i class="fa-${isFav ? 'solid' : 'regular'} fa-heart"></i></button>`;
+  const favBtn = `<button type="button" class="fav-btn${isFav ? ' fav-active' : ''}" onclick="event.stopPropagation();toggleFavorito(${p.id},this)" title="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}" aria-label="${isFav ? 'Quitar de favoritos' : 'Guardar en favoritos'}" aria-pressed="${isFav}"><i class="fa-${isFav ? 'solid' : 'regular'} fa-heart" aria-hidden="true"></i></button>`;
+  const opciones = p.tieneVariantes && p.variantes.length > 1 ? `<span class="card-opciones">${p.variantes.length} opciones</span>` : "";
 
+  // Tarjeta compacta: categoría, nombre (2 líneas), precio y acciones. Descripción y variantes van al detalle.
   return `
-    <div class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})">
+    <article class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})"
+             tabindex="0" aria-label="${_escAttr(nom)}"
+             onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();openProductModal(${p.id})}">
       <div class="product-img">${imgHTML}${carouselHTML}${badgeHTML}${favBtn}</div>
       <div class="product-info">
         <div class="product-info-top">
-          <div class="category">${p.categoria}</div>
-          <h3>${p.nombre}</h3>
-          ${descHTML}
-          ${variantesHTML}
+          <div class="category">${p.categoria}${opciones}</div>
+          <h3 title="${_escAttr(nom)}">${nom}</h3>
         </div>
         <div class="product-info-bottom" onclick="event.stopPropagation()">
-          ${hintHTML}
           <div class="product-price">
             <span class="price-main">${formatPrecio(displayPrice)}</span>
             ${oldPriceHTML}
           </div>
-          ${addBtnHTML}
-          ${waBtnHTML}
+          ${hintHTML}
+          <div class="card-actions">
+            ${addBtnHTML}
+            ${waBtnHTML}
+          </div>
         </div>
       </div>
-    </div>`;
+    </article>`;
 }
 
 // ─── MODAL DE PRODUCTO ───────────────────────────────────────────────────────
@@ -462,8 +530,8 @@ function openProductModal(pid) {
   const imgHTML = imgs.length
     ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" />
        ${imgs.length > 1 ? `
-         <button class="modal-img-prev" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left"></i></button>
-         <button class="modal-img-next" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right"></i></button>
+         <button type="button" class="modal-img-prev" aria-label="Foto anterior" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+         <button type="button" class="modal-img-next" aria-label="Foto siguiente" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
          <div class="modal-img-dots" id="modal-img-dots">
            ${imgs.map((_,i) => `<span class="modal-dot${i===0?' active':''}" onclick="modalGaleriaGo(${p.id},${i})"></span>`).join('')}
          </div>` : ''}
@@ -481,16 +549,16 @@ function openProductModal(pid) {
     if (p.colores.length > MAX_BOTONES_VARIANTE) {
       variantesHTML += `
         <div class="variant-group">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           ${variantSelectHTML(pid, 'color', p.colores, sel.color)}
         </div>`;
     } else if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
-              <button class="variant-btn${sel.color === c ? ' selected' : ''}"
+              <button type="button" class="variant-btn${sel.color === c ? ' selected' : ''}" aria-pressed="${sel.color === c}"
                       onclick="selectVariantModal(${pid},'color','${c.replace(/'/g,"\\'")}',this)">
                 ${c}
               </button>`).join("")}
@@ -512,43 +580,32 @@ function openProductModal(pid) {
     }
   }
 
-  const needsColor = p.colores.length > 1;
-  const needsTalle = p.talles.length > 1;
-  const hintText   = [needsColor ? 'color' : '', needsTalle ? 'talle' : ''].filter(Boolean).join(' y ');
-  const hintHTML   = p.tieneVariantes && !alreadyComplete
-    ? `<div class="variant-hint"><i class="fa-solid fa-circle-exclamation"></i> Seleccioná ${hintText} para continuar</div>`
-    : "";
+  const ec = estadoCompra(pid), puede = ec.estado === "listo";
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${puede ? " hidden" : ""}>${htmlEstadoCompra(p, ec)}</div>`;
 
   const oldPriceHTML = displayOldPrice
     ? `<span class="price-old" id="modal-old-price">${formatPrecio(displayOldPrice)}</span>` : "";
 
   const addBtnHTML = `
-    <button class="btn-add${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-add"
-            onclick="addToCartFromModal(${pid})" ${btnDisabled ? 'disabled' : ''}>
-      <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+    <button type="button" class="btn-add${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-add"
+            onclick="addToCartFromModal(${pid})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+      ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock' : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = p.tieneVariantes
-    ? `<button class="btn-wa-product${btnDisabled ? ' btn-variant-disabled' : ''}" id="modal-btn-wa"
-               onclick="return buyWithWAModal(${pid})"
-               data-ready="${!btnDisabled ? 'true' : 'false'}"
-               data-color="${sel.color || ''}" data-talle="${sel.talle || ''}"
-               data-precio="${displayPrice || ''}">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
-       </button>`
-    : `<button class="btn-wa-product" onclick="Cart.add(${pid}); window.location.href='checkout.html';">
-         <i class="fa-solid fa-bolt"></i> Comprar ahora
+  const waBtnHTML = `<button type="button" class="btn-wa-product${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-wa"
+               onclick="return buyWithWAModal(${pid})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
+         <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
 
   const modal = document.getElementById('product-modal');
   modal.innerHTML = `
     <div class="modal-box" onclick="event.stopPropagation()">
-      <button class="modal-close" onclick="closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
+      <button type="button" class="modal-close" onclick="closeProductModal()" aria-label="Cerrar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
       <div class="modal-img" style="position:relative;">${imgHTML}${badgeHTML}</div>
       <div class="modal-info">
         <div class="category" style="font-size:0.75rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${p.categoria}</div>
-        <h2 class="modal-nombre">${p.nombre}</h2>
-        ${p.descripcion ? `<p class="modal-desc">${p.descripcion}</p>` : ""}
+        <h2 class="modal-nombre" id="modal-nombre">${nombreVisible(p)}</h2>
+        ${descripcionHTML(p.descripcion)}
         <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
         ${hintHTML}
         <div class="modal-price">
@@ -562,10 +619,29 @@ function openProductModal(pid) {
       </div>
     </div>`;
 
-  document.getElementById('product-modal').classList.add('open');
+  if (!modal.classList.contains('open')) _modalOrigen = document.activeElement;
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.setAttribute('aria-labelledby', 'modal-nombre');
+  modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   mostrarImagenVariante(pid);
+  setTimeout(() => { const c = modal.querySelector('.modal-close'); if (c) c.focus(); }, 60);
 }
+
+// Detalle accesible: Escape cierra, el foco no se escapa y vuelve a la tarjeta al cerrar
+let _modalOrigen = null;
+document.addEventListener('keydown', e => {
+  const modal = document.getElementById('product-modal');
+  if (!modal || !modal.classList.contains('open')) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeProductModal(); return; }
+  if (e.key !== 'Tab') return;
+  const f = [...modal.querySelectorAll('button:not([disabled]), a[href], select, input, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
+  if (!f.length) return;
+  const primero = f[0], ultimo = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === primero) { e.preventDefault(); ultimo.focus(); }
+  else if (!e.shiftKey && document.activeElement === ultimo) { e.preventDefault(); primero.focus(); }
+});
 
 function selectVariantModal(pid, type, value, btn) {
   selectVariant(pid, type, value, btn);           // actualiza selectedVariants y la tarjeta
@@ -584,9 +660,6 @@ function updateModalVariantState(pid) {
 
   const priceEl    = document.getElementById('modal-price');
   const oldPriceEl = document.getElementById('modal-old-price');
-  const addBtn     = document.getElementById('modal-btn-add');
-  const waBtn      = document.getElementById('modal-btn-wa');
-  const hint       = document.querySelector('#product-modal .variant-hint');
 
   // Deshabilitar variantes no disponibles en el modal
   if (sel.color && p.talles.length > 0) {
@@ -606,8 +679,6 @@ function updateModalVariantState(pid) {
     });
   }
 
-  if (hint) hint.style.display = complete ? 'none' : 'flex';
-
   // Mostrar precio parcial en modal también
   if (!complete && priceEl) {
     let parcialVariant = null;
@@ -626,13 +697,8 @@ function updateModalVariantState(pid) {
       else priceEl?.insertAdjacentHTML('afterend', `<span class="price-old" id="modal-old-price">${formatPrecio(variant.precioOriginal)}</span>`);
     } else { if (oldPriceEl) oldPriceEl.remove(); }
 
-    const inStock = variant.stock;
-    if (addBtn) { addBtn.disabled = !inStock; addBtn.classList.toggle('btn-variant-disabled', !inStock); }
-    if (waBtn)  { waBtn.classList.toggle('btn-variant-disabled', !inStock); waBtn.dataset.ready = inStock ? 'true' : 'false'; waBtn.dataset.color = sel.color || ''; waBtn.dataset.talle = sel.talle || ''; waBtn.dataset.precio = variant.precio || ''; }
-  } else {
-    if (addBtn) { addBtn.disabled = true; addBtn.classList.add('btn-variant-disabled'); }
-    if (waBtn)  { waBtn.classList.add('btn-variant-disabled'); waBtn.dataset.ready = 'false'; }
   }
+  pintarEstadoCompra(document.querySelector('#product-modal .modal-box'), pid);
 }
 
 function addToCartFromModal(pid) {
@@ -641,8 +707,7 @@ function addToCartFromModal(pid) {
 }
 
 function buyWithWAModal(pid) {
-  const waBtn = document.getElementById('modal-btn-wa');
-  if (!waBtn || waBtn.dataset.ready !== 'true') return false;
+  if (estadoCompra(pid).estado !== 'listo') { avisarEstadoCompra(document.querySelector('#product-modal .modal-box'), pid); return false; }
   addToCartWithVariant(pid);
   window.location.href = 'checkout.html';
   return false;
@@ -652,6 +717,8 @@ function closeProductModal() {
   document.getElementById('product-modal').classList.remove('open');
   document.body.style.overflow = '';
   _galeriaIdx = 0;
+  if (_modalOrigen && document.contains(_modalOrigen)) _modalOrigen.focus({ preventScroll: true });
+  _modalOrigen = null;
 }
 
 // ─── GALERÍA DE IMÁGENES EN MODAL ────────────────────────────────────────────

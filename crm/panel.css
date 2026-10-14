@@ -1405,3 +1405,32 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   border: 2.5px solid var(--red, #e11d2a); border-right-color: transparent; animation: catfoto-gira .8s linear infinite; }
 @keyframes catfoto-gira { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .cat-foto.subiendo::after { animation-duration: 2s; } }
+
+/* Tabla de productos: entra entera en la pantalla de la compu (sin mover de costado) */
+@media (min-width: 769px) {
+  .prod-tabla { min-width: 0; width: 100%; table-layout: fixed; }
+  .prod-tabla th:nth-child(2) { width: 100px; }   /* SKU */
+  .prod-tabla th:nth-child(3) { width: 132px; }   /* Variante */
+  .prod-tabla th:nth-child(4) { width: 132px; }   /* Precio */
+  .prod-tabla th:nth-child(5) { width: 124px; }   /* Stock */
+  .prod-tabla th:nth-child(6) { width: 184px; }   /* Acciones */
+  .prod-tabla td { overflow: hidden; text-overflow: ellipsis; }
+  .prod-tabla .prod-name-cell { min-width: 0; }
+  .prod-tabla .prod-name-text { min-width: 0; overflow-wrap: anywhere; }
+  .prod-tabla .prod-name-text > div { white-space: normal; }
+  .prod-tabla th { white-space: nowrap; }
+  .prod-tabla td:nth-child(n+2) { white-space: nowrap; }
+}
+@media (min-width: 769px) and (max-width: 1280px) {
+  .prod-tabla th, .prod-tabla td { padding-left: 8px; padding-right: 8px; }
+  .prod-tabla .prod-name-cell { gap: 10px; }
+  .prod-tabla .btn-editar { padding-left: 10px; padding-right: 10px; }
+  .prod-tabla .btn-editar-txt { display: none; }
+  .prod-tabla th:nth-child(2) { width: 84px; }
+  .prod-tabla th:nth-child(3), .prod-tabla th:nth-child(4) { width: 126px; }
+  .prod-tabla th:nth-child(5) { width: 112px; }
+  .prod-tabla th:nth-child(6) { width: 122px; }
+}
+@media (min-width: 769px) and (max-width: 1100px) {
+  .prod-tabla th:nth-child(2), .prod-tabla td.td-sku { display: none; }
+}

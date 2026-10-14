@@ -286,7 +286,7 @@ function urlTienda(p) {
 }
 function celdaAcciones() {
   return `<td class="td-acc"><div class="acc-wrap">
-    <button type="button" class="btn-editar"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar</button>
+    <button type="button" class="btn-editar" title="Editar"><i class="fa-solid fa-pen" aria-hidden="true"></i><span class="btn-editar-txt"> Editar</span></button>
     <button type="button" class="btn-mas" aria-label="Más acciones" aria-haspopup="menu" aria-expanded="false"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i></button>
   </div></td>`;
 }

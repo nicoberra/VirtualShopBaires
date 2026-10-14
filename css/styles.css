@@ -3465,3 +3465,27 @@ body { background: #f4f5f7; }
   .sort-bar .filtros-abrir { flex-shrink: 0; }
 }
 @media (max-width: 400px) { .sort-bar .results-count { display: none; } }
+
+/* ===== Detalle del producto ===== */
+.modal-box .category { color: var(--ink-3) !important; font-weight: 600 !important; letter-spacing: .06em !important; }
+.modal-nombre { color: var(--ink); text-wrap: balance; }
+.modal-desc { color: var(--ink-2); font-size: .88rem; line-height: 1.55; max-width: 62ch; }
+.modal-desc p + p, .modal-desc p + ul { margin-top: 8px; }
+.modal-desc ul { padding-left: 18px; display: grid; gap: 3px; }
+.modal-desc li::marker { color: var(--red); }
+.modal-desc-corta { max-height: 9.5em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 65%, transparent); mask-image: linear-gradient(#000 65%, transparent); }
+.modal-desc-mas {
+  align-self: flex-start; margin: 4px 0 6px; padding: 4px 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: .84rem; font-weight: 700; color: var(--ink); text-decoration: underline; text-underline-offset: 3px;
+}
+.modal-desc-mas:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.variant-label { color: var(--ink-3); font-weight: 700; }
+.variant-btn {
+  min-height: 38px; padding: 0 14px; border-radius: 9px; font-size: .85rem; font-weight: 600;
+  background: #fff; color: var(--ink); border: 1px solid var(--line-strong);
+}
+.variant-btn:hover:not(:disabled) { border-color: var(--ink); }
+.variant-btn.selected { border-color: var(--red); background: var(--red-light); color: var(--red-dark); box-shadow: inset 0 0 0 1px var(--red); }
+.variant-btn:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.modal-actions .btn-add, .modal-actions .btn-wa-product { height: 46px; border-radius: 10px; font-size: .92rem; }
+.modal-box .price-main { color: var(--ink); font-variant-numeric: tabular-nums; }

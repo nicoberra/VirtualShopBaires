@@ -129,6 +129,28 @@ function isVariantComplete(pid) {
 
 // ─── ESTADO DE COMPRA (uno solo para tarjeta, detalle y "Comprar ahora") ────
 // listo: se puede comprar · elegir: falta color/talle · sinstock: no hay disponibilidad real
+const _COLORES = /^(azul|rojo|roja|verde|negro|negra|blanco|blanca|gris|amarillo|amarilla|naranja|rosa|rosado|violeta|lila|celeste|marr[oó]n|beige|dorado|plateado|bord[oó]|turquesa|fucsia|multicolor(es)?|transparente|crema|natural|nude|coral|menta|[uú]nico|surtido|varios)\b/i;
+function etiquetaVariante(p) {
+  if (p.categoria === "Autos a escala") return "Modelo";
+  const vals = (p.colores || []).filter(Boolean);
+  return vals.length && vals.every(v => _COLORES.test(String(v).trim())) ? "Color" : "Opción";
+}
+
+// Descripción legible: "a - b - c" se muestra como lista; el texto no cambia
+function _escHTML(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function descripcionHTML(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return "";
+  const partes = t.split(/\s+-\s+/).map(x => x.trim()).filter(Boolean);
+  const cuerpo = (partes.length >= 3 && partes.every(x => x.length < 160))
+    ? `<p>${_escHTML(partes[0])}</p><ul>${partes.slice(1).map(x => `<li>${_escHTML(x)}</li>`).join("")}</ul>`
+    : t.split(/\n{2,}/).map(x => `<p>${_escHTML(x).replace(/\n/g, "<br>")}</p>`).join("");
+  const larga = t.length > 360;
+  return `<div class="modal-desc${larga ? " modal-desc-corta" : ""}" id="modal-desc">${cuerpo}</div>` +
+    (larga ? `<button type="button" class="modal-desc-mas" aria-controls="modal-desc" aria-expanded="false"
+               onclick="const d=document.getElementById('modal-desc');const a=d.classList.toggle('modal-desc-corta');this.setAttribute('aria-expanded',String(!a));this.textContent=a?'Ver descripción completa':'Ver menos'">Ver descripción completa</button>` : "");
+}
+
 function nombreVisible(p) {
   return String(p.nombre || "").replace(/\s*\[[^\]]*\]\s*/g, " ").replace(/\s{2,}/g, " ").trim();
 }
@@ -221,8 +243,9 @@ function selectVariant(pid, type, value, btn) {
   }
 
   btn.closest('.variant-options').querySelectorAll('.variant-btn')
-    .forEach(b => b.classList.remove('selected'));
+    .forEach(b => { b.classList.remove('selected'); b.setAttribute('aria-pressed', 'false'); });
   btn.classList.add('selected');
+  btn.setAttribute('aria-pressed', 'true');
   updateVariantState(pid);
 }
 
@@ -399,13 +422,13 @@ function renderProductCard(p) {
     if (p.colores.length > MAX_BOTONES_VARIANTE) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           ${variantSelectHTML(p.id, 'color', p.colores, sel.color)}
         </div>`;
     } else if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group" onclick="event.stopPropagation()">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
               <button class="variant-btn${sel.color === c ? ' selected' : ''}"
@@ -524,16 +547,16 @@ function openProductModal(pid) {
     if (p.colores.length > MAX_BOTONES_VARIANTE) {
       variantesHTML += `
         <div class="variant-group">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           ${variantSelectHTML(pid, 'color', p.colores, sel.color)}
         </div>`;
     } else if (p.colores.length > 1) {
       variantesHTML += `
         <div class="variant-group">
-          <span class="variant-label">Color:</span>
+          <span class="variant-label">${etiquetaVariante(p)}:</span>
           <div class="variant-options" data-type="color">
             ${p.colores.map(c => `
-              <button class="variant-btn${sel.color === c ? ' selected' : ''}"
+              <button type="button" class="variant-btn${sel.color === c ? ' selected' : ''}" aria-pressed="${sel.color === c}"
                       onclick="selectVariantModal(${pid},'color','${c.replace(/'/g,"\\'")}',this)">
                 ${c}
               </button>`).join("")}
@@ -580,7 +603,7 @@ function openProductModal(pid) {
       <div class="modal-info">
         <div class="category" style="font-size:0.75rem;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${p.categoria}</div>
         <h2 class="modal-nombre">${nombreVisible(p)}</h2>
-        ${p.descripcion ? `<p class="modal-desc">${p.descripcion}</p>` : ""}
+        ${descripcionHTML(p.descripcion)}
         <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
         ${hintHTML}
         <div class="modal-price">

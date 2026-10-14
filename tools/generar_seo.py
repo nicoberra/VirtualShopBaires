@@ -132,6 +132,12 @@ def precio_txt(n):
     entero = int(round(n))
     return "$" + f"{entero:,}".replace(",", ".")
 
+def precio_transferencia_txt(n):
+    """Precio con 10% OFF por transferencia (mismo cálculo que el checkout: centavos si hay)."""
+    v = round(n * 90) / 100
+    entero, cent = int(v), int(round((v - int(v)) * 100))
+    return "$" + f"{entero:,}".replace(",", ".") + (f",{cent:02d}" if cent else "")
+
 def recortar(s, maximo):
     s = re.sub(r"\s+", " ", str(s)).strip()
     if len(s) <= maximo:
@@ -409,7 +415,7 @@ def main():
     <div>
       <h1 class="seo-h1">{esc(p['nombre'])}</h1>
       <p class="pdp-precio">{'Desde ' if desde else ''}{precio}</p>
-      <p class="pdp-nota">10% OFF pagando por transferencia · Envío a todo el país</p>
+      <p class="pdp-nota"><strong>{'Desde ' if desde else ''}{precio_transferencia_txt(p['precio_min'])}</strong> pagando por transferencia (10% OFF) · Envío a todo el país</p>
       <p class="seo-intro">{resumen}</p>
       {'<p class="pdp-vars">' + '<br>'.join(vars_txt) + '</p>' if vars_txt else ''}
       <div class="pdp-acciones">

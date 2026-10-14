@@ -153,6 +153,25 @@ function descripcionHTML(texto) {
                onclick="const d=document.getElementById('modal-desc');const a=d.classList.toggle('modal-desc-corta');this.setAttribute('aria-expanded',String(!a));this.textContent=a?'Ver descripción completa':'Ver menos'">Ver descripción completa</button>` : "");
 }
 
+// 10% OFF por transferencia o efectivo: mismo valor que DISCOUNT_PCT (checkout) y el servidor
+const DESCUENTO_TRANSFERENCIA = 10;
+function precioTransferencia(precio) { return Math.round(Number(precio) * (100 - DESCUENTO_TRANSFERENCIA)) / 100; }
+function formatPrecioExacto(n) {
+  const x = Number(n), dec = Math.round(x * 100) % 100 !== 0;
+  return "$" + x.toLocaleString("es-AR", { minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: 2 });
+}
+function htmlTransfer(precio) {
+  return `<div class="precio-transfer"><strong>${formatPrecioExacto(precioTransferencia(precio))}</strong> con transferencia <span class="precio-transfer-off">${DESCUENTO_TRANSFERENCIA}% OFF</span></div>`;
+}
+// Cambia el precio y su línea de transferencia juntos (tarjeta o detalle)
+function ponerPrecio(el, precio) {
+  if (!el) return;
+  el.textContent = formatPrecio(precio);
+  const caja = el.closest('.product-info, .modal-info');
+  const t = caja && caja.querySelector('.precio-transfer');
+  if (t) t.outerHTML = htmlTransfer(precio);
+}
+
 function nombreVisible(p) {
   return String(p.nombre || "").replace(/\s*\[[^\]]*\]\s*/g, " ").replace(/\s{2,}/g, " ").trim();
 }
@@ -300,11 +319,11 @@ function updateVariantState(pid) {
     } else if (sel.color && !sel.talle) {
       parcialVariant = p.variantes.find(v => v.color === sel.color && v.stock);
     }
-    if (parcialVariant) priceEl.textContent = formatPrecio(parcialVariant.precio);
+    if (parcialVariant) ponerPrecio(priceEl, parcialVariant.precio);
   }
 
   if (complete && variant) {
-    if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
+    if (priceEl) ponerPrecio(priceEl, variant.precio);
 
     // Actualizar precio tachado
     const oldPriceEl = card.querySelector('.price-old');
@@ -492,6 +511,7 @@ function renderProductCard(p) {
             <span class="price-main">${formatPrecio(displayPrice)}</span>
             ${oldPriceHTML}
           </div>
+          ${htmlTransfer(displayPrice)}
           ${hintHTML}
           <div class="card-actions">
             ${addBtnHTML}
@@ -612,6 +632,7 @@ function openProductModal(pid) {
           <span class="price-main" id="modal-price">${formatPrecio(displayPrice)}</span>
           ${oldPriceHTML}
         </div>
+        ${htmlTransfer(displayPrice)}
         <div class="modal-actions">
           ${addBtnHTML}
           ${waBtnHTML}
@@ -687,11 +708,11 @@ function updateModalVariantState(pid) {
     } else if (sel.color && !sel.talle) {
       parcialVariant = p.variantes.find(v => v.color === sel.color && v.stock);
     }
-    if (parcialVariant) priceEl.textContent = formatPrecio(parcialVariant.precio);
+    if (parcialVariant) ponerPrecio(priceEl, parcialVariant.precio);
   }
 
   if (complete && variant) {
-    if (priceEl) priceEl.textContent = formatPrecio(variant.precio);
+    if (priceEl) ponerPrecio(priceEl, variant.precio);
     if (variant.precioOriginal) {
       if (oldPriceEl) oldPriceEl.textContent = formatPrecio(variant.precioOriginal);
       else priceEl?.insertAdjacentHTML('afterend', `<span class="price-old" id="modal-old-price">${formatPrecio(variant.precioOriginal)}</span>`);

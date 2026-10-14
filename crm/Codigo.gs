@@ -1395,8 +1395,12 @@ var SBP = {
     var act = _sbR(_sb('get', 'productos?select=imagenes&categoria=eq.' + encodeURIComponent(categoria) +
       '&nombre=eq.' + encodeURIComponent(nombre)), 'Fotos');
     if (!act.length) return { ok: false, error: 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.' };
+    var previas = act[0].imagenes || [];
+    if (!previas.length) {   // todavía no estaban en Supabase: se parte de las del manifest (las que ve la tienda)
+      try { previas = _fotosDe(storeManifestLeer(), categoria, nombre).urls || []; } catch (e) { previas = []; }
+    }
     var url = _sbFotoGH(categoria, nombre, p.data);
-    var fotos = (act[0].imagenes || []).concat([url]);
+    var fotos = previas.concat([url]);
     _sbImagenesSet(categoria, nombre, fotos);
     return { ok: true, url: url, fotos: fotos };
   },

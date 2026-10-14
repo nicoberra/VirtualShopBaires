@@ -122,6 +122,7 @@ function manejar(e) {
       'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,'ext_variantes_set':1,
       'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
+      'ext_categorias_list':1,'ext_categoria_foto':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
     };
     if (ADMIN_ACTIONS[accion]) {
@@ -163,7 +164,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v9-ranking1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v10-catfoto1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1159,7 +1160,7 @@ var CATALOGO_NO_PUBLICAR = /sku|costo|proveedor|compra|ganancia|margen/i;
 var CATALOGO_PROHIBIDAS  = SYSTEM_TABS.concat(['Usuarios', 'Errores', 'Categorias']);
 var CAMBIAN_CATALOGO = {
   'ext_producto_update':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
-  'ext_producto_eliminar':1, 'ext_categoria_agregar':1, 'ext_categoria_eliminar':1,
+  'ext_producto_eliminar':1, 'ext_categoria_agregar':1, 'ext_categoria_eliminar':1, 'ext_categoria_foto':1,
   'producto_foto_subir':1, 'producto_fotos_set':1, 'productos_save':1, 'productos_add':1
 };
 var CATALOGO_CACHE_SEG = 300;
@@ -1357,6 +1358,33 @@ var SBP = {
     _sbR(_sb('delete', 'productos?categoria=eq.' + encodeURIComponent(nombre), undefined, 'return=minimal'), 'Eliminar categoría');
     _sbR(_sb('delete', 'categorias?nombre=eq.' + encodeURIComponent(nombre), undefined, 'return=minimal'), 'Eliminar categoría');
     return { ok: true };
+  },
+
+  // Fotos de las categorías (el carrusel que gira en la portada de la tienda)
+  ext_categorias_list: function() {
+    var r = _sb('get', 'categorias?select=nombre,imagen_url&order=orden,nombre');
+    if (r.code !== 200) r = _sb('get', 'categorias?select=nombre&order=orden,nombre');   // todavía sin la columna
+    return { ok: true, categorias: _sbR(r, 'Categorías') };
+  },
+
+  ext_categoria_foto: function(p) {
+    var nombre = String(p.nombre || '').trim();
+    if (!nombre) return { ok: false, error: 'Falta la categoría' };
+    if (!_sbR(_sb('get', 'categorias?select=nombre&nombre=eq.' + encodeURIComponent(nombre)), 'Categoría').length)
+      return { ok: false, error: 'No existe esa categoría' };
+    var url = null;
+    if (p.data) {   // sin foto = volver a la de siempre
+      if (!GH_TOKEN) return { ok: false, error: 'Falta GH_TOKEN para subir la foto' };
+      var ruta = STORE_IMG_DIR + '/categorias/' + _slug(nombre) + '-' + new Date().getTime() + '.jpg';
+      var up = ghApi('put', 'contents/' + encPath(ruta), { message: 'Foto de categoría: ' + nombre,
+        content: String(p.data).replace(/^data:[^,]*,/, ''), branch: GH_BRANCH });
+      if (up.code < 200 || up.code >= 300) return { ok: false, error: 'No se pudo subir la foto (' + up.code + ')' };
+      url = STORE_BASE_URL + ruta;
+    }
+    var r = _sb('patch', 'categorias?nombre=eq.' + encodeURIComponent(nombre), { imagen_url: url }, 'return=representation');
+    if (r.code >= 400 && /imagen_url/.test(r.text)) return { ok: false, error: 'Falta preparar Supabase para las fotos de categoría' };
+    if (!_sbR(r, 'Foto de categoría').length) return { ok: false, error: 'No existe esa categoría' };
+    return { ok: true, url: url || '' };
   },
 
   // Fotos: se guardan en el repo y en el manifest como siempre, y además en Supabase

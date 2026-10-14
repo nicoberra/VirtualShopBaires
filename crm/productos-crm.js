@@ -78,7 +78,11 @@ function abrirModalEditarCats() {
     ? cats.map(c => `
         <div class="editar-cat-row">
           <span><strong>${escHtml(c)}</strong> <span class="text-muted" style="font-size:.78rem">· ${contar(c)} productos</span></span>
-          <span style="display:flex;gap:6px">
+          <span style="display:flex;gap:6px;align-items:center">
+            <label class="cat-foto" title="Foto en el carrusel de la portada" data-cat="${escHtml(c)}">
+              <img alt="" hidden><i class="fa-solid fa-image"></i>
+              <input type="file" accept="image/*" hidden>
+            </label>
             <button class="btn-secondary btn-sm btn-ver-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-eye"></i> Ver</button>
             <button class="btn-danger btn-sm btn-del-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-trash"></i> Eliminar</button>
           </span>
@@ -90,8 +94,65 @@ function abrirModalEditarCats() {
   lista.querySelectorAll('.btn-del-cat').forEach(btn => {
     btn.addEventListener('click', () => eliminarCategoria(btn.dataset.cat));
   });
+  lista.querySelectorAll('.cat-foto input').forEach(inp => {
+    inp.addEventListener('change', () => subirFotoCategoria(inp));
+  });
   $('nueva-cat-nombre').value = '';
   show('modal-editar-cats', 'flex');
+  cargarFotosCategorias();
+}
+
+// Fotos de las categorías: las que giran en el carrusel de la portada de la tienda
+async function cargarFotosCategorias() {
+  try {
+    const r = await crmEnviar({ action: 'ext_categorias_list' });
+    (r.categorias || []).forEach(c => pintarFotoCategoria(c.nombre, c.imagen_url));
+  } catch (e) { /* sin fotos: quedan los íconos */ }
+}
+
+function pintarFotoCategoria(cat, url) {
+  const lbl = [...document.querySelectorAll('#editar-cats-lista .cat-foto')].find(l => l.dataset.cat === cat);
+  if (!lbl) return;
+  const img = lbl.querySelector('img');
+  img.hidden = !url;
+  if (url) img.src = url; else img.removeAttribute('src');
+  lbl.title = url ? 'Cambiar la foto del carrusel de la portada' : 'Subir foto para el carrusel de la portada';
+}
+
+// Recorte cuadrado al centro (el carrusel muestra las fotos cuadradas)
+function _prepararFotoCuadrada(file) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      const lado = Math.min(img.width, img.height), sal = Math.min(800, lado);
+      const c = document.createElement('canvas');
+      c.width = c.height = sal;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, sal, sal);
+      ctx.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, sal, sal);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+
+async function subirFotoCategoria(input) {
+  const lbl = input.closest('.cat-foto'), cat = lbl.dataset.cat, file = input.files[0];
+  input.value = '';
+  if (!file) return;
+  lbl.classList.add('subiendo');
+  try {
+    const data = await _prepararFotoCuadrada(file);
+    const r = await crmEnviar({ action: 'ext_categoria_foto', nombre: cat, data });
+    if (!r.ok) throw new Error(r.error || 'No se pudo guardar');
+    pintarFotoCategoria(cat, r.url);
+    toast('Foto de "' + cat + '" guardada ✓ (en la tienda se ve en un par de minutos)');
+  } catch (e) {
+    if (e.message !== 'auth') toast('Error al subir la foto: ' + e.message, 'err');
+  } finally { lbl.classList.remove('subiendo'); }
 }
 
 // ── Filtros, páginas y menú "⋯" de la tabla de productos ─────────────

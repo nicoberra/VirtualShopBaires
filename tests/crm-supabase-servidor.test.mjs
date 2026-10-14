@@ -37,7 +37,8 @@ function crearSupabase() {
     if (metodo === "patch") {
       if (tabla === "productos" && body.nombre && sel.some(r => T.some(p => p !== r && p.categoria === r.categoria && p.nombre === body.nombre)))
         return resp(409, { message: "duplicate key value violates unique constraint" });
-      sel.forEach(r => Object.assign(r, body)); return resp(204);
+      sel.forEach(r => Object.assign(r, body));
+      return (opt.headers.Prefer || "").includes("representation") ? resp(200, sel.map(r => ({ ...r }))) : resp(204);
     }
     if (metodo === "delete") {
       sel.forEach(r => T.splice(T.indexOf(r), 1));
@@ -142,6 +143,16 @@ const PROPS = { FUENTE_PRODUCTOS: "supabase", SUPABASE_SECRET: "sb_secret_test",
   pedir({ action: "ext_categoria_eliminar", nombre: "Pesca" });
   assert.ok(!db.categorias.some(c => c.nombre === "Pesca")); assert.ok(db.productos.some(p => p.categoria === "Camping"));
   ok("crear y eliminar categorías (solo la elegida)");
+
+  assert.equal(pedir({ action: "ext_categoria_foto", nombre: "Camping", token: "MALO" }).error, "auth");
+  const cf = pedir({ action: "ext_categoria_foto", nombre: "Camping", data: "data:image/jpeg;base64,AAA" });
+  assert.equal(cf.ok, true); assert.match(cf.url, /^https:\/\/virtualshopbaires\.com\.ar\/img\/productos\/categorias\/camping-/);
+  assert.equal(db.categorias.find(c => c.nombre === "Camping").imagen_url, cf.url);
+  assert.equal(pedir({ action: "ext_categorias_list" }).categorias[0].imagen_url, cf.url);
+  assert.equal(pedir({ action: "ext_categoria_foto", nombre: "No existe", data: "data:image/jpeg;base64,AAA" }).ok, false);
+  pedir({ action: "ext_categoria_foto", nombre: "Camping" });
+  assert.equal(db.categorias.find(c => c.nombre === "Camping").imagen_url, null);
+  ok("foto de categoría (carrusel de la portada): solo con la clave del CRM, se sube al repo y se puede quitar");
 }
 {
   const { pedir } = cargar({ FUENTE_PRODUCTOS: "supabase" });

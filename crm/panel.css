@@ -1386,3 +1386,21 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .enc-modal { max-width: 100%; border-radius: 18px 18px 0 0; }
   .enc-body { padding: 14px 18px 4px; }
 }
+
+/* Foto de la categoría (carrusel de la portada) */
+.cat-foto { position: relative; width: 38px; height: 38px; border-radius: 9px; border: 1.5px dashed var(--border);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden;
+  color: var(--text-muted, #888); flex-shrink: 0; transition: border-color .15s, transform .15s; }
+.cat-foto:hover { border-color: var(--red, #e11d2a); color: var(--red, #e11d2a); }
+.cat-foto:active { transform: scale(.94); }
+.cat-foto:focus-within { outline: 2px solid var(--red, #e11d2a); outline-offset: 2px; }
+.cat-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cat-foto img:not([hidden]) + i { display: none; }
+.cat-foto img:not([hidden]) { border-radius: 8px; }
+.cat-foto:has(img:not([hidden])) { border-style: solid; }
+.cat-foto.subiendo { pointer-events: none; }
+.cat-foto.subiendo::before { content: ""; position: absolute; inset: 0; background: rgba(255,255,255,.75); }
+.cat-foto.subiendo::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%;
+  border: 2.5px solid var(--red, #e11d2a); border-right-color: transparent; animation: catfoto-gira .8s linear infinite; }
+@keyframes catfoto-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cat-foto.subiendo::after { animation-duration: 2s; } }

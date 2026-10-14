@@ -868,7 +868,15 @@
     track.innerHTML = lista.map(c => slide(c, false)).join("") + lista.map(c => slide(c, true)).join("");
   }
 
-  cargarProductos().then(productos => {
+  // Fotos de categoría cargadas desde el CRM (si falla, quedan las de siempre)
+  const fotosCategorias = (typeof SUPABASE_URL === "undefined") ? Promise.resolve() :
+    fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre,imagen_url&imagen_url=not.is.null`,
+          { headers: { apikey: SUPABASE_PUB } })
+      .then(r => r.ok ? r.json() : [])
+      .then(filas => filas.forEach(c => { if (c.imagen_url) CAT_IMG[c.nombre] = c.imagen_url; }))
+      .catch(() => {});
+
+  Promise.all([cargarProductos(), fotosCategorias]).then(([productos]) => {
     if (CATALOGO_ERROR) return;   // queda el aviso de error con Reintentar
     construirCarruselCategorias(productos, CATEGORIAS);
     // Mostrar productos destacados

@@ -332,6 +332,9 @@
     else if (selectedCat !== "Todos") {
       // Orden del Sheet para una categoría específica
       results.sort((a, b) => a.id - b.id);
+    } else if (results.length && results.every(p => typeof p.orden === "number")) {
+      // Ranking: los más vendidos y con más interés primero (también entre categorías)
+      results.sort((a, b) => a.orden - b.orden || a.id - b.id);
     } else {
       // Mezclar productos de distintas categorías (round-robin entre categorías)
       const bycat = {};

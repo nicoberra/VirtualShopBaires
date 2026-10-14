@@ -43,7 +43,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v13';
+const _CACHE_DATA   = 'vsb_data_v14';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 30 * 60 * 1000;   // 30 minutos
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -154,6 +154,7 @@ const PRODUCTOS_EN_SUPABASE = true;
 const SUPABASE_URL = "https://dtsixnqwwrbwybulpuxo.supabase.co";
 const SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM";
 let _sbImagenes = null;   // { categoria: { nombre: [urls] } } para sumar a IMAGE_MAP
+let _sbOrden = {};        // "categoria|nombre" → orden del ranking (más vendidos primero)
 
 async function _catalogoSupabase() {
   const h = { apikey: SUPABASE_PUB };
@@ -169,6 +170,7 @@ async function _catalogoSupabase() {
   cats.forEach(c => { hojas[c.nombre] = { cols, rows: [] }; });
   prods.forEach(p => {
     const hoja = hojas[p.categoria]; if (!hoja) return;
+    _sbOrden[p.categoria + "|" + String(p.nombre).trim()] = p.orden;
     if (p.imagenes && p.imagenes.length) (imgs[p.categoria] = imgs[p.categoria] || {})[p.nombre] = p.imagenes;
     (p.variantes || []).sort((a, b) => a.orden - b.orden).forEach(v => {
       const cel = x => (x === null || x === undefined || x === "") ? null : { v: x };
@@ -383,7 +385,7 @@ async function cargarProductos() {
     let id = 1;
     PRODUCTOS = resultados.flat()
       .filter(p => p.precio > 0 || p.descripcion)
-      .map(p => ({ ...p, categoria: CATEGORY_ALIASES[p.categoria] || p.categoria, id: id++ }));
+      .map(p => ({ ...p, orden: _sbOrden[p.categoria + "|" + String(p.nombre).trim()], categoria: CATEGORY_ALIASES[p.categoria] || p.categoria, id: id++ }));
 
     // 4. Categorías: las que tienen productos + las externas del Sheet
     const catsConProductos = [...new Set(PRODUCTOS.map(p => p.categoria))];

@@ -59,9 +59,10 @@ function cargar() {
   assert.equal(gs.loginPanel({ clave: "mal", confiar: "1" }).dispositivo, undefined);
   ok("con la clave equivocada no se crea ningún dispositivo");
 
+  for (let i = 0; i < 2; i++) gs.loginPanel({ clave: "clave-buena-123", dispositivo: r3.dispositivo });
   const d = gs.loginDispositivo({ dispositivo: r3.dispositivo });
   assert.equal(d.ok, true); assert.ok(gs.verifyPanel({ token: d.token }).ok);
-  ok("con la llave entra directo y recibe una sesión válida");
+  ok("tras 3 ingresos con clave, con la llave entra directo y recibe una sesión válida");
 
   assert.equal(gs.loginDispositivo({ dispositivo: "f".repeat(64) }).error, "dispositivo");
   assert.equal(gs.loginDispositivo({ dispositivo: "<script>" }).error, "dispositivo");
@@ -107,5 +108,19 @@ function cargar() {
   const falsa = "a".repeat(64);
   assert.match(gs.loginPanel({ clave: "clave-buena-123", dispositivo: falsa }).error, /Demasiados intentos/);
   ok("una llave inventada no saltea el bloqueo general");
+}
+{
+  // El ingreso sin clave lo habilita el SERVIDOR recién al 3er ingreso con clave de esa llave
+  const { gs } = cargar();
+  const llave = gs.loginPanel({ clave: "clave-buena-123", confiar: "1" }).dispositivo;
+  assert.equal(gs.loginDispositivo({ dispositivo: llave }).error, "pocos_ingresos");
+  gs.loginPanel({ clave: "clave-buena-123", dispositivo: llave });
+  assert.equal(gs.loginDispositivo({ dispositivo: llave }).error, "pocos_ingresos");
+  ok("con la llave sola no se entra sin clave en el 1er ni 2do ingreso (aunque se borre el contador del navegador)");
+  gs.loginPanel({ clave: "clave-buena-123", dispositivo: llave });
+  assert.equal(gs.loginDispositivo({ dispositivo: llave }).ok, true);
+  ok("desde el 3er ingreso con clave, ese navegador entra directo");
+  gs.loginPanel({ clave: "mal", dispositivo: llave });
+  ok("las claves equivocadas no suman ingresos");
 }
 console.log(`\n${n} pruebas OK`);

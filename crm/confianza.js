@@ -17,10 +17,11 @@
   };
 
   window.confianza = {
-    // Datos extra para mandar junto con la contraseña
+    // Datos extra para mandar junto con la contraseña: la llave de este navegador (así
+    // nunca lo bloquean los intentos de otros) o el pedido de una llave nueva
     paramsLogin() {
-      const n = Number(leer(CUENTA)) || 0;
-      return (n + 1 >= INGRESOS_PARA_CONFIAR && !leer(LLAVE)) ? { confiar: '1', navegador: navegador() } : {};
+      const llave = leer(LLAVE);
+      return llave ? { dispositivo: llave } : { confiar: '1', navegador: navegador() };
     },
     // Después de un ingreso correcto con contraseña
     ingresoOk(data) {
@@ -30,7 +31,7 @@
     // Al abrir el CRM: si este navegador es de confianza, entra sin pedir la clave
     async entrarDirecto(guardarSesion, entrar) {
       const llave = leer(LLAVE);
-      if (!llave) return false;
+      if (!llave || (Number(leer(CUENTA)) || 0) < INGRESOS_PARA_CONFIAR) return false;
       const glass = window.loginGlass;
       const sub = document.getElementById('login-sub');
       if (sub) sub.textContent = 'Dispositivo de confianza: entrando…';

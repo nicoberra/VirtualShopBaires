@@ -164,7 +164,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v13-fotos1' };
+    else if (accion === 'version')              out = { ok:true, version: 'v14-ingreso1' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -2453,23 +2453,30 @@ function loginPanel(p) {
   var stored = PropertiesService.getScriptProperties().getProperty('PANEL_PASS');
   if (!stored) return { ok:false, error:'Contraseña no configurada. Agregá PANEL_PASS en las propiedades del script.' };
 
-  // Máx 10 claves equivocadas en 15 min EN TOTAL (no por prefijo: así no se puede adivinar
-  // probando combinaciones). La clave correcta limpia el contador.
+  // Navegadores RECONOCIDOS (ya entraron bien antes y tienen su llave secreta): cuentan solo
+  // sus propios errores, así nadie de afuera puede dejar al dueño sin poder entrar.
+  // Navegadores desconocidos: máx 10 claves equivocadas en 15 min EN TOTAL entre todos
+  // (no por navegador: así no se puede adivinar la clave rotando navegadores).
   var cache = CacheService.getScriptCache();
-  if (_bloqueado('panel_login', 10)) return { ok:false, error:'Demasiados intentos fallidos. Esperá 15 minutos.' };
+  var dev = p.dispositivo ? _dispositivoValido(p.dispositivo) : null;
+  var contador = dev ? 'panel_login_d_' + String(dev.datos[0]).slice(0, 16) : 'panel_login';
+  if (_bloqueado(contador, 10)) return { ok:false, error: dev
+    ? 'Demasiados intentos fallidos desde este navegador. Esperá 15 minutos.'
+    : 'Demasiados intentos fallidos. Esperá 15 minutos o entrá desde un navegador donde ya hayas ingresado antes.' };
 
   if (String(p.clave || '') !== String(stored)) {
-    _falloSumar('panel_login', 900);
+    _falloSumar(contador, 900);
     return { ok:false, error:'Contraseña incorrecta.' };
   }
 
   // Éxito: limpiar contador y emitir token
-  _falloLimpiar('panel_login');
+  _falloLimpiar(contador);
   var token = Utilities.getUuid();
   cache.put('panel_' + token, '1', 28800); // 8 horas
   var out = { ok:true, token: token };
-  // A partir del 3er ingreso correcto en el mismo navegador, queda como dispositivo de confianza
-  if (String(p.confiar || '') === '1') {
+  // Desde el 1er ingreso correcto el navegador queda reconocido (llave secreta). El ingreso
+  // automático sin clave lo decide el navegador recién a partir del 3er ingreso.
+  if (String(p.confiar || '') === '1' && !dev) {
     try { out.dispositivo = _crearDispositivo(p.navegador); } catch (e) { _registrarError('dispositivo', e); }
   }
   return out;
@@ -2508,6 +2515,13 @@ function _buscarDispositivo(llave) {
   var h = _sha256(llave), sh = _hojaDispositivos(), datos = sh.getDataRange().getValues();
   for (var i = 1; i < datos.length; i++) if (String(datos[i][0]) === h) return { sh: sh, fila: i + 1, datos: datos[i] };
   return null;
+}
+// Llave de navegador válida (existe, no venció y es de la contraseña actual) o null
+function _dispositivoValido(llave) {
+  var d = _buscarDispositivo(llave);
+  if (!d) return null;
+  var vencido = new Date(d.datos[2]).getTime() < Date.now() - DISP_DIAS * 86400000;
+  return (vencido || String(d.datos[3]) !== _claveHashPanel()) ? null : d;
 }
 function loginDispositivo(p) {
   if (!_limite('disp_global_' + Math.floor(Date.now() / 60000), 60, 120))

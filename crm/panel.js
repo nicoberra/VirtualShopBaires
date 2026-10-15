@@ -20,7 +20,9 @@ function crm(params) {
     const qs = new URLSearchParams({ ...allParams, callback: cb, _: Date.now() });
     const s  = document.createElement('script');
     const ok = () => { delete window[cb]; s.remove(); };
-    const to = setTimeout(() => { ok(); reject(new Error('timeout')); }, 45000);
+    // El ingreso no espera más de 20 s; el resto, 45 s
+    const espera = (params.action === 'loginPanel' || params.action === 'loginDispositivo') ? 20000 : 45000;
+    const to = setTimeout(() => { ok(); reject(new Error('timeout')); }, espera);
     window[cb] = (data) => {
       clearTimeout(to); ok();
       // Token expirado o inválido: volver al login
@@ -33,6 +35,9 @@ function crm(params) {
       resolve(data);
     };
     s.onerror  = () => { clearTimeout(to); ok(); reject(new Error('red')); };
+    // Si el servidor contesta algo que no es la respuesta esperada (página de error de Google,
+    // cuota, implementación a medias), avisa al instante en vez de esperar el tiempo máximo
+    s.onload   = () => setTimeout(() => { if (window[cb]) { clearTimeout(to); ok(); reject(new Error('servidor')); } }, 50);
     s.src = CRM_URL + '?' + qs.toString();
     document.body.appendChild(s);
   });
@@ -128,8 +133,10 @@ async function doLogin() {
     } else {
       fallo(data.error || 'Contraseña incorrecta.');
     }
-  } catch {
-    fallo('Error de conexión. Intentá de nuevo.');
+  } catch (e) {
+    fallo(e && e.message === 'timeout' ? 'El servidor tardó demasiado en responder. Intentá de nuevo.'
+        : e && e.message === 'servidor' ? 'El servidor respondió con un error. Probá de nuevo en un momento.'
+        : 'Sin conexión. Revisá internet e intentá de nuevo.');
   } finally {
     if (btn) btn.disabled = false;
   }

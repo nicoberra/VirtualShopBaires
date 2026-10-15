@@ -88,4 +88,24 @@ function cargar() {
   assert.ok(hojas.Dispositivos.filas.length - 1 <= 30);
   ok("se guardan como máximo 30 dispositivos (los más viejos se borran)");
 }
+{
+  // El dueño nunca queda afuera por intentos de otros
+  const { gs } = cargar();
+  const mio = gs.loginPanel({ clave: "clave-buena-123", confiar: "1", navegador: "Chrome en Windows" }).dispositivo;
+  for (let i = 0; i < 12; i++) gs.loginPanel({ clave: "robot-" + i });
+  assert.match(gs.loginPanel({ clave: "clave-buena-123" }).error, /Demasiados intentos/);
+  ok("10 claves equivocadas de desconocidos bloquean a los navegadores desconocidos");
+
+  const r = gs.loginPanel({ clave: "clave-buena-123", dispositivo: mio });
+  assert.equal(r.ok, true); assert.ok(r.token); assert.equal(r.dispositivo, undefined);
+  ok("pero un navegador reconocido entra igual con su clave (no lo bloquean los robots)");
+
+  for (let i = 0; i < 10; i++) gs.loginPanel({ clave: "me-equivoque", dispositivo: mio });
+  assert.match(gs.loginPanel({ clave: "clave-buena-123", dispositivo: mio }).error, /desde este navegador/);
+  ok("un navegador reconocido tiene su propio límite de 10 errores (sigue protegido)");
+
+  const falsa = "a".repeat(64);
+  assert.match(gs.loginPanel({ clave: "clave-buena-123", dispositivo: falsa }).error, /Demasiados intentos/);
+  ok("una llave inventada no saltea el bloqueo general");
+}
 console.log(`\n${n} pruebas OK`);

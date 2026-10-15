@@ -123,7 +123,8 @@ function manejar(e) {
       'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_categorias_list':1,'ext_categoria_foto':1,
-      'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1
+      'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1,
+      'push_suscribir':1,'push_desuscribir':1,'push_probar':1
     };
     if (ADMIN_ACTIONS[accion]) {
       var tok = String(p.token || '').trim();
@@ -139,6 +140,11 @@ function manejar(e) {
     else if (accion === 'registrar')       out = registrar(p);
     else if (accion === 'login')           out = login(p);
     else if (accion === 'suscribir')       out = { ok:true, id: suscribir(p) };
+    else if (accion === 'push_clave')      out = pushClave();
+    else if (accion === 'push_suscribir')  out = pushSuscribir(p);
+    else if (accion === 'push_desuscribir') out = pushDesuscribir(p);
+    else if (accion === 'push_probar')     out = pushProbar();
+    else if (accion === 'push_pendientes') out = pushPendientes(p);
     else if (accion === 'productos_list')  out = { ok:true, rows: productosListar() };
     else if (accion === 'productos_save')  out = { ok:true, saved: productosGuardar(p) };
     else if (accion === 'productos_add')   out = { ok:true, id: productosAgregar(p) };
@@ -164,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v14-ingreso2' };
+    else if (accion === 'version')              out = { ok:true, version: 'v15-push' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -210,6 +216,188 @@ function avisarTelegram(texto) {
       payload: { chat_id: TG_CHAT, text: texto, disable_web_page_preview: 'true' }
     });
   } catch(e) {}
+}
+
+// ─── NOTIFICACIONES PUSH (CRM instalado en celular o compu) ──
+// Web Push estándar con VAPID (ES256). El aviso va sin contenido: el dispositivo se despierta,
+// el service worker pide el detalle con push_pendientes y muestra la notificación.
+// Las claves VAPID se crean solas acá la primera vez (la privada nunca sale del servidor).
+var PUSH_MAX = 30, PUSH_TTL_EVENTOS = 21600;
+var PUSH_HOSTS = /^https:\/\/(fcm\.googleapis\.com|[a-z0-9.-]*push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9.-]+\.notify\.windows\.com)\//;
+
+// Curva P-256. Las constantes se crean al usarse (si BigInt faltara, solo fallan los avisos).
+var _EC = null;
+function _ec() {
+  if (_EC) return _EC;
+  var B = BigInt;
+  return _EC = {
+    Z: B(0), U: B(1), D: B(2), T: B(3), C: B(4), O: B(8),
+    p:  B('0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff'),
+    n:  B('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551'),
+    gx: B('0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296'),
+    gy: B('0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5')
+  };
+}
+function _pmod(a, m) { var r = a % m; return r < _ec().Z ? r + m : r; }
+function _pinv(a, m) {               // inverso modular (Euclides extendido)
+  var E = _ec(), x0 = E.Z, x1 = E.U, r0 = m, r1 = _pmod(a, m);
+  while (r1 !== E.Z) { var q = r0 / r1, t = r0 - q * r1; r0 = r1; r1 = t; t = x0 - q * x1; x0 = x1; x1 = t; }
+  return _pmod(x0, m);
+}
+// Puntos en coordenadas jacobianas [X, Y, Z]; a = -3
+function _pdbl(P) {
+  var E = _ec(), p = E.p, X = P[0], Y = P[1], Z = P[2];
+  if (Y === E.Z || Z === E.Z) return [E.Z, E.U, E.Z];
+  var d = _pmod(Y * Y, p), s = _pmod(E.C * X * d, p), z2 = _pmod(Z * Z, p);
+  var m = _pmod(E.T * (X - z2) * (X + z2), p);
+  var x3 = _pmod(m * m - E.D * s, p);
+  return [x3, _pmod(m * (s - x3) - E.O * d * d, p), _pmod(E.D * Y * Z, p)];
+}
+function _padd(P, Q) {
+  var E = _ec(), p = E.p;
+  if (P[2] === E.Z) return Q; if (Q[2] === E.Z) return P;
+  var z1 = _pmod(P[2] * P[2], p), z2 = _pmod(Q[2] * Q[2], p);
+  var u1 = _pmod(P[0] * z2, p), u2 = _pmod(Q[0] * z1, p);
+  var s1 = _pmod(P[1] * z2 * Q[2], p), s2 = _pmod(Q[1] * z1 * P[2], p);
+  if (u1 === u2) return s1 === s2 ? _pdbl(P) : [E.Z, E.U, E.Z];
+  var h = _pmod(u2 - u1, p), r = _pmod(s2 - s1, p), h2 = _pmod(h * h, p), h3 = _pmod(h2 * h, p);
+  var x3 = _pmod(r * r - h3 - E.D * u1 * h2, p);
+  return [x3, _pmod(r * (u1 * h2 - x3) - s1 * h3, p), _pmod(h * P[2] * Q[2], p)];
+}
+function _pmul(k) {                  // k·G, devuelve [x, y] afín
+  var E = _ec(), R = [E.Z, E.U, E.Z], A = [E.gx, E.gy, E.U];
+  while (k > E.Z) { if (k % E.D === E.U) R = _padd(R, A); A = _pdbl(A); k = k / E.D; }
+  var zi = _pinv(R[2], E.p), zi2 = _pmod(zi * zi, E.p);
+  return [_pmod(R[0] * zi2, E.p), _pmod(R[1] * zi2 * zi, E.p)];
+}
+function _bytesU(b) { return b.map(function(x) { return x < 0 ? x + 256 : x; }); }
+function _bytesHex(b) { return _bytesU(b).map(function(x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }
+function _bigBytes(n) { var h = n.toString(16); while (h.length < 64) h = '0' + h; var o = []; for (var i = 0; i < 64; i += 2) o.push(parseInt(h.substr(i, 2), 16)); return o; }
+function _b64url(bytes) {
+  return Utilities.base64EncodeWebSafe(bytes.map(function(x) { return x > 127 ? x - 256 : x; })).replace(/=+$/, '');
+}
+function _b64urlTxt(s) { return _b64url(_bytesU(Utilities.newBlob(s).getBytes())); }
+function _shaBytes(s) { return _bytesU(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s), Utilities.Charset.UTF_8)); }
+// 512 bits de azar del servidor + la clave + el mensaje (sesgo despreciable al reducir mod n)
+function _azar512(extra) {
+  var a = _shaBytes('a' + Utilities.getUuid() + Utilities.getUuid() + Date.now() + extra);
+  var b = _shaBytes('b' + Utilities.getUuid() + Utilities.getUuid() + Math.random() + extra);
+  return BigInt('0x' + _bytesHex(a.concat(b)));
+}
+
+function _pushClaves() {
+  var pr = PropertiesService.getScriptProperties();
+  var d = pr.getProperty('PUSH_VAPID_PRIVADA'), pub = pr.getProperty('PUSH_VAPID_PUBLICA');
+  if (d && pub) return { d: BigInt('0x' + d), pub: pub };
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    d = pr.getProperty('PUSH_VAPID_PRIVADA'); pub = pr.getProperty('PUSH_VAPID_PUBLICA');
+    if (d && pub) return { d: BigInt('0x' + d), pub: pub };
+    var E = _ec(), k = _pmod(_azar512('clave'), E.n - E.U) + E.U, Q = _pmul(k);
+    pub = _b64url([4].concat(_bigBytes(Q[0]), _bigBytes(Q[1])));
+    pr.setProperty('PUSH_VAPID_PRIVADA', k.toString(16));
+    pr.setProperty('PUSH_VAPID_PUBLICA', pub);
+    return { d: k, pub: pub };
+  } finally { lock.releaseLock(); }
+}
+function _es256(texto, d) {          // firma ECDSA P-256 + SHA-256 en formato JWS (r||s)
+  var E = _ec(), n = E.n, e = BigInt('0x' + _bytesHex(_shaBytes(texto)));
+  for (;;) {
+    var k = _pmod(_azar512(d.toString(16) + e.toString(16)), n - E.U) + E.U;
+    var r = _pmod(_pmul(k)[0], n); if (r === E.Z) continue;
+    var s = _pmod(_pinv(k, n) * (e + r * d), n); if (s === E.Z) continue;
+    return _b64url(_bigBytes(r).concat(_bigBytes(s)));
+  }
+}
+function _vapidJwt(aud, cl) {
+  var h = _b64urlTxt(JSON.stringify({ typ:'JWT', alg:'ES256' }));
+  var c = _b64urlTxt(JSON.stringify({ aud: aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'https://virtualshopbaires.com.ar' }));
+  return h + '.' + c + '.' + _es256(h + '.' + c, cl.d);
+}
+
+function _pushHoja() {
+  var libro = ss(), sh = libro.getSheetByName('Push');
+  if (!sh) {
+    sh = libro.insertSheet('Push');
+    sh.appendRow(['Endpoint (hash)', 'Endpoint', 'Creado', 'Último uso', 'Panel', 'Navegador']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+function _pushValido(ep) { return typeof ep === 'string' && ep.length < 1000 && PUSH_HOSTS.test(ep); }
+
+function pushClave() { return { ok:true, clave: _pushClaves().pub }; }
+
+function pushSuscribir(p) {
+  var ep = String(p.endpoint || '');
+  if (!_pushValido(ep)) return { ok:false, error:'endpoint' };
+  var lock = LockService.getScriptLock(); lock.waitLock(10000);
+  try {
+    var sh = _pushHoja(), h = _sha256(ep), datos = sh.getDataRange().getValues();
+    var panel = p.panel === 'ops' ? 'ops' : 'crm', nav = String(p.navegador || '').slice(0, 120);
+    for (var i = datos.length - 1; i >= 1; i--) {
+      if (datos[i][0] === h) {
+        sh.getRange(i + 1, 4).setValue(new Date()); sh.getRange(i + 1, 5).setValue(panel); sh.getRange(i + 1, 6).setValue(nav);
+        return { ok:true };
+      }
+    }
+    sh.appendRow([h, ep, new Date(), new Date(), panel, nav]);
+    var sobran = sh.getLastRow() - 1 - PUSH_MAX;
+    if (sobran > 0) sh.deleteRows(2, sobran);          // quedan los más nuevos
+    return { ok:true };
+  } finally { lock.releaseLock(); }
+}
+
+function pushDesuscribir(p) {
+  var h = _sha256(String(p.endpoint || '')), sh = _pushHoja(), datos = sh.getDataRange().getValues();
+  for (var i = datos.length - 1; i >= 1; i--) if (datos[i][0] === h) sh.deleteRow(i + 1);
+  return { ok:true };
+}
+
+// El service worker pide el detalle de los avisos. Solo responde a un endpoint suscripto
+// (la dirección del endpoint es secreta: solo la conocen ese navegador y este servidor).
+function pushPendientes(p) {
+  var h = _sha256(String(p.endpoint || '')), datos = _pushHoja().getDataRange().getValues(), esta = false;
+  for (var i = 1; i < datos.length; i++) if (datos[i][0] === h) { esta = true; break; }
+  if (!esta) return { ok:false, error:'endpoint' };
+  var ev = []; try { ev = JSON.parse(CacheService.getScriptCache().get('push_eventos') || '[]'); } catch (e) {}
+  return { ok:true, eventos: ev };
+}
+
+// Guarda el aviso y despierta a todos los dispositivos suscriptos. Nunca frena la venta.
+function avisarPush(titulo, cuerpo, seccion) {
+  try {
+    var cache = CacheService.getScriptCache(), ev = [];
+    try { ev = JSON.parse(cache.get('push_eventos') || '[]'); } catch (e) {}
+    ev.push({ id: Utilities.getUuid().slice(0, 8), ts: Date.now(), t: String(titulo).slice(0, 80), b: String(cuerpo || '').slice(0, 240), s: seccion || 'pedidos' });
+    cache.put('push_eventos', JSON.stringify(ev.slice(-20)), PUSH_TTL_EVENTOS);
+
+    var sh = _pushHoja(), datos = sh.getDataRange().getValues(), subs = [];
+    for (var i = 1; i < datos.length; i++) if (_pushValido(datos[i][1])) subs.push(datos[i]);
+    if (!subs.length) return;
+    var cl = _pushClaves(), jwts = {};
+    var reqs = subs.map(function(s) {
+      var aud = s[1].match(/^https:\/\/[^\/]+/)[0];
+      if (!jwts[aud]) jwts[aud] = _vapidJwt(aud, cl);
+      return { url: s[1], method: 'post', muteHttpExceptions: true, payload: '',
+               headers: { TTL: '86400', Urgency: 'high', Authorization: 'vapid t=' + jwts[aud] + ', k=' + cl.pub } };
+    });
+    var res = UrlFetchApp.fetchAll(reqs), muertos = {};
+    res.forEach(function(r, j) {
+      var c = r.getResponseCode();
+      if (c === 404 || c === 410) muertos[subs[j][0]] = 1;           // el navegador la dio de baja
+      else if (c >= 400) _registrarError('push', c + ' ' + String(r.getContentText()).slice(0, 200));
+    });
+    if (Object.keys(muertos).length) {
+      var d2 = sh.getDataRange().getValues();
+      for (var k = d2.length - 1; k >= 1; k--) if (muertos[d2[k][0]]) sh.deleteRow(k + 1);
+    }
+  } catch (e) { try { _registrarError('push', String(e)); } catch (x) {} }
+}
+
+function pushProbar() {
+  avisarPush('🔔 Notificaciones activadas', 'Desde ahora te aviso acá cada venta nueva.', 'panel');
+  return { ok:true };
 }
 
 // ─── HOJA HELPERS ────────────────────────────────────────────
@@ -321,8 +509,10 @@ function agregar(tab, p) {
   });
   sh.appendRow(fila);
 
-  if (tab === 'Pedidos')
+  if (tab === 'Pedidos') {
     avisarTelegram('🧾 Nuevo pedido\n👤 ' + (p.cliente||'—') + '\n💰 $' + (p.monto||'0'));
+    avisarPush('🧾 Nueva venta cargada', (p.cliente||'Sin nombre') + ' · $' + (p.monto||'0'), 'pedidos');
+  }
 
   return id;
 }
@@ -2048,6 +2238,8 @@ function crearPedido(p) {
       '\n' + (p.nombre||'') + ' ' + (p.apellido||'') +
       '\n' + (p.email||'') + ' · ' + (p.telefono||'') +
       '\nTotal: $' + (p.total||0) + ' · ' + (p.metodoPago||'') + ' · ' + (p.metodoEntrega||''));
+    avisarPush('🛒 Nueva venta en la web', ((p.nombre||'') + ' ' + (p.apellido||'')).trim() +
+      ' · $' + (p.total||0) + (p.metodoPago ? ' · ' + p.metodoPago : '') + ' · Pedido ' + orderNum, 'pedidos');
 
     return res;
   } catch(err) {
@@ -2104,6 +2296,8 @@ function _confirmarPagoMP(pago) {
       cache.put(kPago, '1', 21600);
       avisarTelegram((aviso ? '⚠️ Pago MP con monto distinto' : '✅ Pago MP aprobado') +
         '\n👤 ' + (datos[i][cols.indexOf('cliente')] || '—') + '\n💰 $' + pagado + '\nRef: ' + ref);
+      avisarPush(aviso ? '⚠️ Pago con monto distinto' : '✅ Venta pagada con Mercado Pago',
+        (datos[i][cols.indexOf('cliente')] || 'Cliente') + ' · $' + pagado, 'pedidos');
       return { ok:true, estado: aviso ? 'monto_distinto' : 'confirmado' };
     }
     return { ok:true, estado:'pedido_no_encontrado' };
@@ -2281,6 +2475,7 @@ function tiendaComprobante(p) {
     w.sh.getRange(w.fila, w.ix.observaciones + 1).setValue(('Comprobante: ' + url + (obs ? ' | ' + obs : '')).slice(0, 5000));
   }
   avisarTelegram('📎 Comprobante subido\nPedido ' + numero + '\n' + url);
+  avisarPush('📎 Comprobante de pago recibido', 'Pedido ' + numero, 'pedidos');
   return { ok:true, message:'Comprobante recibido. Te avisaremos cuando confirmemos el pago.' };
 }
 
@@ -2397,6 +2592,7 @@ function comprobanteSubir(p) {
   var url = 'https://drive.google.com/file/d/' + file.getId() + '/view';
   if (p.pedidoId) actualizar('Pedidos', { id:p.pedidoId, comprobante:url });
   avisarTelegram('📎 Comprobante subido' + (p.pedidoId ? ' (pedido '+p.pedidoId+')' : ''));
+  avisarPush('📎 Comprobante de pago recibido', p.pedidoId ? 'Pedido ' + p.pedidoId : 'Revisalo en Comprobantes', 'comprobantes');
   return url;
 }
 

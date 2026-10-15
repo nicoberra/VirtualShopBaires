@@ -11,7 +11,7 @@ let n = 0; const ok = (m) => { n++; console.log("  ✓", m); };
 const firmados = (b) => b.map(x => x > 127 ? x - 256 : x);
 
 function cargar(respuestas = {}) {
-  const props = {};
+  const props = { PANEL_PASS: "clave-buena-123" };
   const cache = new Map();
   const hojas = {};
   const enviados = [];
@@ -63,10 +63,13 @@ const APPLE = "https://web.push.apple.com/QGv" + "y".repeat(80);
 {
   const { gs, enviados, hojas } = cargar();
   const clave = gs.pushClave().clave;
-  assert.equal(gs.pushSuscribir({ endpoint: FCM, panel: "crm", navegador: "Chrome Android" }).ok, true);
+  const s1 = gs.pushSuscribir({ endpoint: FCM, panel: "crm", navegador: "Chrome Android" });
+  assert.equal(s1.ok, true); assert.match(s1.secreto, /^[a-f0-9]{64}$/);
   assert.equal(gs.pushSuscribir({ endpoint: APPLE, panel: "ops" }).ok, true);
-  assert.equal(gs.pushSuscribir({ endpoint: FCM, panel: "crm" }).ok, true);
+  const s2 = gs.pushSuscribir({ endpoint: FCM, panel: "crm" });
+  assert.equal(s2.ok, true); assert.notEqual(s2.secreto, s1.secreto);
   assert.equal(hojas.Push.filas.length, 3);
+  assert.ok(!JSON.stringify(hojas.Push.filas).includes(s2.secreto));
   ok("guarda cada dispositivo una sola vez");
 
   gs.avisarPush("🛒 Nueva venta en la web", "Ana · $1000", "pedidos");
@@ -87,11 +90,13 @@ const APPLE = "https://web.push.apple.com/QGv" + "y".repeat(80);
   }
   ok("cada aviso va firmado con ES256 válido (verificado con la librería de Node) para Google y Apple");
 
-  const pend = gs.pushPendientes({ endpoint: FCM });
+  const pend = gs.pushPendientes({ endpoint: FCM, secreto: s2.secreto });
   assert.equal(pend.eventos.at(-1).t, "🛒 Nueva venta en la web");
   assert.equal(pend.eventos.at(-1).b, "Ana · $1000");
   assert.equal(gs.pushPendientes({ endpoint: "https://fcm.googleapis.com/fcm/send/inventado" }).ok, false);
-  ok("el detalle solo se entrega a un dispositivo suscripto");
+  assert.equal(gs.pushPendientes({ endpoint: FCM }).ok, false);
+  assert.equal(gs.pushPendientes({ endpoint: FCM, secreto: s1.secreto }).ok, false);
+  ok("el detalle solo se entrega a un dispositivo suscripto con su secreto vigente (la planilla guarda solo el hash)");
 }
 {
   const { gs, hojas } = cargar({ [APPLE]: 410 });
@@ -116,9 +121,18 @@ const APPLE = "https://web.push.apple.com/QGv" + "y".repeat(80);
   const { gs } = cargar();
   gs.avisarPush("sin suscriptos", "no explota");
   for (let i = 0; i < 25; i++) gs.avisarPush("v" + i, "");
-  gs.pushSuscribir({ endpoint: FCM });
-  assert.equal(gs.pushPendientes({ endpoint: FCM }).eventos.length, 20);
+  const s = gs.pushSuscribir({ endpoint: FCM });
+  assert.equal(gs.pushPendientes({ endpoint: FCM, secreto: s.secreto }).eventos.length, 20);
   ok("sin dispositivos no falla, y guarda solo los últimos 20 avisos");
+}
+{
+  const { gs, props, hojas, enviados } = cargar();
+  const s = gs.pushSuscribir({ endpoint: FCM });
+  props.PANEL_PASS = "otra-clave-nueva";
+  assert.equal(gs.pushPendientes({ endpoint: FCM, secreto: s.secreto }).ok, false);
+  gs.avisarPush("x", "y");
+  assert.equal(enviados.length, 0); assert.equal(hojas.Push.filas.length, 1);
+  ok("si se cambia PANEL_PASS, esos dispositivos dejan de recibir avisos y se borran");
 }
 {
   const src = readFileSync(join(root, "crm/Codigo.gs"), "utf8");

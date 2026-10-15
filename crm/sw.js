@@ -87,7 +87,10 @@ async function mostrarAvisos() {
   const sub = await self.registration.pushManager.getSubscription();
   let eventos = [];
   try {
-    const r = await fetch(CRM_URL + '?action=push_pendientes&endpoint=' + encodeURIComponent(sub ? sub.endpoint : '') + '&_=' + Date.now());
+    const c = await caches.open(ESTADO_PUSH), g = await c.match('/secreto');
+    const secreto = g ? await g.text() : '';
+    const r = await fetch(CRM_URL + '?action=push_pendientes&endpoint=' + encodeURIComponent(sub ? sub.endpoint : '') +
+                          '&secreto=' + encodeURIComponent(secreto) + '&_=' + Date.now());
     const d = await r.json();
     if (d && d.ok) eventos = d.eventos || [];
   } catch (e) {}

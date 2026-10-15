@@ -319,12 +319,14 @@ function _pushHoja() {
   var libro = ss(), sh = libro.getSheetByName('Push');
   if (!sh) {
     sh = libro.insertSheet('Push');
-    sh.appendRow(['Endpoint (hash)', 'Endpoint', 'Creado', 'Último uso', 'Panel', 'Navegador']);
+    sh.appendRow(['Endpoint (hash)', 'Endpoint', 'Creado', 'Último uso', 'Panel', 'Navegador', 'Secreto (hash)', 'Clave (hash)']);
     sh.setFrozenRows(1);
   }
   return sh;
 }
 function _pushValido(ep) { return typeof ep === 'string' && ep.length < 1000 && PUSH_HOSTS.test(ep); }
+// Una suscripción vale mientras no cambie PANEL_PASS (igual que los dispositivos de confianza)
+function _pushVigente(fila) { return fila[7] === _claveHashPanel(); }
 
 function pushClave() { return { ok:true, clave: _pushClaves().pub }; }
 
@@ -335,16 +337,17 @@ function pushSuscribir(p) {
   try {
     var sh = _pushHoja(), h = _sha256(ep), datos = sh.getDataRange().getValues();
     var panel = p.panel === 'ops' ? 'ops' : 'crm', nav = String(p.navegador || '').slice(0, 120);
+    var secreto = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), clave = _claveHashPanel();
     for (var i = datos.length - 1; i >= 1; i--) {
       if (datos[i][0] === h) {
-        sh.getRange(i + 1, 4).setValue(new Date()); sh.getRange(i + 1, 5).setValue(panel); sh.getRange(i + 1, 6).setValue(nav);
-        return { ok:true };
+        [[4, new Date()], [5, panel], [6, nav], [7, _sha256(secreto)], [8, clave]].forEach(function(c) { sh.getRange(i + 1, c[0]).setValue(c[1]); });
+        return { ok:true, secreto: secreto };
       }
     }
-    sh.appendRow([h, ep, new Date(), new Date(), panel, nav]);
+    sh.appendRow([h, ep, new Date(), new Date(), panel, nav, _sha256(secreto), clave]);
     var sobran = sh.getLastRow() - 1 - PUSH_MAX;
     if (sobran > 0) sh.deleteRows(2, sobran);          // quedan los más nuevos
-    return { ok:true };
+    return { ok:true, secreto: secreto };
   } finally { lock.releaseLock(); }
 }
 
@@ -354,11 +357,12 @@ function pushDesuscribir(p) {
   return { ok:true };
 }
 
-// El service worker pide el detalle de los avisos. Solo responde a un endpoint suscripto
-// (la dirección del endpoint es secreta: solo la conocen ese navegador y este servidor).
+// El service worker pide el detalle de los avisos. Solo responde a un dispositivo suscripto
+// con su secreto (lo recibió al activar, con la sesión del panel) y si PANEL_PASS no cambió.
 function pushPendientes(p) {
-  var h = _sha256(String(p.endpoint || '')), datos = _pushHoja().getDataRange().getValues(), esta = false;
-  for (var i = 1; i < datos.length; i++) if (datos[i][0] === h) { esta = true; break; }
+  var h = _sha256(String(p.endpoint || '')), hs = _sha256(String(p.secreto || ''));
+  var datos = _pushHoja().getDataRange().getValues(), esta = false;
+  for (var i = 1; i < datos.length; i++) if (datos[i][0] === h && datos[i][6] === hs && _pushVigente(datos[i])) { esta = true; break; }
   if (!esta) return { ok:false, error:'endpoint' };
   var ev = []; try { ev = JSON.parse(CacheService.getScriptCache().get('push_eventos') || '[]'); } catch (e) {}
   return { ok:true, eventos: ev };
@@ -373,16 +377,19 @@ function avisarPush(titulo, cuerpo, seccion) {
     cache.put('push_eventos', JSON.stringify(ev.slice(-20)), PUSH_TTL_EVENTOS);
 
     var sh = _pushHoja(), datos = sh.getDataRange().getValues(), subs = [];
-    for (var i = 1; i < datos.length; i++) if (_pushValido(datos[i][1])) subs.push(datos[i]);
-    if (!subs.length) return;
-    var cl = _pushClaves(), jwts = {};
+    var muertos = {};
+    for (var i = 1; i < datos.length; i++) {
+      if (!_pushVigente(datos[i])) muertos[datos[i][0]] = 1;
+      else if (_pushValido(datos[i][1])) subs.push(datos[i]);
+    }
+    var cl = subs.length ? _pushClaves() : null, jwts = {};
     var reqs = subs.map(function(s) {
       var aud = s[1].match(/^https:\/\/[^\/]+/)[0];
       if (!jwts[aud]) jwts[aud] = _vapidJwt(aud, cl);
       return { url: s[1], method: 'post', muteHttpExceptions: true, payload: '',
                headers: { TTL: '86400', Urgency: 'high', Authorization: 'vapid t=' + jwts[aud] + ', k=' + cl.pub } };
     });
-    var res = UrlFetchApp.fetchAll(reqs), muertos = {};
+    var res = reqs.length ? UrlFetchApp.fetchAll(reqs) : [];
     res.forEach(function(r, j) {
       var c = r.getResponseCode();
       if (c === 404 || c === 410) muertos[subs[j][0]] = 1;           // el navegador la dio de baja

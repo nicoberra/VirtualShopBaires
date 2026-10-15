@@ -18,6 +18,7 @@ function cargar(respuesta) {
       showNotification: async (t, o) => { mostradas.push({ t, ...o }); },
     },
   };
+  guardado.set("/secreto", "sec123");
   const caches = { open: async () => ({ put: async (k, r) => guardado.set(k, await r.text()), match: async k => guardado.has(k) ? new Response(guardado.get(k)) : undefined, addAll: async () => {} }), keys: async () => [] };
   const fetch = async (url) => { pedidos.push(url); if (respuesta instanceof Error) throw respuesta; return { json: async () => respuesta() }; };
   new Function("self", "caches", "fetch", readFileSync(join(root, "crm/sw.js"), "utf8"))(self, caches, fetch);
@@ -32,7 +33,7 @@ function cargar(respuesta) {
   await push();
   assert.equal(mostradas.length, 1);
   assert.equal(mostradas[0].t, "🛒 Nueva venta en la web"); assert.equal(mostradas[0].body, "Ana · $1000");
-  assert.match(pedidos[0], /action=push_pendientes&endpoint=https%3A%2F%2Ffcm/);
+  assert.match(pedidos[0], /action=push_pendientes&endpoint=https%3A%2F%2Ffcm[^&]*&secreto=sec123&/);
   ok("muestra la venta con su detalle");
 
   eventos = eventos.concat([{ id: "b2", ts: ahora, t: "✅ Venta pagada con Mercado Pago", b: "Luis · $500" }]);

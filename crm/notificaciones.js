@@ -26,7 +26,17 @@
     const reg = await navigator.serviceWorker.ready;
     return { reg, sub: await reg.pushManager.getSubscription() };
   }
-  const guardar = sub => crm({ action: 'push_suscribir', endpoint: sub.endpoint, panel: PANEL, navegador: navegador() });
+  // El servidor entrega un secreto por dispositivo; el service worker lo usa para pedir el detalle
+  async function guardar(sub) {
+    const g = await crm({ action: 'push_suscribir', endpoint: sub.endpoint, panel: PANEL, navegador: navegador() });
+    if (g && g.ok && g.secreto) await (await caches.open('vsb-push-estado')).put('/secreto', new Response(g.secreto));
+    return g;
+  }
+  async function bajaDispositivo() {
+    const { sub } = await suscripcion();
+    if (sub) { await crm({ action: 'push_desuscribir', endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+    try { await (await caches.open('vsb-push-estado')).delete('/secreto'); } catch (e) {}
+  }
 
   async function activar() {
     if (!soporta) {
@@ -59,8 +69,7 @@
 
   async function desactivar() {
     try {
-      const { sub } = await suscripcion();
-      if (sub) { await crm({ action: 'push_desuscribir', endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe(); }
+      await bajaDispositivo();
       aviso('Notificaciones desactivadas en este dispositivo.');
     } catch (e) { aviso('No se pudo desactivar. Probá de nuevo.', 'err'); }
     pintar();
@@ -111,13 +120,24 @@
     try { const { sub } = await suscripcion(); if (sub) guardar(sub).catch(() => {}); } catch (e) {}
   }
 
+  // "Salir" también corta las notificaciones de este dispositivo (máx. 4 s de espera)
+  function envolverSalir() {
+    const salir = window.logout;
+    if (typeof salir !== 'function' || salir._push) return;
+    window.logout = async function () {
+      if (soporta) await Promise.race([bajaDispositivo().catch(() => {}), new Promise(r => setTimeout(r, 4000))]);
+      return salir.apply(this, arguments);
+    };
+    window.logout._push = true;
+  }
+
   let listo = false;
   function alEntrar() {
     if (listo) return;
     const app = document.getElementById('app');
     if (!app || app.style.display === 'none' || !sessionStorage.getItem('crm_token')) return;
     listo = true;
-    crearUI(); pintar(); sincronizar();
+    envolverSalir(); crearUI(); pintar(); sincronizar();
   }
   const obs = new MutationObserver(alEntrar);
   window.addEventListener('DOMContentLoaded', () => {

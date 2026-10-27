@@ -107,17 +107,48 @@ function selectVariantSelect(pid, type, value) {
   if (modal && modal.classList.contains('open')) updateModalVariantState(pid);
 }
 
-// Muestra la foto de la variante elegida (si la fila tiene imagen propia)
+// Fotos que muestra el detalle: las de la variante elegida (si tiene varias propias) o las del producto
+function _fotosDetalle(p) {
+  const sel = selectedVariants[p.id] || {};
+  const v = (sel.color && p.variantes) ? p.variantes.find(x => x.color === sel.color && x.imagenes && x.imagenes.length > 1) : null;
+  if (v) return v.imagenes;
+  return (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+}
+
+function _galeriaModalHTML(p, imgs) {
+  return imgs.length
+    ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" />
+       ${imgs.length > 1 ? `
+         <button type="button" class="modal-img-prev" aria-label="Foto anterior" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+         <button type="button" class="modal-img-next" aria-label="Foto siguiente" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+         <div class="modal-img-dots" id="modal-img-dots">
+           ${imgs.map((_,i) => `<span class="modal-dot${i===0?' active':''}" onclick="modalGaleriaGo(${p.id},${i})"></span>`).join('')}
+         </div>` : ''}
+       `
+    : `<i class="fa-solid fa-box-open" style="font-size:5rem; color:var(--red);" id="modal-img-main"></i>`;
+}
+
+// Muestra la foto de la variante elegida (si tiene imagen propia); con varias, el detalle pasa a mostrar las suyas
 function mostrarImagenVariante(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
   const sel = selectedVariants[pid] || {};
   if (!p || !p.tieneVariantes || !sel.color) return;
-  const v = p.variantes.find(x => x.color === sel.color && x.imagen);
+  const v = p.variantes.find(x => x.color === sel.color && (x.imagen || (x.imagenes && x.imagenes.length)));
   if (!v) return;
+  const principal = (v.imagenes && v.imagenes[0]) || v.imagen;
   const cardImg = document.querySelector(`.product-card[data-id="${pid}"] .product-img img`);
-  if (cardImg) ponerFoto(cardImg, v.imagen);
+  if (cardImg) ponerFoto(cardImg, principal);
+  const modal = document.getElementById('product-modal');
+  const cont = modal && modal.classList.contains('open') ? modal.querySelector('.modal-img') : null;
+  if (cont && v.imagenes && v.imagenes.length > 1) {
+    const badge = cont.querySelector('.badge-offer, .badge-new');
+    _galeriaIdx = 0;
+    cont.innerHTML = _galeriaModalHTML(p, v.imagenes);
+    if (badge) cont.appendChild(badge);
+    return;
+  }
   const modalImg = document.getElementById('modal-img-main');
-  if (modalImg && modalImg.tagName === 'IMG') modalImg.src = fotoSrc(v.imagen);
+  if (modalImg && modalImg.tagName === 'IMG') modalImg.src = fotoSrc(principal);
 }
 
 function isVariantComplete(pid) {
@@ -564,17 +595,7 @@ function openProductModal(pid) {
   const inStock         = currentVariant ? currentVariant.stock : true;
   const btnDisabled     = p.tieneVariantes && (!alreadyComplete || !inStock);
 
-  const imgs    = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
-  const imgHTML = imgs.length
-    ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" />
-       ${imgs.length > 1 ? `
-         <button type="button" class="modal-img-prev" aria-label="Foto anterior" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
-         <button type="button" class="modal-img-next" aria-label="Foto siguiente" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
-         <div class="modal-img-dots" id="modal-img-dots">
-           ${imgs.map((_,i) => `<span class="modal-dot${i===0?' active':''}" onclick="modalGaleriaGo(${p.id},${i})"></span>`).join('')}
-         </div>` : ''}
-       `
-    : `<i class="fa-solid fa-box-open" style="font-size:5rem; color:var(--red);" id="modal-img-main"></i>`;
+  const imgHTML = _galeriaModalHTML(p, _fotosDetalle(p));
 
   const badgeHTML = (p.badge === "oferta" || p.badge === "offer")
     ? `<span class="badge-offer" style="position:absolute;top:12px;left:12px;">OFERTA</span>`
@@ -767,7 +788,7 @@ let _galeriaIdx = 0;
 function modalGaleria(pid, dir) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p) return;
-  const imgs = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  const imgs = _fotosDetalle(p);
   if (imgs.length <= 1) return;
   _galeriaIdx = (_galeriaIdx + dir + imgs.length) % imgs.length;
   _actualizarGaleria(imgs);
@@ -776,7 +797,7 @@ function modalGaleria(pid, dir) {
 function modalGaleriaGo(pid, idx) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p) return;
-  const imgs = (p.imagenes && p.imagenes.length) ? p.imagenes : (p.imagen ? [p.imagen] : []);
+  const imgs = _fotosDetalle(p);
   _galeriaIdx = idx;
   _actualizarGaleria(imgs);
 }

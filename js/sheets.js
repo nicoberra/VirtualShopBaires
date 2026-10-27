@@ -43,7 +43,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v14';
+const _CACHE_DATA   = 'vsb_data_v15';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 5 * 60 * 1000;    // 5 minutos: los cambios del CRM se ven rápido
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -155,10 +155,11 @@ const SUPABASE_URL = "https://dtsixnqwwrbwybulpuxo.supabase.co";
 const SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM";
 let _sbImagenes = null;   // { categoria: { nombre: [urls] } } para sumar a IMAGE_MAP
 let _sbOrden = {};        // "categoria|nombre" → orden del ranking (más vendidos primero)
+let _sbVarFotos = {};     // "categoria|nombre|color" → fotos propias de esa variante
 
 async function _catalogoSupabase() {
   const h = { apikey: SUPABASE_PUB };
-  const sel = "categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,variantes(color,talle,precio,precio_descuento,stock,imagen_url,orden)";
+  const sel = "categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,variantes(color,talle,precio,precio_descuento,stock,imagen_url,imagenes,orden)";
   const json = r => r.ok ? r.json() : Promise.reject(new Error("Supabase " + r.status));
   const [cats, prods] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre&visible=eq.true&order=orden`, { headers: h }).then(json),
@@ -173,6 +174,7 @@ async function _catalogoSupabase() {
     _sbOrden[p.categoria + "|" + String(p.nombre).trim()] = p.orden;
     if (p.imagenes && p.imagenes.length) (imgs[p.categoria] = imgs[p.categoria] || {})[p.nombre] = p.imagenes;
     (p.variantes || []).sort((a, b) => a.orden - b.orden).forEach(v => {
+      if (v.imagenes && v.imagenes.length) _sbVarFotos[p.categoria + "|" + String(p.nombre).trim() + "|" + String(v.color || "").trim()] = v.imagenes;
       const cel = x => (x === null || x === undefined || x === "") ? null : { v: x };
       hoja.rows.push({ c: [cel(p.nombre), cel(Number(v.precio)), { v: !!v.stock }, cel(v.color), cel(v.talle), cel(p.descripcion),
         { v: !!p.destacado }, cel(p.subcategoria), null, null, cel(v.imagen_url), cel(v.precio_descuento === null ? null : Number(v.precio_descuento))] });
@@ -317,6 +319,7 @@ async function fetchHoja(nombreHoja) {
           precioOriginal: row.precioOriginal,
           stock:          row.stock,
           imagen:         row.imagenVar,
+          imagenes:       _sbVarFotos[nombreHoja + "|" + String(row.nombre).trim() + "|" + String(row.color || "").trim()] || null,
         });
       } else {
         if (!row.stock || !STOCK_ACTIVO) grouped[row.nombre].disponible = false;

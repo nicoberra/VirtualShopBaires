@@ -898,9 +898,16 @@ async function cargarFotos(p) {
   }
 }
 
+// Fotos de una variante (la primera es la principal)
+function _fotosVarDe(v) {
+  return (Array.isArray(v.imagenes) && v.imagenes.length ? v.imagenes : (v.imagen ? [v.imagen] : [])).slice();
+}
+
 function renderFotos(p) {
   const grid = $('fotos-grid');
-  const fotosHTML = _fotosProd.map((url, i) => `
+  const enVariante = _modoFicha === 'variante';
+  const lista = enVariante ? _fotosVarDe(p) : _fotosProd;
+  const fotosHTML = lista.map((url, i) => `
         <div class="foto-tile">
           <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy" onerror="fotoRespaldo(this)">
           ${i === 0 ? '<span class="foto-principal">Principal</span>' : `<button type="button" class="foto-btn foto-btn-star" data-acc="principal" data-i="${i}" title="Hacer principal" aria-label="Hacer principal"><i class="fa-solid fa-star"></i></button>`}
@@ -939,16 +946,29 @@ function renderFotos(p) {
     ? '<p class="text-muted" style="font-size:.75rem;color:var(--red)">Para subir o cambiar fotos falta configurar GH_TOKEN en el Apps Script del CRM.</p>'
     : '';
 
-  grid.innerHTML = _modoFicha === 'variante'
-    ? `${varsHTML}${aviso}`
+  const deGaleria = _fotosProd.filter(u => !lista.some(f => fotoSrcCRM(f) === fotoSrcCRM(u)));
+  grid.innerHTML = enVariante
+    ? `<div class="fotos-bloque-tit"><span>Son las fotos que ve el cliente al elegir esta variante. La primera es la principal; con ★ elegís otra.</span></div>
+       <div class="fotos-tiles">${fotosHTML}</div>
+       ${deGaleria.length ? `<div class="fv-desde-galeria"><button type="button" class="fv-btn" data-acc="var-elegir"><i class="fa-regular fa-images" aria-hidden="true"></i> Sumar una foto de la galería del producto</button>
+         <div class="fv-galeria" hidden>${deGaleria.map(u => `<button type="button" class="fv-elegir" data-acc="var-usar" data-url="${escHtml(u)}" aria-label="Sumar esta foto a la variante"><img src="${escHtml(fotoSrcCRM(u))}" alt="" loading="lazy" onerror="fotoRespaldo(this)"></button>`).join('')}</div></div>` : ''}
+       ${aviso}`
     : `<div class="fotos-bloque-tit"><span>Se ven en la ficha de la tienda, en este orden. La primera es la principal; con ★ elegís otra.</span></div><div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
   _activarArrastreFotos(grid);
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.acc === 'copiar') copiarFoto(b.dataset.url, b);
+      else if (enVariante) accionFotoVariante(p, b.dataset.acc, Number(b.dataset.i));
       else accionFoto(p, b.dataset.acc, Number(b.dataset.i));
     });
   });
+  if (enVariante) {
+    const caja = grid.querySelector('.fv-desde-galeria');
+    if (caja) {
+      caja.querySelector('[data-acc="var-elegir"]').addEventListener('click', () => { const g = caja.querySelector('.fv-galeria'); g.hidden = !g.hidden; });
+      caja.querySelectorAll('[data-acc="var-usar"]').forEach(b => b.addEventListener('click', () => usarFotoEnVariante(p, p, b.dataset.url, caja)));
+    }
+  }
   // Variantes
   grid.querySelectorAll('.fv-item').forEach(item => {
     const v = todas[Number(item.dataset.j)];
@@ -1060,13 +1080,45 @@ function fotoEstiloCRM(url) {
   return e ? `object-fit:cover;object-position:${e.x}% ${e.y}%;transform:scale(${e.z});transform-origin:${e.x}% ${e.y}%;` : '';
 }
 
+function _errServidorNuevo(r) {
+  const e = (r && r.error) || 'sin respuesta';
+  return /Acción desconocida|no disponible/.test(e) ? 'falta implementar la versión nueva del servidor' : e;
+}
+
+async function _guardarFotosVariante(p, v, urls, msg) {
+  const r = await crmEnviar({ action: 'variante_fotos_set', sheet: v._sheet || v.categoria, row: String(v._row), urls: JSON.stringify(urls) });
+  if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
+  v.imagenes = r.fotos || urls; v.imagen = v.imagenes[0] || '';
+  lsGuardar('productos', _productos);
+  renderFotos(p); filtrarProductos(true);
+  toast(msg);
+}
+
+function accionFotoVariante(p, acc, i) {
+  const urls = _fotosVarDe(p);
+  const err = e => { if (e.message !== 'auth') toast('No se pudo guardar: ' + e.message, 'err'); };
+  if (acc === 'principal') {
+    const [f] = urls.splice(i, 1); urls.unshift(f);
+    _guardarFotosVariante(p, p, urls, 'Foto principal de la variante actualizada ✓').catch(err);
+  } else if (acc === 'encuadre') {
+    abrirEncuadre(urls[i], i === 0 ? 'Foto principal de la variante' : `Foto ${i + 1} de la variante`, nueva => {
+      urls[i] = nueva;
+      return _guardarFotosVariante(p, p, urls, 'Encuadre guardado ✓');
+    });
+  } else if (acc === 'quitar') {
+    confirmar('¿Quitar esta foto de la variante?', () => {
+      _guardarFotosVariante(p, p, urls.filter((_, j) => j !== i), 'Foto quitada ✓').catch(err);
+    });
+  }
+}
+
 async function subirFotoVariante(p, v, file, item) {
   item && item.classList.add('subiendo');
   try {
     const data = await _prepararFoto(file);
     const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(v._row), color: v.color || v.talle || '', data });
-    if (!r || !r.ok) throw new Error(/Acción desconocida|no disponible/.test((r && r.error) || '') ? 'falta implementar la versión nueva del servidor' : ((r && r.error) || 'sin respuesta'));
-    v.imagen = r.url;
+    if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
+    v.imagenes = r.fotos || _fotosVarDe(v).concat(r.url); v.imagen = v.imagenes[0] || '';
     lsGuardar('productos', _productos);
     renderFotos(p); filtrarProductos(true);
     toast('Foto de "' + (v.color || v.talle || 'la variante') + '" cambiada ✓');
@@ -1079,12 +1131,8 @@ async function subirFotoVariante(p, v, file, item) {
 async function usarFotoEnVariante(p, v, url, item) {
   item && item.classList.add('subiendo');
   try {
-    const r = await actualizarCampo(v, 'imagen_url', fotoSrcCRM(url));
-    if (r && r.ok === false) throw new Error(r.error);
-    v.imagen = fotoSrcCRM(url);
-    lsGuardar('productos', _productos);
-    renderFotos(p); filtrarProductos(true);
-    toast('Foto de "' + (v.color || v.talle || 'la variante') + '" cambiada ✓');
+    const urls = _fotosVarDe(v).filter(u => fotoSrcCRM(u) !== fotoSrcCRM(url)).concat(url);
+    await _guardarFotosVariante(p, v, urls, 'Foto sumada a "' + (v.color || v.talle || 'la variante') + '" ✓');
   } catch (e) {
     if (e.message !== 'auth') toast('No se pudo cambiar la foto: ' + e.message, 'err');
     item && item.classList.remove('subiendo');
@@ -1264,11 +1312,19 @@ async function subirFoto(input) {
   const p = _prodActual;
   if (_ghOk === false) { toast('Falta configurar GH_TOKEN para subir fotos', 'err'); return; }
   const grid = $('fotos-grid');
+  const enVariante = _modoFicha === 'variante';
   let ok = 0;
   for (let k = 0; k < files.length; k++) {
     grid.insertAdjacentHTML('afterbegin', `<div class="loading-row" id="foto-subiendo"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo foto ${k + 1} de ${files.length}…</div>`);
     try {
       const data = await _prepararFoto(files[k]);
+      if (enVariante) {
+        const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(p._row), color: p.color || p.talle || '', data });
+        if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
+        p.imagenes = r.fotos || _fotosVarDe(p).concat(r.url); p.imagen = p.imagenes[0] || '';
+        lsGuardar('productos', _productos); filtrarProductos(true);
+        ok++; renderFotos(p); continue;
+      }
       const r = await crmEnviar({ action: 'producto_foto_subir', categoria: p._sheet || p.categoria, nombre: p.nombre, data });
       if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
       _fotosProd = r.fotos || _fotosProd.concat(r.url);

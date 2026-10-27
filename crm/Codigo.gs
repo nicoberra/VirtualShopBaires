@@ -119,7 +119,7 @@ function manejar(e) {
       'list':1,'add':1,'update':1,'delete':1,
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
-      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_guardar':1,'variante_foto_subir':1,'ext_producto_agregar':1,'ext_variantes_set':1,
+      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_guardar':1,'variante_foto_subir':1,'variante_fotos_set':1,'ext_producto_agregar':1,'ext_variantes_set':1,
       'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_categorias_list':1,'ext_categoria_foto':1,
@@ -170,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v18-foto-variante' };
+    else if (accion === 'version')              out = { ok:true, version: 'v19-fotos-variante' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1514,7 +1514,7 @@ var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos exte
 var CATALOGO_NO_PUBLICAR = /sku|costo|proveedor|compra|ganancia|margen/i;
 var CATALOGO_PROHIBIDAS  = SYSTEM_TABS.concat(['Usuarios', 'Errores', 'Categorias']);
 var CAMBIAN_CATALOGO = {
-  'ext_producto_update':1, 'ext_producto_guardar':1, 'variante_foto_subir':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
+  'ext_producto_update':1, 'ext_producto_guardar':1, 'variante_foto_subir':1, 'variante_fotos_set':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
   'ext_producto_eliminar':1, 'ext_categoria_agregar':1, 'ext_categoria_eliminar':1, 'ext_categoria_foto':1,
   'producto_foto_subir':1, 'producto_fotos_set':1, 'productos_save':1, 'productos_add':1
 };
@@ -1635,7 +1635,7 @@ function _sbValorCampo(campo, valor) {
 var SBP = {
   ext_productos_list: function() {
     var sel = 'id,categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,' +
-              'variantes(id,color,talle,precio,precio_descuento,stock,sku_costo,imagen_url,orden)';
+              'variantes(id,color,talle,precio,precio_descuento,stock,sku_costo,imagen_url,imagenes,orden)';
     var prods = [];
     for (var desde = 0; ; desde += 1000) {   // Supabase entrega hasta 1000 por pedido
       var pag = _sbR(_sb('get', 'productos?select=' + encodeURIComponent(sel) + '&order=orden,id&offset=' + desde + '&limit=1000'), 'Productos');
@@ -1649,19 +1649,34 @@ var SBP = {
           precio: Number(v.precio), stock: !!v.stock, color: v.color || '', marca: '', talle: v.talle || '',
           descripcion: p.descripcion || '', destacado: !!p.destacado,
           descuento: v.precio_descuento === null ? '' : Number(v.precio_descuento),
-          subcategoria: p.subcategoria || '', sku: v.sku_costo || '', imagen: v.imagen_url || (p.imagenes || [])[0] || '' });
+          subcategoria: p.subcategoria || '', sku: v.sku_costo || '', imagen: v.imagen_url || (p.imagenes || [])[0] || '',
+          imagenes: (v.imagenes && v.imagenes.length) ? v.imagenes : (v.imagen_url ? [v.imagen_url] : []) });
       });
     });
     return { ok: true, rows: filas };
   },
 
-  // Cambia la foto de UNA variante (no toca la galería del producto)
+  // Suma una foto a UNA variante (no toca la galería del producto). La primera de la lista es la principal.
   variante_foto_subir: function(p) {
     if (!p.data) return { ok: false, error: 'Falta la foto' };
     var v = _sbVariante(_sbVid(p.row));
     var url = _sbFotoGH(v.productos.categoria, v.productos.nombre + ' ' + String(p.color || '').trim(), p.data);
-    _sbR(_sb('patch', 'variantes?id=eq.' + v.id, { imagen_url: url }, 'return=minimal'), 'Foto de la variante');
-    return { ok: true, url: url };
+    var fila = _sbR(_sb('get', 'variantes?select=imagenes,imagen_url&id=eq.' + v.id), 'Foto de la variante')[0] || {};
+    var fotos = (fila.imagenes && fila.imagenes.length) ? fila.imagenes.slice() : (fila.imagen_url ? [fila.imagen_url] : []);
+    fotos.push(url);
+    _sbR(_sb('patch', 'variantes?id=eq.' + v.id, { imagenes: fotos, imagen_url: fotos[0] }, 'return=minimal'), 'Foto de la variante');
+    return { ok: true, url: url, fotos: fotos };
+  },
+
+  // Fotos de UNA variante en el orden elegido (quitar, elegir la principal, encuadre, sumar de la galería)
+  variante_fotos_set: function(p) {
+    var urls;
+    try { urls = JSON.parse(p.urls || '[]'); } catch (e) { return { ok: false, error: 'Datos inválidos' }; }
+    if (!Array.isArray(urls) || urls.length > 30) return { ok: false, error: 'Lista de fotos inválida' };
+    urls = urls.map(function(u) { return String(u || '').trim(); }).filter(function(u) { return /^https:\/\/[^\s"<>]+$/.test(u); });
+    var v = _sbVariante(_sbVid(p.row));
+    _sbR(_sb('patch', 'variantes?id=eq.' + v.id, { imagenes: urls, imagen_url: urls[0] || null }, 'return=minimal'), 'Fotos de la variante');
+    return { ok: true, fotos: urls };
   },
 
   // Guarda varios campos de una variante y de su producto en un solo pedido (la ficha "Editar producto")
@@ -1693,6 +1708,11 @@ var SBP = {
     var cuerpo = {};
     if (_SB_CAMPOS_VARIANTE[campo]) {
       cuerpo[_SB_CAMPOS_VARIANTE[campo]] = (valor === '' && _SB_CAMPOS_VARIANTE[campo] === 'sku_costo') ? null : valor;
+      if (_SB_CAMPOS_VARIANTE[campo] === 'imagen_url') {   // la principal es la primera de la lista
+        var fv = _sbR(_sb('get', 'variantes?select=imagenes&id=eq.' + v.id), 'Foto')[0] || {}, lista = (fv.imagenes || []).slice();
+        if (valor) { if (lista.length) lista[0] = valor; else lista = [valor]; } else lista = [];
+        cuerpo.imagenes = lista;
+      }
       _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cuerpo, 'return=minimal'), 'Guardar');
     } else if (_SB_CAMPOS_PRODUCTO[campo]) {
       if (_SB_CAMPOS_PRODUCTO[campo] === 'nombre' && !valor) throw 'El nombre no puede quedar vacío';
@@ -1722,7 +1742,7 @@ var SBP = {
     var img = p.data ? _sbFotoGH(v.productos.categoria, v.productos.nombre + ' ' + color, p.data) : null;
     var orden = hermanas.reduce(function(m, h) { return Math.max(m, h.orden); }, -1) + 1;
     _sbR(_sb('post', 'variantes', { producto_id: v.producto_id, color: color, precio: _numPrecio(p.precio) || 0, stock: true,
-      sku_costo: String(p.sku || '').trim() || null, imagen_url: img, orden: orden }, 'return=minimal'), 'Agregar variante');
+      sku_costo: String(p.sku || '').trim() || null, imagen_url: img, imagenes: img ? [img] : [], orden: orden }, 'return=minimal'), 'Agregar variante');
     return { ok: true, imagen: img || '' };
   },
 

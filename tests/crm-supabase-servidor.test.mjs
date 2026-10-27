@@ -126,7 +126,20 @@ const PROPS = { FUENTE_PRODUCTOS: "supabase", SUPABASE_SECRET: "sb_secret_test",
   assert.equal(db.variantes.find(v => v.id === 11).imagen_url, fv.url);
   assert.deepEqual(db.productos.find(p => p.id === 1).imagenes, ["https://img/1.jpg"]);
   assert.equal(pedir({ action: "variante_foto_subir", sheet: "Camping", row: "v11" }).ok, false);
-  ok("cambiar la foto de una variante sube la foto y la pone SOLO en esa variante (la galería no cambia)");
+  assert.deepEqual(fv.fotos, [fv.url]);
+  const fv2 = pedir({ action: "variante_foto_subir", sheet: "Camping", row: "v11", color: "Rojo", data: "data:image/jpeg;base64,BBB" });
+  assert.deepEqual(db.variantes.find(v => v.id === 11).imagenes, [fv.url, fv2.url]);
+  assert.equal(db.variantes.find(v => v.id === 11).imagen_url, fv.url);
+  ok("subir fotos a una variante las suma a SU lista (la primera queda como principal); la galería del producto no cambia");
+
+  const fs = pedir({ action: "variante_fotos_set", sheet: "Camping", row: "v11", urls: JSON.stringify([fv2.url, "javascript:alert(1)", "https://img/x.jpg"]) });
+  assert.equal(fs.ok, true);
+  assert.deepEqual(db.variantes.find(v => v.id === 11).imagenes, [fv2.url, "https://img/x.jpg"]);
+  assert.equal(db.variantes.find(v => v.id === 11).imagen_url, fv2.url);
+  pedir({ action: "variante_fotos_set", sheet: "Camping", row: "v11", urls: "[]" });
+  assert.equal(db.variantes.find(v => v.id === 11).imagen_url, null);
+  assert.equal(pedir({ action: "variante_fotos_set", sheet: "Camping", row: "v11", urls: "{roto" }).ok, false);
+  ok("ordenar/quitar fotos de una variante: la principal es la primera, descarta direcciones raras y permite dejarla sin fotos");
 
   const vieja = pedir({ action: "ext_producto_update", sheet: "Camping", row: "11", campo: "precio", valor: "1" });
   assert.equal(vieja.ok, false); assert.match(vieja.error, /desactualizada/);

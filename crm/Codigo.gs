@@ -119,7 +119,7 @@ function manejar(e) {
       'list':1,'add':1,'update':1,'delete':1,
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
-      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_guardar':1,'ext_producto_agregar':1,'ext_variantes_set':1,
+      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_guardar':1,'variante_foto_subir':1,'ext_producto_agregar':1,'ext_variantes_set':1,
       'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_categorias_list':1,'ext_categoria_foto':1,
@@ -170,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v17-datos-supabase' };
+    else if (accion === 'version')              out = { ok:true, version: 'v18-foto-variante' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1514,7 +1514,7 @@ var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos exte
 var CATALOGO_NO_PUBLICAR = /sku|costo|proveedor|compra|ganancia|margen/i;
 var CATALOGO_PROHIBIDAS  = SYSTEM_TABS.concat(['Usuarios', 'Errores', 'Categorias']);
 var CAMBIAN_CATALOGO = {
-  'ext_producto_update':1, 'ext_producto_guardar':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
+  'ext_producto_update':1, 'ext_producto_guardar':1, 'variante_foto_subir':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
   'ext_producto_eliminar':1, 'ext_categoria_agregar':1, 'ext_categoria_eliminar':1, 'ext_categoria_foto':1,
   'producto_foto_subir':1, 'producto_fotos_set':1, 'productos_save':1, 'productos_add':1
 };
@@ -1653,6 +1653,15 @@ var SBP = {
       });
     });
     return { ok: true, rows: filas };
+  },
+
+  // Cambia la foto de UNA variante (no toca la galería del producto)
+  variante_foto_subir: function(p) {
+    if (!p.data) return { ok: false, error: 'Falta la foto' };
+    var v = _sbVariante(_sbVid(p.row));
+    var url = _sbFotoGH(v.productos.categoria, v.productos.nombre + ' ' + String(p.color || '').trim(), p.data);
+    _sbR(_sb('patch', 'variantes?id=eq.' + v.id, { imagen_url: url }, 'return=minimal'), 'Foto de la variante');
+    return { ok: true, url: url };
   },
 
   // Guarda varios campos de una variante y de su producto en un solo pedido (la ficha "Editar producto")

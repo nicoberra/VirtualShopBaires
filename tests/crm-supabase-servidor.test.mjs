@@ -121,6 +121,13 @@ const PROPS = { FUENTE_PRODUCTOS: "supabase", SUPABASE_SECRET: "sb_secret_test",
   assert.equal(pedir({ action: "ext_producto_guardar", sheet: "Camping", row: "v10", producto: "{roto" }).ok, false);
   ok("guardar la ficha manda todos los cambios en un solo pedido (variante + producto) y rechaza campos raros");
 
+  const fv = pedir({ action: "variante_foto_subir", sheet: "Camping", row: "v11", color: "Rojo", data: "data:image/jpeg;base64,AAA" });
+  assert.equal(fv.ok, true); assert.match(fv.url, /^https:\/\/.+\.jpg$/);
+  assert.equal(db.variantes.find(v => v.id === 11).imagen_url, fv.url);
+  assert.deepEqual(db.productos.find(p => p.id === 1).imagenes, ["https://img/1.jpg"]);
+  assert.equal(pedir({ action: "variante_foto_subir", sheet: "Camping", row: "v11" }).ok, false);
+  ok("cambiar la foto de una variante sube la foto y la pone SOLO en esa variante (la galería no cambia)");
+
   const vieja = pedir({ action: "ext_producto_update", sheet: "Camping", row: "11", campo: "precio", valor: "1" });
   assert.equal(vieja.ok, false); assert.match(vieja.error, /desactualizada/);
   const vieja2 = pedir({ action: "ext_producto_eliminar", sheet: "Camping", row: 20, nombre: "Carpa" });

@@ -852,7 +852,6 @@ async function cargarFotos(p) {
 
 function renderFotos(p) {
   const grid = $('fotos-grid');
-  const vars = hermanos(p).filter(v => v.imagen);
   const fotosHTML = _fotosProd.map((url, i) => `
         <div class="foto-tile">
           <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy" onerror="fotoRespaldo(this)">
@@ -863,17 +862,27 @@ function renderFotos(p) {
         </div>`).join('')
     + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span><small class="foto-add-drag">o arrastrala acá</small></label>`);
 
-  const enLista = u => _fotosProd.some(f => fotoSrcCRM(f) === fotoSrcCRM(u));
-  const varsHTML = vars.length > 1 || (vars.length === 1 && !enLista(vars[0].imagen))
+  // Foto de cada variante: bloque aparte, una fila por variante con sus botones
+  const todas = hermanos(p);
+  const varsHTML = todas.length > 1
     ? `<div class="fotos-variantes">
-         <span class="text-muted" style="font-size:.78rem">Fotos de cada variante (tocá <i class="fa-solid fa-crop-simple"></i> para encuadrarla)</span>
-         <div class="fotos-tiles fotos-tiles-sm">${vars.map((v, j) => `
-           <div class="foto-tile foto-tile-sm" title="${escHtml(v.color || '')}">
-             <img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy" onerror="fotoRespaldo(this)">
-             <span class="foto-var-label">${escHtml(v.color || v.talle || '')}</span>
-             <button type="button" class="foto-btn foto-btn-copiar" data-acc="copiar" data-url="${escHtml(fotoSrcCRM(v.imagen))}" title="Copiar foto" aria-label="Copiar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-regular fa-copy"></i></button>
-             <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre-var" data-i="${j}" title="Encuadrar" aria-label="Encuadrar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-solid fa-crop-simple"></i></button>
-           </div>`).join('')}
+         <div class="fv-head"><b>Foto de cada variante</b><span>Es la foto que ve el cliente cuando elige ese color o modelo.</span></div>
+         <div class="fv-lista">${todas.map((v, j) => {
+           const nom = escHtml(v.color || v.talle || 'Variante ' + (j + 1));
+           return `
+           <div class="fv-item${v === p ? ' actual' : ''}" data-j="${j}">
+             <div class="fv-foto">${v.imagen
+               ? `<img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="Foto de ${nom}" loading="lazy" onerror="fotoRespaldo(this)">`
+               : '<i class="fa-regular fa-image" aria-hidden="true"></i>'}</div>
+             <div class="fv-info"><b>${nom}</b><small>${v === p ? 'La que estás editando' : (v.imagen ? 'Arrastrá una foto acá para cambiarla' : 'Sin foto propia')}</small></div>
+             <div class="fv-acc">
+               ${_ghOk === false ? '' : `<label class="fv-btn fv-btn-main"><i class="fa-solid fa-upload" aria-hidden="true"></i> Cambiar foto<input type="file" accept="image/*" class="sr-only" data-acc="var-subir" data-j="${j}"></label>`}
+               ${_fotosProd.length ? `<button type="button" class="fv-btn" data-acc="var-elegir" data-j="${j}"><i class="fa-regular fa-images" aria-hidden="true"></i> Elegir de la galería</button>` : ''}
+               ${v.imagen ? `<button type="button" class="fv-btn fv-ico" data-acc="encuadre-var" data-j="${j}" title="Encuadrar" aria-label="Encuadrar foto de ${nom}"><i class="fa-solid fa-crop-simple"></i></button>
+               <button type="button" class="fv-btn fv-ico" data-acc="copiar" data-url="${escHtml(fotoSrcCRM(v.imagen))}" title="Copiar foto" aria-label="Copiar foto de ${nom}"><i class="fa-regular fa-copy"></i></button>` : ''}
+             </div>
+             <div class="fv-galeria" hidden>${_fotosProd.map(u => `<button type="button" class="fv-elegir" data-acc="var-usar" data-j="${j}" data-url="${escHtml(u)}" aria-label="Usar esta foto para ${nom}"><img src="${escHtml(fotoSrcCRM(u))}" alt="" loading="lazy" onerror="fotoRespaldo(this)"></button>`).join('')}</div>
+           </div>`; }).join('')}
          </div>
        </div>`
     : '';
@@ -882,13 +891,36 @@ function renderFotos(p) {
     ? '<p class="text-muted" style="font-size:.75rem;color:var(--red)">Para subir o cambiar fotos falta configurar GH_TOKEN en el Apps Script del CRM.</p>'
     : '';
 
-  grid.innerHTML = `<div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
+  grid.innerHTML = `<div class="fotos-bloque-tit"><span>Se ven en la ficha de la tienda, en este orden. La primera es la principal; con ★ elegís otra.</span></div><div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
   _activarArrastreFotos(grid);
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.acc === 'copiar') copiarFoto(b.dataset.url, b);
-      else if (b.dataset.acc === 'encuadre-var') encuadrarVariante(p, vars[Number(b.dataset.i)]);
       else accionFoto(p, b.dataset.acc, Number(b.dataset.i));
+    });
+  });
+  // Variantes
+  grid.querySelectorAll('.fv-item').forEach(item => {
+    const v = todas[Number(item.dataset.j)];
+    item.querySelectorAll('[data-acc]').forEach(b => {
+      const acc = b.dataset.acc;
+      if (acc === 'var-subir') b.addEventListener('change', () => { const f = b.files[0]; b.value = ''; if (f) subirFotoVariante(p, v, f, item); });
+      else b.addEventListener('click', () => {
+        if (acc === 'copiar') copiarFoto(b.dataset.url, b);
+        else if (acc === 'encuadre-var') encuadrarVariante(p, v);
+        else if (acc === 'var-elegir') { const g = item.querySelector('.fv-galeria'); g.hidden = !g.hidden; }
+        else if (acc === 'var-usar') usarFotoEnVariante(p, v, b.dataset.url, item);
+      });
+    });
+    // Soltar una foto sobre la fila de la variante cambia SU foto (no la galería)
+    item.addEventListener('dragenter', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); e.stopPropagation(); } });
+    item.addEventListener('dragover', e => { if ([...(e.dataTransfer?.types || [])].includes('Files')) { e.preventDefault(); e.stopPropagation(); item.classList.add('arrastrando'); } });
+    item.addEventListener('dragleave', () => item.classList.remove('arrastrando'));
+    item.addEventListener('drop', e => {
+      const f = [...(e.dataTransfer?.files || [])].find(x => /^image\//.test(x.type));
+      if (!f) return;
+      e.preventDefault(); e.stopPropagation(); item.classList.remove('arrastrando');
+      subirFotoVariante(p, v, f, item);
     });
   });
 }
@@ -976,6 +1008,37 @@ function _leerEncuadre(url) {
 function fotoEstiloCRM(url) {
   const e = _leerEncuadre(url);
   return e ? `object-fit:cover;object-position:${e.x}% ${e.y}%;transform:scale(${e.z});transform-origin:${e.x}% ${e.y}%;` : '';
+}
+
+async function subirFotoVariante(p, v, file, item) {
+  item && item.classList.add('subiendo');
+  try {
+    const data = await _prepararFoto(file);
+    const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(v._row), color: v.color || v.talle || '', data });
+    if (!r || !r.ok) throw new Error(/Acción desconocida|no disponible/.test((r && r.error) || '') ? 'falta implementar la versión nueva del servidor' : ((r && r.error) || 'sin respuesta'));
+    v.imagen = r.url;
+    lsGuardar('productos', _productos);
+    renderFotos(p); filtrarProductos(true);
+    toast('Foto de "' + (v.color || v.talle || 'la variante') + '" cambiada ✓');
+  } catch (e) {
+    if (e.message !== 'auth') toast('No se pudo cambiar la foto: ' + e.message, 'err');
+    item && item.classList.remove('subiendo');
+  }
+}
+
+async function usarFotoEnVariante(p, v, url, item) {
+  item && item.classList.add('subiendo');
+  try {
+    const r = await actualizarCampo(v, 'imagen_url', fotoSrcCRM(url));
+    if (r && r.ok === false) throw new Error(r.error);
+    v.imagen = fotoSrcCRM(url);
+    lsGuardar('productos', _productos);
+    renderFotos(p); filtrarProductos(true);
+    toast('Foto de "' + (v.color || v.talle || 'la variante') + '" cambiada ✓');
+  } catch (e) {
+    if (e.message !== 'auth') toast('No se pudo cambiar la foto: ' + e.message, 'err');
+    item && item.classList.remove('subiendo');
+  }
 }
 
 function encuadrarVariante(p, v) {

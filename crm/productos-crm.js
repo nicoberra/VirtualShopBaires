@@ -385,7 +385,7 @@ function buildGrupoRow(g, hijos) {
   };
   fijar(_gruposAbiertos.has(clave));
   tr.addEventListener('click', e => { if (!e.target.closest('.td-acc')) fijar(hijos[0].hidden); });
-  tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(g[0]));
+  tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(g[0], 'producto'));
   const mas = tr.querySelector('.btn-mas');
   mas.addEventListener('click', () => abrirMenuAcciones(mas, [
     { icon: 'fa-arrow-up-right-from-square', label: 'Ver en la tienda', fn: () => window.open(urlTienda(g[0]), '_blank', 'noopener') },
@@ -574,7 +574,7 @@ function buildProdRow(p, esVariante) {
     <td class="td-toggle td-stock" title="Tocá para cambiar">${renderStock(sVal)}</td>
     ${celdaAcciones()}`;
 
-  tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(p));
+  tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
   tr.querySelector('.td-precio').addEventListener('click', function() {
     editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; }, '$');
   });
@@ -586,7 +586,7 @@ function buildProdRow(p, esVariante) {
       .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); })
       .catch(() => { sVal = sVal ? 0 : 1; p.stock = !!sVal; this.innerHTML = renderStock(sVal); toast('Error al guardar stock', 'err'); });
   });
-  tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(p));
+  tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
   const mas = tr.querySelector('.btn-mas');
   mas.addEventListener('click', () => abrirMenuAcciones(mas, [
     { icon: 'fa-arrow-up-right-from-square', label: 'Ver en la tienda', fn: () => window.open(urlTienda(p), '_blank', 'noopener') },
@@ -660,10 +660,21 @@ async function editarCeldaNum(td, p, campo, valorActual, onSave, prefix='$', cus
   });
 }
 
-function editarProducto(p) {
+// Modos de la ficha:
+//   'producto' → datos de todo el producto (nombre, descripción, destacado, galería) + lista de variantes
+//   'variante' → solo esa variante (color, talle, precio, stock, SKU y su foto)
+//   'completo' → producto de una sola variante: todo junto
+let _modoFicha = 'completo';
+function editarProducto(p, modo) {
   if (typeof p === 'string') p = JSON.parse(p);
+  const abierta = $('modal-producto').style.display === 'flex';
+  if (abierta && _prodActual && _mprodInicial && JSON.stringify(_leerFormProd()) !== JSON.stringify(_mprodInicial)) {
+    confirmar('Tenés cambios sin guardar en esta ficha. ¿Salir sin guardarlos?', () => { _mprodInicial = null; editarProducto(p, modo); });
+    return;
+  }
   _prodActual = p;
   const vars = hermanos(p);
+  _modoFicha = modo || (vars.length > 1 ? 'variante' : 'completo');
 
   $('mprod-title').textContent   = p.nombre || p.categoria || 'Producto';
   $('mprod-nombre').value        = p.nombre || '';
@@ -702,9 +713,46 @@ function editarProducto(p) {
        <p class="text-muted" style="font-size:.75rem;margin-top:6px">El nombre, la descripción y el destacado se aplican a todas las variantes. Color, SKU, precio y stock son de esta variante.</p>`
     : '';
 
+  if (_modoFicha === 'producto') {
+    info.innerHTML = `<label>Variantes (${vars.length})</label>
+       <div class="mprod-var-list mprod-var-edit">${vars.map((v, j) => `
+         <div class="mprod-var">${prodThumb(v.imagen, 36)}<span class="mv-txt"><b>${escHtml(v.color || v.talle || '—')}</b> · ${fmtPrecioSheet(v.precio)} · ${v.stock ? 'Con stock' : 'Sin stock'}</span>
+           <button type="button" class="fv-btn" data-j="${j}"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar variante</button></div>`).join('')}
+       </div>
+       <p class="text-muted" style="font-size:.75rem;margin-top:6px">Precio, stock, SKU y foto se cambian en cada variante.</p>`;
+    info.querySelectorAll('button[data-j]').forEach(b => b.addEventListener('click', () => editarProducto(vars[Number(b.dataset.j)], 'variante')));
+  } else if (_modoFicha === 'variante') info.innerHTML = '';
+  _aplicarModoFicha(p, vars);
+
   $('fotos-grid').innerHTML = '<div class="loading-row"><i class="fa-solid fa-spinner fa-spin"></i></div>';
   show('modal-producto', 'flex');
+  const cuerpo = document.querySelector('#modal-producto .mprod-body'); if (cuerpo) cuerpo.scrollTop = 0;
   if (typeof cargarFotos === 'function') cargarFotos(p);
+}
+
+// Muestra solo los campos que corresponden a cada modo
+function _aplicarModoFicha(p, vars) {
+  const m = _modoFicha, grupo = id => $(id) && $(id).closest('.form-group');
+  const ver = (el, si) => { if (el) el.style.display = si ? '' : 'none'; };
+  const prod = m !== 'variante', varia = m !== 'producto';
+  ver(grupo('mprod-nombre'), prod); ver(grupo('mprod-cats-chips'), prod);
+  ver(grupo('mprod-color'), varia); ver(grupo('mprod-talle'), varia);
+  ver(grupo('mprod-precio'), varia); ver(grupo('mprod-descuento'), varia); ver(grupo('mprod-stock-num'), varia); ver(grupo('mprod-sku'), varia);
+  ver(grupo('mprod-destacado'), prod); ver(grupo('mprod-descripcion'), prod);
+  const secs = document.querySelectorAll('#modal-producto .mprod-sec');
+  const h = (i, t) => { const e = secs[i] && secs[i].querySelector('h4'); if (e) e.textContent = t; };
+  h(0, m === 'variante' ? 'Datos de la variante' : 'Información del producto');
+  h(1, m === 'producto' ? 'Visibilidad' : 'Precio e inventario');
+  h(2, m === 'variante' ? 'Foto de la variante' : (m === 'producto' ? 'Descripción y fotos del producto' : 'Descripción e imágenes'));
+  const lblFotos = grupo('fotos-grid') && grupo('fotos-grid').querySelector('label');
+  if (lblFotos) { lblFotos.textContent = 'Imágenes del producto'; lblFotos.style.display = m === 'variante' ? 'none' : ''; }
+  $('mprod-h').textContent = m === 'variante' ? 'Editar variante' : 'Editar producto';
+  $('mprod-title').textContent = m === 'variante'
+    ? (p.nombre || '') + ' · ' + (p.color || p.talle || 'Variante')
+    : (p.nombre || p.categoria || 'Producto');
+  const etiqueta = document.querySelector('label[for="mprod-color"]');
+  if (etiqueta) etiqueta.textContent = vars.length > 1 ? 'Nombre de la variante (color / modelo)' : 'Color / Marca';
+  $('modal-producto').querySelector('.modal-prod').dataset.modo = m;
 }
 
 // Valores de la ficha tal como están en pantalla
@@ -863,10 +911,10 @@ function renderFotos(p) {
     + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span><small class="foto-add-drag">o arrastrala acá</small></label>`);
 
   // Foto de cada variante: bloque aparte, una fila por variante con sus botones
-  const todas = hermanos(p);
-  const varsHTML = todas.length > 1
+  const todas = _modoFicha === 'variante' ? [p] : (_modoFicha === 'producto' ? [] : hermanos(p));
+  const varsHTML = (todas.length > 1 || _modoFicha === 'variante')
     ? `<div class="fotos-variantes">
-         <div class="fv-head"><b>Foto de cada variante</b><span>Es la foto que ve el cliente cuando elige ese color o modelo.</span></div>
+         ${_modoFicha === 'variante' ? '' : '<div class="fv-head"><b>Foto de cada variante</b><span>Es la foto que ve el cliente cuando elige ese color o modelo.</span></div>'}
          <div class="fv-lista">${todas.map((v, j) => {
            const nom = escHtml(v.color || v.talle || 'Variante ' + (j + 1));
            return `
@@ -874,7 +922,7 @@ function renderFotos(p) {
              <div class="fv-foto">${v.imagen
                ? `<img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="Foto de ${nom}" loading="lazy" onerror="fotoRespaldo(this)">`
                : '<i class="fa-regular fa-image" aria-hidden="true"></i>'}</div>
-             <div class="fv-info"><b>${nom}</b><small>${v === p ? 'La que estás editando' : (v.imagen ? 'Arrastrá una foto acá para cambiarla' : 'Sin foto propia')}</small></div>
+             <div class="fv-info"><b>${nom}</b><small>${_modoFicha === 'variante' ? 'Es la que ve el cliente al elegir esta variante. Podés arrastrar una foto acá.' : (v === p ? 'La que estás editando' : (v.imagen ? 'Arrastrá una foto acá para cambiarla' : 'Sin foto propia'))}</small></div>
              <div class="fv-acc">
                ${_ghOk === false ? '' : `<label class="fv-btn fv-btn-main"><i class="fa-solid fa-upload" aria-hidden="true"></i> Cambiar foto<input type="file" accept="image/*" class="sr-only" data-acc="var-subir" data-j="${j}"></label>`}
                ${_fotosProd.length ? `<button type="button" class="fv-btn" data-acc="var-elegir" data-j="${j}"><i class="fa-regular fa-images" aria-hidden="true"></i> Elegir de la galería</button>` : ''}
@@ -891,7 +939,9 @@ function renderFotos(p) {
     ? '<p class="text-muted" style="font-size:.75rem;color:var(--red)">Para subir o cambiar fotos falta configurar GH_TOKEN en el Apps Script del CRM.</p>'
     : '';
 
-  grid.innerHTML = `<div class="fotos-bloque-tit"><span>Se ven en la ficha de la tienda, en este orden. La primera es la principal; con ★ elegís otra.</span></div><div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
+  grid.innerHTML = _modoFicha === 'variante'
+    ? `${varsHTML}${aviso}`
+    : `<div class="fotos-bloque-tit"><span>Se ven en la ficha de la tienda, en este orden. La primera es la principal; con ★ elegís otra.</span></div><div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
   _activarArrastreFotos(grid);
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
@@ -1308,7 +1358,7 @@ function buildProdCard(g) {
         <button type="button" class="pvar-btn pvar-stock ${v.stock ? 'on' : ''}" title="Stock">${v.stock ? 'Con stock' : 'Sin stock'}</button>
         <button type="button" class="pvar-btn" data-a="editar" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button type="button" class="pvar-btn pvar-del" data-a="eliminar" title="Eliminar esta variante"><i class="fa-solid fa-trash"></i></button>`;
-      fila.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(v));
+      fila.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(v, 'variante'));
       fila.querySelector('[data-a="eliminar"]').addEventListener('click', () => eliminarProducto(v));
       const bs = fila.querySelector('.pvar-stock');
       bs.addEventListener('click', () => cambiarStockTarjeta(v, bs));
@@ -1317,8 +1367,8 @@ function buildProdCard(g) {
   };
   if (vars && _gruposAbiertos.has(clave)) { pintarVariantes(); vars.hidden = false; card.classList.add('abierta'); }
 
-  card.querySelector('.pcard-top').addEventListener('click', () => editarProducto(p0));
-  card.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(p0));
+  card.querySelector('.pcard-top').addEventListener('click', () => editarProducto(p0, varios ? 'producto' : 'completo'));
+  card.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(p0, varios ? 'producto' : 'completo'));
   card.querySelector('[data-a="variante"]').addEventListener('click', () => abrirAgregarVariante(g));
   card.querySelector('[data-a="eliminar"]').addEventListener('click', () => varios ? eliminarGrupo(g) : eliminarProducto(p0));
   const bVars = card.querySelector('[data-a="variantes"]');

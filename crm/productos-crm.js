@@ -1368,12 +1368,14 @@ async function subirFoto(input) {
 
 // ─── CELULAR: productos como tarjetas ─────────────────────────
 function esCelular() { return window.matchMedia('(max-width: 768px)').matches; }
+// Si la ventana pasa de celular a compu (o al revés), la lista se vuelve a armar con la vista que corresponde.
+// Se compara con la vista que se dibujó de verdad, así sirve aunque el cambio sea de un solo salto (maximizar).
 (function() {
-  let antes = null;
   window.addEventListener('resize', () => {
-    const ahora = esCelular();
-    if (antes !== null && ahora !== antes && typeof currentSec !== 'undefined' && currentSec === 'productos' && _productos.length) filtrarProductos();
-    antes = ahora;
+    const t = $('prod-table'); if (!t || !_productos.length) return;
+    const dibujadaCelular = !!t.querySelector('.pcard') || t.classList.contains('prod-cards');
+    const dibujadaCompu = !!document.querySelector('#prod-tbody tr');
+    if ((esCelular() && dibujadaCompu && !dibujadaCelular) || (!esCelular() && dibujadaCelular)) filtrarProductos(true);
   });
 })();
 

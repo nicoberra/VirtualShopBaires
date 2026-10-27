@@ -46,6 +46,32 @@ function fotoRespaldo(img) {
   return true;
 }
 
+// Foto principal del producto (la primera de su galería); si no tiene, la de una variante
+function _miniProducto(g) {
+  return (g[0] && g[0].fotoProducto) || (g.find(v => v.imagen) || {}).imagen || '';
+}
+// Al cambiar la galería, la miniatura de la lista se actualiza enseguida
+function _fijarFotoPrincipal(p, url) {
+  let cambio = false;
+  hermanos(p).forEach(v => { if ((v.fotoProducto || '') !== (url || '')) { v.fotoProducto = url || ''; cambio = true; } });
+  if (cambio) { lsGuardar('productos', _productos); filtrarProductos(true); }
+}
+// Trae de la tienda la foto principal de cada producto (una sola consulta, en segundo plano)
+async function _completarFotosProducto() {
+  try {
+    const r = await fetch(`${_SB_URL}/rest/v1/productos?select=categoria,nombre,imagenes&limit=5000`, { headers: { apikey: _SB_PUB }, cache: 'no-store' });
+    if (!r.ok) return;
+    const mapa = {};
+    (await r.json()).forEach(x => { if (x.imagenes && x.imagenes[0]) mapa[x.categoria + '|' + String(x.nombre).trim()] = x.imagenes[0]; });
+    let cambio = false;
+    _productos.forEach(v => {
+      const f = mapa[(v._sheet || v.categoria) + '|' + String(v.nombre || '').trim()] || '';
+      if ((v.fotoProducto || '') !== f) { v.fotoProducto = f; cambio = true; }
+    });
+    if (cambio) { lsGuardar('productos', _productos); if ($('prod-tbody') || $('prod-table')) filtrarProductos(true); }
+  } catch (e) { /* sin conexión: quedan las fotos de las variantes */ }
+}
+
 function prodThumb(src, size) {
   const s = size || 44;
   return src
@@ -363,7 +389,7 @@ function buildGrupoRow(g, hijos) {
   tr.innerHTML = `
     <td class="td-nombre">
       <div class="prod-name-cell">
-        ${prodThumb((g.find(v => v.imagen) || {}).imagen, 64)}
+        ${prodThumb(_miniProducto(g), 64)}
         <div class="prod-name-text">
           <strong>${escHtml(g[0].nombre)}</strong>${_estrella(g[0])}
           <div class="prod-sub"><i class="fa-solid fa-chevron-right prod-group-chev" aria-hidden="true"></i> ${g.length} variantes${opciones.length ? ' · ' + escHtml(opciones.join(' · ')) : ''}</div>
@@ -561,7 +587,7 @@ function buildProdRow(p, esVariante) {
   tr.innerHTML = `
     <td class="td-nombre">
       <div class="prod-name-cell${esVariante ? ' es-variante' : ''}">
-        ${prodThumb(p.imagen, esVariante ? 44 : 64)}
+        ${prodThumb(esVariante ? p.imagen : _miniProducto([p]), esVariante ? 44 : 64)}
         <div class="prod-name-text">
           <strong>${escHtml(esVariante ? (colorMarca || talle || '—') : p.nombre)}</strong>${_estrella(p)}
           ${sub ? `<div class="prod-sub">${escHtml(sub)}</div>` : ''}
@@ -893,6 +919,7 @@ async function cargarFotos(p) {
     _fotosProd = await _fotosDeSupabase(p._sheet || p.categoria, p.nombre);
     if (!_fotosProd.length) _fotosProd = _fotosDelManifest(await _leerManifestTienda(), p._sheet || p.categoria, p.nombre);
     renderFotos(p);
+    if (_fotosProd[0]) _fijarFotoPrincipal(p, _fotosProd[0]);
   } catch (e) {
     grid.innerHTML = '<p class="text-muted">No se pudieron cargar las fotos</p>';
   }
@@ -1264,6 +1291,7 @@ async function guardarFotos(p, urls, msgOk) {
   if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
   _fotosProd = urls;
   renderFotos(p);
+  _fijarFotoPrincipal(p, urls[0]);
   toast(msgOk);
 }
 
@@ -1328,6 +1356,7 @@ async function subirFoto(input) {
       const r = await crmEnviar({ action: 'producto_foto_subir', categoria: p._sheet || p.categoria, nombre: p.nombre, data });
       if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
       _fotosProd = r.fotos || _fotosProd.concat(r.url);
+      _fijarFotoPrincipal(p, _fotosProd[0]);
       ok++;
     } catch (e) {
       toast('Error al subir foto: ' + e.message, 'err');
@@ -1384,7 +1413,7 @@ function buildProdCard(g) {
   card.className = 'pcard';
   card.innerHTML = `
     <div class="pcard-top">
-      ${prodThumb((g.find(v => v.imagen) || {}).imagen, 60)}
+      ${prodThumb(_miniProducto(g), 60)}
       <div class="pcard-info">
         <div class="pcard-nombre">${escHtml(p0.nombre)}</div>
         <div class="pcard-meta">
@@ -1495,3 +1524,14 @@ function _conBotonGuardando(nombre, modal) {
 }
 _conBotonGuardando('guardarCliente', 'modal-cliente');
 _conBotonGuardando('guardarPedido', 'modal-pedido');
+
+(function () {
+  const cargar = window.loadProductos;
+  if (typeof cargar !== 'function' || cargar._fotos) return;
+  window.loadProductos = async function () {
+    const r = await cargar.apply(this, arguments);
+    _completarFotosProducto();
+    return r;
+  };
+  window.loadProductos._fotos = true;
+})();

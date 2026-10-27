@@ -1574,3 +1574,9 @@ body:has(.modal-backdrop[style*="flex"]) .push-aviso { display: none; }
 .modal-prod[data-modo="variante"] .fv-item.actual { background: var(--bg2); border-color: var(--border); }
 .fv-desde-galeria { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
 .fv-desde-galeria .fv-galeria { border-top: 0; padding-top: 0; }
+
+/* Miniaturas de productos: la foto sola, con bordes redondeados (sin recuadro blanco) */
+img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-thumb {
+  border: 0; padding: 0; background: transparent; object-fit: cover; border-radius: 12px;
+}
+.prod-tabla .prod-var-row img.prod-thumb { border-radius: 10px; }

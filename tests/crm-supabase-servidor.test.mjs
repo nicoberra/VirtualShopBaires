@@ -107,6 +107,20 @@ const PROPS = { FUENTE_PRODUCTOS: "supabase", SUPABASE_SECRET: "sb_secret_test",
   assert.equal(dup.ok, false); assert.match(dup.error, /Ya existe/);
   ok("el nombre se cambia para todo el producto y no permite repetidos");
 
+  const antesG = llamadas.length;
+  const g = pedir({ action: "ext_producto_guardar", sheet: "Camping", row: "v10",
+    variante: JSON.stringify({ precio: "$ 31.000", descuento: "", stock: "false", color: "Verde" }),
+    producto: JSON.stringify({ descripcion: "Plegable", destacado: "true" }) });
+  assert.equal(g.ok, true);
+  const v10 = db.variantes.find(v => v.id === 10);
+  assert.deepEqual([v10.precio, v10.precio_descuento, v10.stock, v10.color], [31000, null, false, "Verde"]);
+  assert.deepEqual([db.productos.find(p => p.id === 1).descripcion, db.productos.find(p => p.id === 1).destacado], ["Plegable", true]);
+  assert.equal(db.variantes.find(v => v.id === 11).precio, 30000);
+  assert.ok(llamadas.length - antesG <= 3, "una lectura y como mucho dos escrituras");
+  assert.equal(pedir({ action: "ext_producto_guardar", sheet: "Camping", row: "v10", variante: JSON.stringify({ inventado: 1 }) }).ok, false);
+  assert.equal(pedir({ action: "ext_producto_guardar", sheet: "Camping", row: "v10", producto: "{roto" }).ok, false);
+  ok("guardar la ficha manda todos los cambios en un solo pedido (variante + producto) y rechaza campos raros");
+
   const vieja = pedir({ action: "ext_producto_update", sheet: "Camping", row: "11", campo: "precio", valor: "1" });
   assert.equal(vieja.ok, false); assert.match(vieja.error, /desactualizada/);
   const vieja2 = pedir({ action: "ext_producto_eliminar", sheet: "Camping", row: 20, nombre: "Carpa" });

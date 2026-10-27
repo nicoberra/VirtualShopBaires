@@ -119,7 +119,7 @@ function manejar(e) {
       'list':1,'add':1,'update':1,'delete':1,
       'productos_list':1,'productos_save':1,'productos_add':1,
       'fotos_list':1,'foto_subir':1,'foto_borrar':1,'fotos_orden':1,
-      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_agregar':1,'ext_variantes_set':1,
+      'ext_productos_list':1,'ext_producto_update':1,'ext_producto_guardar':1,'ext_producto_agregar':1,'ext_variantes_set':1,
       'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_categorias_list':1,'ext_categoria_foto':1,
@@ -170,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v15-push' };
+    else if (accion === 'version')              out = { ok:true, version: 'v16-guardar-rapido' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1356,7 +1356,7 @@ var SYSTEM_TABS = ['Clientes','Pedidos','Suscriptores','Productos','Pedidos exte
 var CATALOGO_NO_PUBLICAR = /sku|costo|proveedor|compra|ganancia|margen/i;
 var CATALOGO_PROHIBIDAS  = SYSTEM_TABS.concat(['Usuarios', 'Errores', 'Categorias']);
 var CAMBIAN_CATALOGO = {
-  'ext_producto_update':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
+  'ext_producto_update':1, 'ext_producto_guardar':1, 'ext_producto_agregar':1, 'ext_variantes_set':1, 'ext_variante_agregar':1,
   'ext_producto_eliminar':1, 'ext_categoria_agregar':1, 'ext_categoria_eliminar':1, 'ext_categoria_foto':1,
   'producto_foto_subir':1, 'producto_fotos_set':1, 'productos_save':1, 'productos_add':1
 };
@@ -1467,6 +1467,13 @@ var _SB_CAMPOS_VARIANTE = { precio:'precio', descuento:'precio_descuento', stock
   'talle/medida':'talle', talle:'talle', sku_costo:'sku_costo', sku:'sku_costo', imagen_url:'imagen_url' };
 var _SB_CAMPOS_PRODUCTO = { descripcion:'descripcion', destacado:'destacado', producto:'nombre', nombre:'nombre', subcategoria:'subcategoria' };
 
+function _sbValorCampo(campo, valor) {
+  if (campo === 'stock' || campo === 'destacado') return esVerdadero(valor);
+  if (campo === 'precio') return _numPrecio(valor) || 0;
+  if (campo === 'descuento') { valor = _numPrecio(valor); return valor > 0 ? valor : null; }
+  return String(valor === undefined || valor === null ? '' : valor).trim();
+}
+
 var SBP = {
   ext_productos_list: function() {
     var sel = 'id,categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,' +
@@ -1490,12 +1497,32 @@ var SBP = {
     return { ok: true, rows: filas };
   },
 
+  // Guarda varios campos de una variante y de su producto en un solo pedido (la ficha "Editar producto")
+  ext_producto_guardar: function(p) {
+    var cambiosV = {}, cambiosP = {};
+    try { cambiosV = JSON.parse(p.variante || '{}') || {}; cambiosP = JSON.parse(p.producto || '{}') || {}; }
+    catch (e) { return { ok: false, error: 'Datos inválidos' }; }
+    var v = _sbVariante(_sbVid(p.row)), cv = {}, cp = {};
+    for (var k in cambiosV) {
+      var campo = String(k).trim().toLowerCase();
+      if (!_SB_CAMPOS_VARIANTE[campo]) return { ok: false, error: 'Campo no encontrado: ' + campo };
+      var val = _sbValorCampo(campo, cambiosV[k]);
+      cv[_SB_CAMPOS_VARIANTE[campo]] = (val === '' && _SB_CAMPOS_VARIANTE[campo] === 'sku_costo') ? null : val;
+    }
+    for (var k2 in cambiosP) {
+      var campo2 = String(k2).trim().toLowerCase();
+      if (!_SB_CAMPOS_PRODUCTO[campo2]) return { ok: false, error: 'Campo no encontrado: ' + campo2 };
+      var val2 = _sbValorCampo(campo2, cambiosP[k2]);
+      if (_SB_CAMPOS_PRODUCTO[campo2] === 'nombre' && !val2) throw 'El nombre no puede quedar vacío';
+      cp[_SB_CAMPOS_PRODUCTO[campo2]] = val2;
+    }
+    if (Object.keys(cv).length) _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cv, 'return=minimal'), 'Guardar');
+    if (Object.keys(cp).length) _sbR(_sb('patch', 'productos?id=eq.' + v.producto_id, cp, 'return=minimal'), 'Guardar');
+    return { ok: true };
+  },
+
   ext_producto_update: function(p) {
-    var campo = String(p.campo || '').trim().toLowerCase(), v = _sbVariante(_sbVid(p.row)), valor = p.valor;
-    if (campo === 'stock' || campo === 'destacado') valor = esVerdadero(valor);
-    else if (campo === 'precio') valor = _numPrecio(valor) || 0;
-    else if (campo === 'descuento') { valor = _numPrecio(valor); if (!(valor > 0)) valor = null; }
-    else valor = String(valor === undefined || valor === null ? '' : valor).trim();
+    var campo = String(p.campo || '').trim().toLowerCase(), v = _sbVariante(_sbVid(p.row)), valor = _sbValorCampo(campo, p.valor);
     var cuerpo = {};
     if (_SB_CAMPOS_VARIANTE[campo]) {
       cuerpo[_SB_CAMPOS_VARIANTE[campo]] = (valor === '' && _SB_CAMPOS_VARIANTE[campo] === 'sku_costo') ? null : valor;

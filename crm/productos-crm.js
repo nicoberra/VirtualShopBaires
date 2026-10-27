@@ -37,10 +37,19 @@ function fmtPrecioSheet(v) {
   return isNaN(n) || n === 0 ? '—' : '$' + n.toLocaleString('es-AR', {minimumFractionDigits:0});
 }
 
+// Una foto recién subida tarda 1-2 min en publicarse en la tienda: mientras tanto se muestra desde GitHub
+function fotoRespaldo(img) {
+  const m = /^https:\/\/virtualshopbaires\.com\.ar\/(img\/.+)$/.exec(img.getAttribute('src') || '');
+  if (!m || img.dataset.respaldo) return false;
+  img.dataset.respaldo = '1';
+  img.src = 'https://raw.githubusercontent.com/nicoberra/VirtualShopBaires/main/' + m[1];
+  return true;
+}
+
 function prodThumb(src, size) {
   const s = size || 44;
   return src
-    ? `<img class="prod-thumb" src="${escHtml(src)}" alt="" loading="lazy" style="width:${s}px;height:${s}px" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'prod-thumb prod-thumb-empty',innerHTML:'<i class=\\'fa-solid fa-image\\'></i>'}))">`
+    ? `<img class="prod-thumb" src="${escHtml(src)}" alt="" loading="lazy" style="width:${s}px;height:${s}px" onerror="if(!fotoRespaldo(this))this.replaceWith(Object.assign(document.createElement('span'),{className:'prod-thumb prod-thumb-empty',innerHTML:'<i class=\\'fa-solid fa-image\\'></i>'}))">`
     : `<span class="prod-thumb prod-thumb-empty" style="width:${s}px;height:${s}px"><i class="fa-solid fa-image"></i></span>`;
 }
 
@@ -675,6 +684,7 @@ function editarProducto(p) {
   // Categoría: la del producto (se elige al crearlo)
   const wrap = $('mprod-cats-chips');
   wrap.innerHTML = `<span class="cat-chip cat-chip-sel">${escHtml(p.categoria || p._sheet)}</span>`;
+  _mprodInicial = _leerFormProd();   // para mandar solo lo que cambió
 
   // Variantes del producto (solo lectura, cada una se edita desde su fila)
   let info = $('mprod-variantes');
@@ -697,66 +707,79 @@ function editarProducto(p) {
   if (typeof cargarFotos === 'function') cargarFotos(p);
 }
 
+// Valores de la ficha tal como están en pantalla
+let _mprodInicial = null;
+function _leerFormProd() {
+  return {
+    nombre:      $('mprod-nombre').value.trim(),
+    color:       $('mprod-color').value.trim(),
+    talle:       $('mprod-talle').value.trim(),
+    descripcion: $('mprod-descripcion').value.trim(),
+    sku:         $('mprod-sku') ? $('mprod-sku').value.trim() : '',
+    actual:      Number($('mprod-precio').value) || 0,
+    anterior:    Number($('mprod-descuento').value) || 0,
+    stock:       (Number($('mprod-stock-num').value) || 0) > 0,
+    destacado:   $('mprod-destacado').checked,
+  };
+}
+
+// Guardar: se cierra al instante y se guarda por detrás en UN solo pedido con lo que cambió.
+// Si el servidor falla, se vuelven los datos atrás y se avisa.
 async function guardarProducto() {
   if (!_prodActual) return;
   const p = _prodActual;
   const vars = hermanos(p);
-  const nombre      = $('mprod-nombre').value.trim();
-  const color       = $('mprod-color').value.trim();
-  const talle       = $('mprod-talle').value.trim();
-  const descripcion = $('mprod-descripcion').value.trim();
-  const sku         = $('mprod-sku') ? $('mprod-sku').value.trim() : (p.sku || '');
-  const actual      = Number($('mprod-precio').value) || 0;
-  const anterior    = Number($('mprod-descuento').value) || 0;
-  const stock       = (Number($('mprod-stock-num').value) || 0) > 0;
-  const destacado   = $('mprod-destacado').checked;
-  if (actual <= 0) { toast('Poné el precio actual', 'err'); $('mprod-precio').focus(); return; }
-  if (anterior && anterior <= actual) { toast('El precio anterior tiene que ser mayor que el actual', 'err'); $('mprod-descuento').focus(); return; }
+  const f = _leerFormProd(), ini = _mprodInicial || {};
+  if (f.actual <= 0) { toast('Poné el precio actual', 'err'); $('mprod-precio').focus(); return; }
+  if (f.anterior && f.anterior <= f.actual) { toast('El precio anterior tiene que ser mayor que el actual', 'err'); $('mprod-descuento').focus(); return; }
   // Con precio anterior: se guarda como precio (tachado) y el actual como descuento
-  const precio    = anterior ? anterior : actual;
-  const descuento = anterior ? actual : '';
-  const descAntes = _precioNum(p.descuento) > 0 ? _precioNum(p.descuento) : '';
+  const precio    = f.anterior ? f.anterior : f.actual;
+  const descuento = f.anterior ? f.actual : '';
 
-  // De esta variante
-  const propios = [
-    { campo:'color',        valor: color },
-    { campo:'talle/medida', valor: talle },
-    { campo:'sku_costo',    valor: sku },
-    { campo:'precio',       valor: precio },
-    { campo:'stock',        valor: stock },
-  ];
-  if (String(descuento) !== String(descAntes)) propios.push({ campo:'descuento', valor: descuento });
-  // De todo el producto (todas las variantes)
-  const comunes = [
-    { campo:'descripcion', valor: descripcion },
-    { campo:'destacado',   valor: destacado },
-  ];
-  if (nombre && nombre !== p.nombre) comunes.unshift({ campo:'producto', valor: nombre });
+  const variante = {}, producto = {};
+  if (f.color !== ini.color) variante.color = f.color;
+  if (f.talle !== ini.talle) variante['talle/medida'] = f.talle;
+  if (f.sku !== ini.sku) variante.sku_costo = f.sku;
+  if (f.actual !== ini.actual || f.anterior !== ini.anterior) { variante.precio = precio; variante.descuento = descuento; }
+  if (f.stock !== ini.stock) variante.stock = f.stock;
+  if (f.nombre && f.nombre !== ini.nombre) producto.producto = f.nombre;
+  if (f.descripcion !== ini.descripcion) producto.descripcion = f.descripcion;
+  if (f.destacado !== ini.destacado) producto.destacado = f.destacado;
 
-  const btn = $('mprod-guardar');
-  btn.disabled = true; btn.textContent = 'Guardando…';
+  hide('modal-producto');
+  if (!Object.keys(variante).length && !Object.keys(producto).length) { toast('Sin cambios'); return; }
+
+  // Se ve el cambio enseguida en la lista
+  const antesP = { color: p.color, talle: p.talle, sku: p.sku, precio: p.precio, descuento: p.descuento, stock: p.stock };
+  const antesV = vars.map(v => ({ v, nombre: v.nombre, descripcion: v.descripcion, destacado: v.destacado }));
+  Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, precio, descuento, stock: f.stock });
+  vars.forEach(v => Object.assign(v, { nombre: f.nombre || v.nombre, descripcion: f.descripcion, destacado: f.destacado }));
+  filtrarProductos(true);
+  toast('Guardando…');
+
   try {
-    for (const u of propios) {
-      const r = await actualizarCampo(p, u.campo, u.valor);
-      if (r && r.ok === false && !/Campo no encontrado/.test(r.error || '')) throw new Error(r.error);
-    }
-    for (const v of vars) {
-      for (const u of comunes) {
-        const r = await actualizarCampo(v, u.campo, u.valor);
-        if (r && r.ok === false && !/Campo no encontrado/.test(r.error || '')) throw new Error(r.error);
-      }
-    }
-    Object.assign(p, { color, talle, sku, precio, descuento, stock });
-    vars.forEach(v => Object.assign(v, { nombre: nombre || v.nombre, descripcion, destacado }));
+    await _guardarCambiosProducto(p, vars, variante, producto);
     lsGuardar('productos', _productos);
     toast('Producto guardado ✓');
-    hide('modal-producto');
+  } catch (e) {
+    Object.assign(p, antesP);
+    antesV.forEach(a => Object.assign(a.v, { nombre: a.nombre, descripcion: a.descripcion, destacado: a.destacado }));
     filtrarProductos(true);
-  } catch(e) {
-    toast('Error al guardar: ' + e.message, 'err');
-  } finally {
-    btn.disabled = false; btn.textContent = 'Guardar cambios';
+    if (e.message !== 'auth') toast('No se guardó "' + (f.nombre || p.nombre) + '": ' + e.message, 'err');
   }
+}
+
+async function _guardarCambiosProducto(p, vars, variante, producto) {
+  const r = await crmEnviar({ action: 'ext_producto_guardar', sheet: p._sheet, row: String(p._row),
+    variante: JSON.stringify(variante), producto: JSON.stringify(producto) });
+  if (r && r.ok) return;
+  if (!/Acción desconocida|no disponible/.test((r && r.error) || '')) throw new Error((r && r.error) || 'sin respuesta');
+  // Servidor anterior (o productos en la planilla): un pedido por campo, todos a la vez
+  const tareas = Object.entries(variante).map(([campo, valor]) => actualizarCampo(p, campo, valor));
+  vars.forEach(v => Object.entries(producto).forEach(([campo, valor]) => tareas.push(actualizarCampo(v, campo, valor))));
+  const rs = await Promise.all(tareas);
+  const mal = rs.find(x => x && x.ok === false && !/Campo no encontrado/.test(x.error || ''));
+  if (mal) throw new Error(mal.error);
 }
 
 // Stock y destacado de la ficha
@@ -832,7 +855,7 @@ function renderFotos(p) {
   const vars = hermanos(p).filter(v => v.imagen);
   const fotosHTML = _fotosProd.map((url, i) => `
         <div class="foto-tile">
-          <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy">
+          <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy" onerror="fotoRespaldo(this)">
           ${i === 0 ? '<span class="foto-principal">Principal</span>' : `<button type="button" class="foto-btn foto-btn-star" data-acc="principal" data-i="${i}" title="Hacer principal" aria-label="Hacer principal"><i class="fa-solid fa-star"></i></button>`}
           <button type="button" class="foto-btn foto-btn-copiar" data-acc="copiar" data-url="${escHtml(fotoSrcCRM(url))}" title="Copiar foto" aria-label="Copiar foto ${i + 1}"><i class="fa-regular fa-copy"></i></button>
           <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre" data-i="${i}" title="Encuadrar" aria-label="Encuadrar foto ${i + 1}"><i class="fa-solid fa-crop-simple"></i></button>
@@ -846,7 +869,7 @@ function renderFotos(p) {
          <span class="text-muted" style="font-size:.78rem">Fotos de cada variante (tocá <i class="fa-solid fa-crop-simple"></i> para encuadrarla)</span>
          <div class="fotos-tiles fotos-tiles-sm">${vars.map((v, j) => `
            <div class="foto-tile foto-tile-sm" title="${escHtml(v.color || '')}">
-             <img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy">
+             <img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy" onerror="fotoRespaldo(this)">
              <span class="foto-var-label">${escHtml(v.color || v.talle || '')}</span>
              <button type="button" class="foto-btn foto-btn-copiar" data-acc="copiar" data-url="${escHtml(fotoSrcCRM(v.imagen))}" title="Copiar foto" aria-label="Copiar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-regular fa-copy"></i></button>
              <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre-var" data-i="${j}" title="Encuadrar" aria-label="Encuadrar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-solid fa-crop-simple"></i></button>
@@ -902,8 +925,16 @@ function _activarArrastreFotos(grid) {
 
 // ─── COPIAR FOTOS (para pegarlas en WhatsApp, Mercado Libre, etc.) ───
 // Copia la imagen al portapapeles como PNG; si el navegador no lo permite, la descarga.
+function _fotoRaw(src) {
+  const m = /^https:\/\/virtualshopbaires\.com\.ar\/(img\/.+)$/.exec(src);
+  return m ? 'https://raw.githubusercontent.com/nicoberra/VirtualShopBaires/main/' + m[1] : null;
+}
+function _fotoBlob(src) {
+  const traer = u => fetch(u, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('foto'); return r.blob(); });
+  return traer(src).catch(e => { const raw = _fotoRaw(src); if (raw) return traer(raw); throw e; });
+}
 function _fotoPng(src) {
-  return fetch(src, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('foto'); return r.blob(); })
+  return _fotoBlob(src)
     .then(b => createImageBitmap(b)).then(bmp => new Promise((res, rej) => {
       const c = document.createElement('canvas');
       c.width = bmp.width; c.height = bmp.height;
@@ -913,7 +944,7 @@ function _fotoPng(src) {
 }
 async function _descargarFoto(src) {
   try {
-    const b = await (await fetch(src, { mode: 'cors' })).blob();
+    const b = await _fotoBlob(src);
     const a = document.createElement('a');
     a.href = URL.createObjectURL(b);
     a.download = (src.split('/').pop().split('?')[0] || 'foto').replace(/\.[a-z0-9]+$/i, '') + '.' + ((b.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'));
@@ -1278,3 +1309,20 @@ function eliminarGrupo(g) {
     delete _cache['ext_productos_list']; _productos = []; loadProductos(true);
   }));
 }
+
+// Guardar cliente / pedido: el botón muestra "Guardando…" al instante y no se puede tocar dos veces
+function _conBotonGuardando(nombre, modal) {
+  const f = window[nombre];
+  if (typeof f !== 'function' || f._guardando) return;
+  window[nombre] = async function () {
+    const b = document.querySelector('#' + modal + ' .btn-primary');
+    if (b && b.disabled) return;
+    const txt = b ? b.textContent : '';
+    if (b) { b.disabled = true; b.textContent = 'Guardando…'; }
+    try { return await f.apply(this, arguments); }
+    finally { if (b) { b.disabled = false; b.textContent = txt; } }
+  };
+  window[nombre]._guardando = true;
+}
+_conBotonGuardando('guardarCliente', 'modal-cliente');
+_conBotonGuardando('guardarPedido', 'modal-pedido');

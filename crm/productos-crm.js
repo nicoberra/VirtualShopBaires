@@ -838,7 +838,7 @@ function renderFotos(p) {
           <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre" data-i="${i}" title="Encuadrar" aria-label="Encuadrar foto ${i + 1}"><i class="fa-solid fa-crop-simple"></i></button>
           <button type="button" class="foto-btn foto-btn-x" data-acc="quitar" data-i="${i}" title="Quitar de la tienda" aria-label="Quitar foto"><i class="fa-solid fa-xmark"></i></button>
         </div>`).join('')
-    + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span></label>`);
+    + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span><small class="foto-add-drag">o arrastrala acá</small></label>`);
 
   const enLista = u => _fotosProd.some(f => fotoSrcCRM(f) === fotoSrcCRM(u));
   const varsHTML = vars.length > 1 || (vars.length === 1 && !enLista(vars[0].imagen))
@@ -860,12 +860,43 @@ function renderFotos(p) {
     : '';
 
   grid.innerHTML = `<div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
+  _activarArrastreFotos(grid);
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.acc === 'copiar') copiarFoto(b.dataset.url, b);
       else if (b.dataset.acc === 'encuadre-var') encuadrarVariante(p, vars[Number(b.dataset.i)]);
       else accionFoto(p, b.dataset.acc, Number(b.dataset.i));
     });
+  });
+}
+
+// ─── ARRASTRAR FOTOS al recuadro "Agregar imagen" (o a cualquier parte de las fotos) ───
+// Acepta archivos de la compu y también fotos arrastradas desde otra página, si esa página lo permite.
+function _activarArrastreFotos(grid) {
+  if (grid._arrastre) return;
+  grid._arrastre = true;
+  let cont = 0;
+  const marcar = on => grid.querySelector('.foto-add')?.classList.toggle('arrastrando', on);
+  const esArrastre = e => [...(e.dataTransfer?.types || [])].some(t => t === 'Files' || t === 'text/uri-list');
+  grid.addEventListener('dragenter', e => { if (!esArrastre(e) || _ghOk === false) return; e.preventDefault(); cont++; marcar(true); });
+  grid.addEventListener('dragover', e => { if (!esArrastre(e) || _ghOk === false) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  grid.addEventListener('dragleave', () => { cont = Math.max(0, cont - 1); if (!cont) marcar(false); });
+  grid.addEventListener('drop', async e => {
+    if (!esArrastre(e)) return;
+    e.preventDefault(); cont = 0; marcar(false);
+    let files = [...(e.dataTransfer.files || [])].filter(f => /^image\//.test(f.type));
+    if (!files.length) {
+      const url = (e.dataTransfer.getData('text/uri-list') || '').split(/\r?\n/).find(l => /^https?:\/\//.test(l.trim()));
+      if (url) {
+        try {
+          const b = await (await fetch(url.trim(), { mode: 'cors' })).blob();
+          if (/^image\//.test(b.type)) files = [new File([b], 'foto.' + (b.type.split('/')[1] || 'jpg'), { type: b.type })];
+        } catch (err) {}
+        if (!files.length) { toast('Esa página no deja usar la foto así. Guardala en la compu y arrastrá el archivo.', 'err'); return; }
+      }
+    }
+    if (!files.length) { toast('Solo se pueden agregar imágenes', 'err'); return; }
+    subirFoto({ files, value: '' });
   });
 }
 

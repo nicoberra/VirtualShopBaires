@@ -834,6 +834,7 @@ function renderFotos(p) {
         <div class="foto-tile">
           <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy">
           ${i === 0 ? '<span class="foto-principal">Principal</span>' : `<button type="button" class="foto-btn foto-btn-star" data-acc="principal" data-i="${i}" title="Hacer principal" aria-label="Hacer principal"><i class="fa-solid fa-star"></i></button>`}
+          <button type="button" class="foto-btn foto-btn-copiar" data-acc="copiar" data-url="${escHtml(fotoSrcCRM(url))}" title="Copiar foto" aria-label="Copiar foto ${i + 1}"><i class="fa-regular fa-copy"></i></button>
           <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre" data-i="${i}" title="Encuadrar" aria-label="Encuadrar foto ${i + 1}"><i class="fa-solid fa-crop-simple"></i></button>
           <button type="button" class="foto-btn foto-btn-x" data-acc="quitar" data-i="${i}" title="Quitar de la tienda" aria-label="Quitar foto"><i class="fa-solid fa-xmark"></i></button>
         </div>`).join('')
@@ -847,6 +848,7 @@ function renderFotos(p) {
            <div class="foto-tile foto-tile-sm" title="${escHtml(v.color || '')}">
              <img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="${escHtml(v.color || '')}" loading="lazy">
              <span class="foto-var-label">${escHtml(v.color || v.talle || '')}</span>
+             <button type="button" class="foto-btn foto-btn-copiar" data-acc="copiar" data-url="${escHtml(fotoSrcCRM(v.imagen))}" title="Copiar foto" aria-label="Copiar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-regular fa-copy"></i></button>
              <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre-var" data-i="${j}" title="Encuadrar" aria-label="Encuadrar foto de ${escHtml(v.color || 'la variante')}"><i class="fa-solid fa-crop-simple"></i></button>
            </div>`).join('')}
          </div>
@@ -860,10 +862,46 @@ function renderFotos(p) {
   grid.innerHTML = `<div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
-      if (b.dataset.acc === 'encuadre-var') encuadrarVariante(p, vars[Number(b.dataset.i)]);
+      if (b.dataset.acc === 'copiar') copiarFoto(b.dataset.url, b);
+      else if (b.dataset.acc === 'encuadre-var') encuadrarVariante(p, vars[Number(b.dataset.i)]);
       else accionFoto(p, b.dataset.acc, Number(b.dataset.i));
     });
   });
+}
+
+// ─── COPIAR FOTOS (para pegarlas en WhatsApp, Mercado Libre, etc.) ───
+// Copia la imagen al portapapeles como PNG; si el navegador no lo permite, la descarga.
+function _fotoPng(src) {
+  return fetch(src, { mode: 'cors' }).then(r => { if (!r.ok) throw new Error('foto'); return r.blob(); })
+    .then(b => createImageBitmap(b)).then(bmp => new Promise((res, rej) => {
+      const c = document.createElement('canvas');
+      c.width = bmp.width; c.height = bmp.height;
+      c.getContext('2d').drawImage(bmp, 0, 0);
+      c.toBlob(x => x ? res(x) : rej(new Error('png')), 'image/png');
+    }));
+}
+async function _descargarFoto(src) {
+  try {
+    const b = await (await fetch(src, { mode: 'cors' })).blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = (src.split('/').pop().split('?')[0] || 'foto').replace(/\.[a-z0-9]+$/i, '') + '.' + ((b.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg'));
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast('Foto descargada ✓');
+  } catch (e) { window.open(src, '_blank', 'noopener'); }
+}
+async function copiarFoto(url, btn) {
+  const src = new URL(url, location.href).href;
+  if (btn) btn.disabled = true;
+  try {
+    if (!navigator.clipboard || !window.ClipboardItem) throw new Error('sin portapapeles');
+    // La promesa va dentro del ClipboardItem para que Safari no pierda el permiso del toque
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': _fotoPng(src) })]);
+    toast('Foto copiada ✓ Ya la podés pegar');
+  } catch (e) {
+    await _descargarFoto(src);
+  } finally { if (btn) btn.disabled = false; }
 }
 
 // ─── ENCUADRE DE FOTOS (cómo se ve en la tarjeta de la tienda) ───────

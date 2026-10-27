@@ -1356,10 +1356,14 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
 .foto-tile img { transition: none; }
 .foto-btn-crop { bottom: 6px; right: 6px; background: rgba(0,0,0,.65); color: #fff; }
 .foto-btn-crop:hover { background: var(--red); }
+.foto-btn-copiar { top: 6px; left: 6px; background: rgba(0,0,0,.65); color: #fff; }
+.foto-btn-copiar:hover { background: var(--red); }
+.foto-btn-copiar:disabled { opacity: .6; cursor: progress; }
 .foto-tile .foto-btn-x { top: 6px; right: 6px; }
 .fotos-tiles-sm { margin-top: 8px; }
 .foto-tile-sm { width: 96px; height: 96px; }
 .foto-tile-sm .foto-var-label { border-radius: 0 0 10px 10px; }
+.foto-tile-sm .foto-btn-copiar { top: 4px; left: 4px; width: 26px; height: 26px; font-size: .75rem; }
 .foto-tile-sm .foto-btn-crop { bottom: 22px; right: 4px; width: 26px; height: 26px; font-size: .75rem; }
 
 .enc-modal { max-width: 460px; border-radius: 18px; }
@@ -1469,3 +1473,47 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .push-aviso { top: auto; bottom: calc(98px + env(safe-area-inset-bottom, 0px)); z-index: 160; }
 }
 @media (prefers-reduced-motion: reduce) { .push-aviso { animation: none; } }
+
+/* ── Ficha "Editar producto" compacta en compu: todo entra sin bajar ── */
+@media (min-width: 1100px) {
+  .modal-backdrop:has(.modal-prod) { padding: 16px; }
+  .modal-prod { max-width: min(1320px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
+  .mprod-head { padding: 14px 24px 12px; align-items: center; }
+  .mprod-head h3 { font-size: 1.3rem; }
+  .mprod-head-sub { font-size: .88rem; margin-top: 2px; }
+  .mprod-x { width: 40px; height: 40px; }
+  .mprod-body { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); column-gap: 28px; padding: 0 24px; }
+  .mprod-sec { padding: 14px 0 4px; }
+  .mprod-sec:nth-of-type(3) { grid-column: 2; grid-row: 1 / span 2; border-top: 0; border-left: 1px solid var(--border); padding-left: 28px; }
+  .mprod-sec h4 { font-size: 1rem; margin-bottom: 10px; grid-column: 1 / -1; }
+  .mprod-sec .form-group { margin-bottom: 10px; gap: 4px; }
+  .mprod-sec .form-group > label { font-size: .8rem; }
+  .mprod-sec input[type=text], .mprod-sec input[type=number] { min-height: 40px; padding: 8px 12px; font-size: .92rem; }
+  .mprod-sec textarea { min-height: 170px; padding: 10px 12px; font-size: .9rem; }
+  .mprod-ayuda { font-size: .74rem; line-height: 1.3; }
+  .mprod-sec .cat-chip-sel { padding: 9px 14px; font-size: .85rem; }
+
+  /* Información: nombre arriba; categoría, color y talle en una fila */
+  .mprod-sec:nth-of-type(1) { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); column-gap: 14px; align-items: start; }
+  .mprod-sec:nth-of-type(1) > .form-group:first-of-type, #mprod-variantes { grid-column: 1 / -1; }
+  .mprod-sec:nth-of-type(1) > .form-row { display: contents; }
+  .mprod-var-list { max-height: 112px; }
+
+  /* Precio e inventario: tres columnas */
+  .mprod-sec:nth-of-type(2) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 14px; align-items: start; }
+  .mprod-sec:nth-of-type(2) > .form-row { display: contents; }
+  .input-pesos span { padding: 0 12px; }
+  .seg-grande { min-height: 40px; padding: 3px; }
+  .seg-grande .seg-btn { font-size: .82rem; }
+  .dest-tile { min-height: 40px; gap: 10px; }
+  .dest-ico { width: 42px; height: 40px; font-size: 1.05rem; }
+  .dest-txt b { font-size: .85rem; } .dest-txt small { font-size: .72rem; }
+
+  /* Descripción arriba, fotos abajo */
+  .mprod-desc-img { grid-template-columns: 1fr; gap: 4px; }
+  .foto-tile, .foto-add { width: 112px; height: 104px; }
+  .fotos-tiles { gap: 10px; }
+
+  .mprod-foot { padding: 10px 24px 12px; }
+  .mprod-foot .btn-secondary, .mprod-foot .btn-primary { min-height: 42px; font-size: .95rem; }
+}

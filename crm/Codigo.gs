@@ -170,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v16-guardar-rapido' };
+    else if (accion === 'version')              out = { ok:true, version: 'v17-datos-supabase' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -409,10 +409,168 @@ function pushProbar() {
 
 // ─── HOJA HELPERS ────────────────────────────────────────────
 
-// Abre la planilla única
+// Abre la planilla única. Los datos del CRM (pedidos, clientes, cuentas, etc.) viven en Supabase:
+// ss() devuelve un "libro" donde esas pestañas leen y escriben en la tabla crm_filas, y el resto
+// (pestañas viejas de productos) sigue yendo a la planilla real.
+var _LIBRO = null;
 function ss() {
-  return SpreadsheetApp.openById(SHEET_ID);
+  if (!_datosEnSupabase()) return SpreadsheetApp.openById(SHEET_ID);
+  return _LIBRO || (_LIBRO = _libroSB());
 }
+
+// ─── DATOS DEL CRM EN SUPABASE (tabla crm_filas) ─────────────
+// Cada fila de una pestaña es una fila de crm_filas (encabezado incluido, con orden 0), así toda la lógica
+// que ya funcionaba con la planilla sigue igual. La primera vez copia sola los datos de la planilla
+// (que queda intacta como respaldo). Volver atrás: propiedad FUENTE_DATOS = planilla.
+var DATOS_HOJAS = { 'clientes':1, 'pedidos':1, 'suscriptores':1, 'pedidos externos':1, 'usuarios':1, 'dispositivos':1, 'push':1, 'errores':1 };
+var _DATOS_SB = null;
+function _datosEnSupabase() {
+  if (_DATOS_SB === null) _DATOS_SB = !!SB_KEY && PropertiesService.getScriptProperties().getProperty('FUENTE_DATOS') !== 'planilla';
+  return _DATOS_SB;
+}
+function _celdaA(v) {
+  if (v instanceof Date) return isNaN(v.getTime()) ? '' : { $d: v.toISOString() };
+  return (v === undefined || v === null) ? '' : v;
+}
+function _celdaDe(v) {
+  if (v && typeof v === 'object' && v.$d) return new Date(v.$d);
+  return (v === undefined || v === null) ? '' : v;
+}
+var _ORDEN_SEQ = 0;
+function _ordenNuevo() { return Date.now() * 1000 + (_ORDEN_SEQ++ % 1000); }
+
+function _libroSB() {
+  var real = null, hojas = {};
+  var R = function() { return real || (real = SpreadsheetApp.openById(SHEET_ID)); };
+  var hoja = function(n) { var k = String(n).trim().toLowerCase(); return hojas[k] || (hojas[k] = new _HojaSB(String(n).trim(), k)); };
+  return {
+    getSheetByName: function(n) {
+      if (!DATOS_HOJAS[String(n).trim().toLowerCase()]) return R().getSheetByName(n);
+      var h = hoja(n); return h._existe() ? h : null;
+    },
+    insertSheet: function(n) {
+      if (!DATOS_HOJAS[String(n).trim().toLowerCase()]) return R().insertSheet(n);
+      var h = hoja(n); h._existe(); return h;
+    },
+    // Solo las pestañas que siguen en la planilla (las de datos están en Supabase)
+    getSheets: function() { return R().getSheets().filter(function(s) { return !DATOS_HOJAS[String(s.getName()).trim().toLowerCase()]; }); },
+    deleteSheet: function(s) { return R().deleteSheet(s); },
+    getId: function() { return SHEET_ID; }
+  };
+}
+
+function _HojaSB(nombre, clave) { this._n = nombre; this._k = clave; this._f = null; }
+_HojaSB.prototype._q = function() { return 'crm_filas?hoja=eq.' + encodeURIComponent(this._k); };
+_HojaSB.prototype._leer = function() {
+  var todas = [], desde = 0;
+  for (;;) {
+    var parte = _sbOk(_sb('get', this._q() + '&select=id,orden,valores&order=orden.asc,id.asc&limit=1000&offset=' + desde), 'Leer ' + this._n) || [];
+    todas = todas.concat(parte);
+    if (parte.length < 1000) break;
+    desde += 1000;
+  }
+  return todas.map(function(r) { return { id: r.id, orden: Number(r.orden) || 0, v: (r.valores || []).map(_celdaDe) }; });
+};
+// true si la pestaña tiene filas (si está vacía en Supabase, primero trae lo que haya en la planilla)
+_HojaSB.prototype._existe = function() {
+  if (this._f) return this._f.length > 0;
+  if (this._k === 'errores') {           // solo se agregan filas: no hace falta traerla entera
+    var hay = _sbOk(_sb('get', this._q() + '&select=id&limit=1'), 'Leer ' + this._n) || [];
+    if (hay.length) return true;
+  }
+  this._f = this._leer();
+  if (!this._f.length && this._migrar()) this._f = this._leer();
+  return this._f.length > 0;
+};
+_HojaSB.prototype._migrar = function() {
+  var cache = CacheService.getScriptCache(), marca = 'mig_' + this._k;
+  if (cache.get(marca)) return false;
+  var lock = LockService.getUserLock();
+  if (!lock.tryLock(25000)) return false;
+  try {
+    if ((_sbOk(_sb('get', this._q() + '&select=id&limit=1'), 'Leer ' + this._n) || []).length) return true;   // ya la copió otra ejecución
+    var libro = SpreadsheetApp.openById(SHEET_ID), k = this._k, sh = null;
+    libro.getSheets().forEach(function(s) { if (!sh && String(s.getName()).trim().toLowerCase() === k) sh = s; });
+    var datos = sh ? sh.getDataRange().getValues() : [];
+    while (datos.length > 1 && datos[datos.length - 1].every(function(c) { return c === '' || c === null; })) datos.pop();
+    if (!datos.length || (datos.length === 1 && datos[0].every(function(c) { return c === ''; }))) { cache.put(marca, '1', 21600); return false; }
+    var filas = datos.map(function(fila, i) { return { hoja: k, orden: i, valores: fila.map(_celdaA) }; });
+    for (var i = 0; i < filas.length; i += 500)
+      _sbOk(_sb('post', 'crm_filas', filas.slice(i, i + 500), 'return=minimal'), 'Copiar ' + this._n);
+    cache.put(marca, '1', 21600);
+    return true;
+  } finally { lock.releaseLock(); }
+};
+_HojaSB.prototype._todas = function() { if (!this._f) { this._existe(); } return this._f; };
+_HojaSB.prototype._ancho = function() { return this._todas().reduce(function(m, f) { return Math.max(m, f.v.length); }, 0); };
+_HojaSB.prototype._guardarFila = function(f) {
+  _sbOk(_sb('patch', 'crm_filas?id=eq.' + f.id, { valores: f.v.map(_celdaA) }, 'return=minimal'), 'Guardar ' + this._n);
+};
+_HojaSB.prototype._filaN = function(r) {            // fila r (1 = encabezado); crea las que falten
+  var f = this._todas();
+  while (f.length < r) this.appendRow([]);
+  return f[r - 1];
+};
+_HojaSB.prototype.getName = function() { return this._n; };
+_HojaSB.prototype.getLastRow = function() { return this._todas().length; };
+_HojaSB.prototype.getLastColumn = function() { return this._ancho(); };
+_HojaSB.prototype.getDataRange = function() { return this.getRange(1, 1, Math.max(1, this.getLastRow()), Math.max(1, this.getLastColumn())); };
+_HojaSB.prototype.appendRow = function(valores) {
+  var orden = (this._f && !this._f.length) ? 0 : _ordenNuevo();
+  var r = _sbOk(_sb('post', 'crm_filas?select=id', { hoja: this._k, orden: orden, valores: (valores || []).map(_celdaA) }, 'return=representation'), 'Agregar en ' + this._n);
+  if (this._f) this._f.push({ id: r[0].id, orden: orden, v: (valores || []).map(function(x) { return _celdaDe(_celdaA(x)); }) });
+  return this;
+};
+_HojaSB.prototype.deleteRow = function(r) {
+  var f = this._todas()[r - 1];
+  if (!f) return this;
+  _sbOk(_sb('delete', 'crm_filas?id=eq.' + f.id, undefined, 'return=minimal'), 'Borrar en ' + this._n);
+  this._f.splice(r - 1, 1);
+  return this;
+};
+_HojaSB.prototype.deleteRows = function(r, n) {
+  var ids = this._todas().slice(r - 1, r - 1 + n).map(function(f) { return f.id; });
+  if (ids.length) _sbOk(_sb('delete', 'crm_filas?id=in.(' + ids.join(',') + ')', undefined, 'return=minimal'), 'Borrar en ' + this._n);
+  this._f.splice(r - 1, ids.length);
+  return this;
+};
+_HojaSB.prototype.setFrozenRows = function() { return this; };
+_HojaSB.prototype.getRange = function(r, c, nr, nc) {
+  var h = this; nr = nr || 1; nc = nc || 1;
+  var leer = function(texto) {
+    var f = h._todas(), out = [];
+    for (var i = 0; i < nr; i++) {
+      var fila = f[r - 1 + i] ? f[r - 1 + i].v : [], o = [];
+      for (var j = 0; j < nc; j++) {
+        var x = fila[c - 1 + j]; x = (x === undefined || x === null) ? '' : x;
+        o.push(texto ? (x instanceof Date ? Utilities.formatDate(x, 'GMT-3', 'dd/MM/yyyy HH:mm:ss') : String(x)) : x);
+      }
+      out.push(o);
+    }
+    return out;
+  };
+  var escribir = function(m) {
+    for (var i = 0; i < nr; i++) {
+      var f = h._filaN(r + i);
+      for (var j = 0; j < nc; j++) {
+        while (f.v.length < c - 1 + j) f.v.push('');
+        f.v[c - 1 + j] = _celdaDe(_celdaA(m(i, j)));
+      }
+      h._guardarFila(f);
+    }
+  };
+  var rango = {
+    getValues: function() { return leer(false); },
+    getDisplayValues: function() { return leer(true); },
+    getValue: function() { return leer(false)[0][0]; },
+    setValue: function(v) { escribir(function() { return v; }); return rango; },
+    setValues: function(vals) { escribir(function(i, j) { return vals[i][j]; }); return rango; },
+    setFontWeight: function() { return rango; },
+    setNumberFormat: function() { return rango; },
+    setBackground: function() { return rango; }
+  };
+  return rango;
+};
 
 // Devuelve una pestaña por nombre, la crea si no existe
 function hoja(tab) {

@@ -1601,3 +1601,8 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .td-toggle.td-stock:hover { background: none; }
 .pvar-stock { background: none !important; border: 0 !important; padding: 0 4px !important; min-width: 0 !important; }
 @media (prefers-reduced-motion: reduce) { .sw-stock, .sw-stock .sw-bola { transition: none; } }
+
+/* ── Foto subiendo: ocupa su lugar en la galería mientras se guarda ── */
+.foto-tile.foto-subiendo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  border-style: dashed; background: var(--bg, #f6f7f9); color: var(--text2); font-size: .8rem; }
+.foto-tile.foto-subiendo i { font-size: 1.1rem; color: var(--blue); }

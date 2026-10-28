@@ -894,6 +894,28 @@ document.addEventListener('change', e => {
 let _fotosProd = [];
 let _ghOk = null;
 
+// Las acciones sobre fotos van de a una y con la lista del momento: si se quita una foto
+// mientras otra se sube, ninguna pisa a la otra. Lo pendiente se ve enseguida en pantalla.
+let _colaFotos = Promise.resolve(), _opsFotos = 0;
+const _galerias = {}, _fotosQuitando = new Set(), _subidas = {};
+function _enColaFotos(fn) {
+  _opsFotos++;
+  const r = _colaFotos.then(fn).finally(() => { _opsFotos--; });
+  _colaFotos = r.catch(() => {});
+  return r;
+}
+function _claveGal(p) { return (p._sheet || p.categoria) + '|' + String(p.nombre || '').trim(); }
+function _claveSub(p, enVariante) { return enVariante ? 'v:' + p._row : 'p:' + _claveGal(p); }
+function _galeriaDe(p) { return (_galerias[_claveGal(p)] || []).slice(); }
+function _ponerGaleria(p, urls) {
+  _galerias[_claveGal(p)] = urls.slice();
+  if (_prodActual && _claveGal(_prodActual) === _claveGal(p)) _fotosProd = urls.slice();
+}
+// Vuelve a dibujar las fotos solo si la ficha abierta es de ese producto
+function _repintarFotos(p) {
+  if (_prodActual && _claveGal(_prodActual) === _claveGal(p)) renderFotos(_prodActual);
+}
+
 function _normFoto(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -932,8 +954,12 @@ async function cargarFotos(p) {
       try { _ghOk = !!(await crmEnviar({ action: 'gh_estado' })).gh; } catch (e) { _ghOk = false; }
     }
     // Las fotos salen de Supabase, igual que en la tienda (el manifest viejo queda de respaldo)
-    _fotosProd = await _fotosDeSupabase(p._sheet || p.categoria, p.nombre);
-    if (!_fotosProd.length) _fotosProd = _fotosDelManifest(await _leerManifestTienda(), p._sheet || p.categoria, p.nombre);
+    let fotos = await _fotosDeSupabase(p._sheet || p.categoria, p.nombre);
+    if (!fotos.length) fotos = _fotosDelManifest(await _leerManifestTienda(), p._sheet || p.categoria, p.nombre);
+    // Con cambios de fotos todavía en curso, manda lo último que se guardó desde acá
+    if (_opsFotos && _galerias[_claveGal(p)]) fotos = _galeriaDe(p);
+    _galerias[_claveGal(p)] = fotos.slice();
+    _fotosProd = fotos;
     renderFotos(p);
     if (_fotosProd[0]) _fijarFotoPrincipal(p, _fotosProd[0]);
   } catch (e) {
@@ -949,7 +975,8 @@ function _fotosVarDe(v) {
 function renderFotos(p) {
   const grid = $('fotos-grid');
   const enVariante = _modoFicha === 'variante';
-  const lista = enVariante ? _fotosVarDe(p) : _fotosProd;
+  const claveSub = _claveSub(p, enVariante);
+  const lista = (enVariante ? _fotosVarDe(p) : _fotosProd).filter(u => !_fotosQuitando.has(claveSub + '|' + u));
   const fotosHTML = lista.map((url, i) => `
         <div class="foto-tile">
           <img src="${escHtml(fotoSrcCRM(url))}" style="${fotoEstiloCRM(url)}" alt="Foto ${i + 1}" loading="lazy" onerror="fotoRespaldo(this)">
@@ -958,6 +985,7 @@ function renderFotos(p) {
           <button type="button" class="foto-btn foto-btn-crop" data-acc="encuadre" data-i="${i}" title="Encuadrar" aria-label="Encuadrar foto ${i + 1}"><i class="fa-solid fa-crop-simple"></i></button>
           <button type="button" class="foto-btn foto-btn-x" data-acc="quitar" data-i="${i}" title="Quitar de la tienda" aria-label="Quitar foto"><i class="fa-solid fa-xmark"></i></button>
         </div>`).join('')
+    + '<div class="foto-tile foto-subiendo" role="status"><i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i><span>Subiendo…</span></div>'.repeat(_subidas[claveSub] || 0)
     + (_ghOk === false ? '' : `<label for="foto-input" class="foto-add" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();$('foto-input').click()}"><i class="fa-solid fa-plus"></i><span>Agregar imagen</span><small class="foto-add-drag">o arrastrala acá</small></label>`);
 
   // Foto de cada variante: bloque aparte, una fila por variante con sus botones
@@ -968,7 +996,7 @@ function renderFotos(p) {
          <div class="fv-lista">${todas.map((v, j) => {
            const nom = escHtml(v.color || v.talle || 'Variante ' + (j + 1));
            return `
-           <div class="fv-item${v === p ? ' actual' : ''}" data-j="${j}">
+           <div class="fv-item${v === p ? ' actual' : ''}${_subidas[_claveSub(v, true)] ? ' subiendo' : ''}" data-j="${j}">
              <div class="fv-foto">${v.imagen
                ? `<img src="${escHtml(fotoSrcCRM(v.imagen))}" style="${fotoEstiloCRM(v.imagen)}" alt="Foto de ${nom}" loading="lazy" onerror="fotoRespaldo(this)">`
                : '<i class="fa-regular fa-image" aria-hidden="true"></i>'}</div>
@@ -1001,8 +1029,8 @@ function renderFotos(p) {
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.acc === 'copiar') copiarFoto(b.dataset.url, b);
-      else if (enVariante) accionFotoVariante(p, b.dataset.acc, Number(b.dataset.i));
-      else accionFoto(p, b.dataset.acc, Number(b.dataset.i));
+      else if (enVariante) accionFotoVariante(p, b.dataset.acc, lista[Number(b.dataset.i)]);
+      else accionFoto(p, b.dataset.acc, lista[Number(b.dataset.i)]);
     });
   });
   if (enVariante) {
@@ -1133,49 +1161,64 @@ async function _guardarFotosVariante(p, v, urls, msg) {
   if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
   v.imagenes = r.fotos || urls; v.imagen = v.imagenes[0] || '';
   lsGuardar('productos', _productos);
-  renderFotos(p); filtrarProductos(true);
+  _repintarFotos(p); filtrarProductos(true);
   toast(msg);
 }
 
-function accionFotoVariante(p, acc, i) {
-  const urls = _fotosVarDe(p);
+function accionFotoVariante(p, acc, url) {
+  if (!url) return;
   const err = e => { if (e.message !== 'auth') toast('No se pudo guardar: ' + e.message, 'err'); };
   if (acc === 'principal') {
-    const [f] = urls.splice(i, 1); urls.unshift(f);
-    _guardarFotosVariante(p, p, urls, 'Foto principal de la variante actualizada ✓').catch(err);
+    _enColaFotos(() => {
+      const urls = _fotosVarDe(p);
+      if (!urls.includes(url)) return;
+      return _guardarFotosVariante(p, p, [url].concat(urls.filter(u => u !== url)), 'Foto principal de la variante actualizada ✓');
+    }).catch(err);
   } else if (acc === 'encuadre') {
-    abrirEncuadre(urls[i], i === 0 ? 'Foto principal de la variante' : `Foto ${i + 1} de la variante`, nueva => {
-      urls[i] = nueva;
+    const i = _fotosVarDe(p).indexOf(url);
+    abrirEncuadre(url, i === 0 ? 'Foto principal de la variante' : `Foto ${i + 1} de la variante`, nueva => _enColaFotos(() => {
+      const urls = _fotosVarDe(p), j = urls.indexOf(url);
+      if (j < 0) throw new Error('esa foto ya no está');
+      urls[j] = nueva;
       return _guardarFotosVariante(p, p, urls, 'Encuadre guardado ✓');
-    });
+    }));
   } else if (acc === 'quitar') {
     confirmar('¿Quitar esta foto de la variante?', () => {
-      _guardarFotosVariante(p, p, urls.filter((_, j) => j !== i), 'Foto quitada ✓').catch(err);
+      const k = _claveSub(p, true) + '|' + url;
+      _fotosQuitando.add(k); _repintarFotos(p);
+      _enColaFotos(() => _guardarFotosVariante(p, p, _fotosVarDe(p).filter(u => u !== url), 'Foto quitada ✓'))
+        .catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
     });
   }
 }
 
-async function subirFotoVariante(p, v, file, item) {
-  item && item.classList.add('subiendo');
+async function subirFotoVariante(p, v, file) {
+  const k = _claveSub(v, true);
+  _subidas[k] = (_subidas[k] || 0) + 1; _repintarFotos(p);
   try {
     const data = await _prepararFoto(file);
-    const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(v._row), color: v.color || v.talle || '', data });
-    if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
-    v.imagenes = r.fotos || _fotosVarDe(v).concat(r.url); v.imagen = v.imagenes[0] || '';
-    lsGuardar('productos', _productos);
-    renderFotos(p); filtrarProductos(true);
+    await _enColaFotos(async () => {
+      const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(v._row), color: v.color || v.talle || '', data });
+      if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
+      v.imagenes = r.fotos || _fotosVarDe(v).concat(r.url); v.imagen = v.imagenes[0] || '';
+      lsGuardar('productos', _productos);
+      filtrarProductos(true);
+    });
     toast('Foto de "' + (v.color || v.talle || 'la variante') + '" cambiada ✓');
   } catch (e) {
     if (e.message !== 'auth') toast('No se pudo cambiar la foto: ' + e.message, 'err');
-    item && item.classList.remove('subiendo');
+  } finally {
+    _subidas[k]--; _repintarFotos(p);
   }
 }
 
 async function usarFotoEnVariante(p, v, url, item) {
   item && item.classList.add('subiendo');
   try {
-    const urls = _fotosVarDe(v).filter(u => fotoSrcCRM(u) !== fotoSrcCRM(url)).concat(url);
-    await _guardarFotosVariante(p, v, urls, 'Foto sumada a "' + (v.color || v.talle || 'la variante') + '" ✓');
+    await _enColaFotos(() => {
+      const urls = _fotosVarDe(v).filter(u => fotoSrcCRM(u) !== fotoSrcCRM(url)).concat(url);
+      return _guardarFotosVariante(p, v, urls, 'Foto sumada a "' + (v.color || v.talle || 'la variante') + '" ✓');
+    });
   } catch (e) {
     if (e.message !== 'auth') toast('No se pudo cambiar la foto: ' + e.message, 'err');
     item && item.classList.remove('subiendo');
@@ -1305,26 +1348,35 @@ function abrirEncuadre(url, titulo, onGuardar) {
 async function guardarFotos(p, urls, msgOk) {
   const r = await crmEnviar({ action: 'producto_fotos_set', categoria: p._sheet || p.categoria, nombre: p.nombre, urls: JSON.stringify(urls) });
   if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
-  _fotosProd = urls;
-  renderFotos(p);
+  _ponerGaleria(p, urls);
+  _repintarFotos(p);
   _fijarFotoPrincipal(p, urls[0]);
   toast(msgOk);
 }
 
-function accionFoto(p, acc, i) {
+function accionFoto(p, acc, url) {
+  if (!url) return;
+  const err = e => { if (e.message !== 'auth') toast('Error: ' + e.message, 'err'); };
   if (acc === 'principal') {
-    const urls = _fotosProd.slice();
-    const [f] = urls.splice(i, 1); urls.unshift(f);
-    guardarFotos(p, urls, 'Foto principal actualizada ✓').catch(e => toast('Error: ' + e.message, 'err'));
+    _enColaFotos(() => {
+      const urls = _galeriaDe(p);
+      if (!urls.includes(url)) return;
+      return guardarFotos(p, [url].concat(urls.filter(u => u !== url)), 'Foto principal actualizada ✓');
+    }).catch(err);
   } else if (acc === 'encuadre') {
-    abrirEncuadre(_fotosProd[i], i === 0 ? 'Foto principal' : `Foto ${i + 1}`, nueva => {
-      const urls = _fotosProd.slice(); urls[i] = nueva;
+    const i = _galeriaDe(p).indexOf(url);
+    abrirEncuadre(url, i === 0 ? 'Foto principal' : `Foto ${i + 1}`, nueva => _enColaFotos(() => {
+      const urls = _galeriaDe(p), j = urls.indexOf(url);
+      if (j < 0) throw new Error('esa foto ya no está');
+      urls[j] = nueva;
       return guardarFotos(p, urls, 'Encuadre guardado ✓');
-    });
+    }));
   } else if (acc === 'quitar') {
     confirmar('¿Quitar esta foto del producto en la tienda?', () => {
-      const urls = _fotosProd.filter((_, j) => j !== i);
-      guardarFotos(p, urls, 'Foto quitada ✓').catch(e => toast('Error: ' + e.message, 'err'));
+      const k = _claveSub(p, false) + '|' + url;
+      _fotosQuitando.add(k); _repintarFotos(p);
+      _enColaFotos(() => guardarFotos(p, _galeriaDe(p).filter(u => u !== url), 'Foto quitada ✓'))
+        .catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
     });
   }
 }
@@ -1355,29 +1407,32 @@ async function subirFoto(input) {
   if (!files.length || !_prodActual) return;
   const p = _prodActual;
   if (_ghOk === false) { toast('Falta configurar GH_TOKEN para subir fotos', 'err'); return; }
-  const grid = $('fotos-grid');
   const enVariante = _modoFicha === 'variante';
+  const clave = _claveSub(p, enVariante);
+  // Cada foto aparece enseguida como "Subiendo…"; mientras tanto se pueden quitar u ordenar otras
+  _subidas[clave] = (_subidas[clave] || 0) + files.length; _repintarFotos(p);
   let ok = 0;
-  for (let k = 0; k < files.length; k++) {
-    grid.insertAdjacentHTML('afterbegin', `<div class="loading-row" id="foto-subiendo"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo foto ${k + 1} de ${files.length}…</div>`);
+  for (const file of files) {
     try {
-      const data = await _prepararFoto(files[k]);
-      if (enVariante) {
-        const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(p._row), color: p.color || p.talle || '', data });
-        if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
-        p.imagenes = r.fotos || _fotosVarDe(p).concat(r.url); p.imagen = p.imagenes[0] || '';
-        lsGuardar('productos', _productos); filtrarProductos(true);
-        ok++; renderFotos(p); continue;
-      }
-      const r = await crmEnviar({ action: 'producto_foto_subir', categoria: p._sheet || p.categoria, nombre: p.nombre, data });
-      if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
-      _fotosProd = r.fotos || _fotosProd.concat(r.url);
-      _fijarFotoPrincipal(p, _fotosProd[0]);
+      const data = await _prepararFoto(file);
+      await _enColaFotos(async () => {
+        if (enVariante) {
+          const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(p._row), color: p.color || p.talle || '', data });
+          if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
+          p.imagenes = r.fotos || _fotosVarDe(p).concat(r.url); p.imagen = p.imagenes[0] || '';
+          lsGuardar('productos', _productos); filtrarProductos(true);
+          return;
+        }
+        const r = await crmEnviar({ action: 'producto_foto_subir', categoria: p._sheet || p.categoria, nombre: p.nombre, data });
+        if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
+        _ponerGaleria(p, r.fotos || _galeriaDe(p).concat(r.url));
+        _fijarFotoPrincipal(p, _galeriaDe(p)[0]);
+      });
       ok++;
     } catch (e) {
-      toast('Error al subir foto: ' + e.message, 'err');
+      if (e.message !== 'auth') toast('Error al subir foto: ' + e.message, 'err');
     }
-    renderFotos(p);
+    _subidas[clave]--; _repintarFotos(p);
   }
   if (ok) toast(ok === 1 ? 'Foto subida ✓ (en la tienda aparece en unos minutos)' : `${ok} fotos subidas ✓ (en la tienda aparecen en unos minutos)`);
 }

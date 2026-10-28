@@ -916,6 +916,74 @@ function _repintarFotos(p) {
   if (_prodActual && _claveGal(_prodActual) === _claveGal(p)) renderFotos(_prodActual);
 }
 
+// ─── PAPELERA: las fotos quitadas se pueden recuperar durante 5 minutos ───
+// Después el servidor las borra para siempre (salvo que otro producto o variante las use).
+const _PAPELERA_MS = 5 * 60 * 1000;
+const _papelera = {};   // clave del producto → [{ url, vid, vence }]
+let _papeleraReloj = null;
+function _vidDe(p) { const m = /^v(\d+)$/.exec(String(p._row || '')); return m ? Number(m[1]) : null; }
+function _papeleraDe(p, enVariante) {
+  const vid = enVariante ? _vidDe(p) : null, ahora = Date.now();
+  return (_papelera[_claveGal(p)] || []).filter(x => x.vence > ahora && (x.vid || null) === vid);
+}
+function _papeleraAnotar(p, url, enVariante) {
+  const k = _claveGal(p), lista = (_papelera[k] || []).filter(x => x.url !== url);
+  lista.push({ url, vid: enVariante ? _vidDe(p) : null, vence: Date.now() + _PAPELERA_MS });
+  _papelera[k] = lista;
+}
+function _papeleraSacar(p, url) {
+  const k = _claveGal(p);
+  _papelera[k] = (_papelera[k] || []).filter(x => fotoSrcCRM(x.url) !== fotoSrcCRM(url));
+}
+async function _cargarPapelera(p) {
+  try {
+    const r = await crmEnviar({ action: 'fotos_papelera', categoria: p._sheet || p.categoria, nombre: p.nombre });
+    if (!r || !r.ok || !Array.isArray(r.fotos)) return;   // servidor viejo: sin papelera
+    const ahora = Date.now();
+    _papelera[_claveGal(p)] = r.fotos.map(x => ({ url: x.url, vid: x.vid || null, vence: ahora + x.quedan * 1000 }));
+    _repintarFotos(p);
+  } catch (e) { /* sin conexión: la papelera se ve la próxima vez */ }
+}
+function _papeleraHTML(items) {
+  if (!items.length) return '';
+  return `<div class="fotos-papelera">
+      <div class="fp-tit"><b><i class="fa-regular fa-trash-can" aria-hidden="true"></i> Quitadas recién</b><span>Se borran para siempre a los 5 minutos. Hasta entonces las podés recuperar.</span></div>
+      <div class="fp-lista">${items.map(x => `
+        <div class="fp-item">
+          <img src="${escHtml(fotoSrcCRM(x.url))}" alt="" loading="lazy" onerror="fotoRespaldo(this)">
+          <span class="fp-tiempo" data-vence="${x.vence}">${_papeleraFalta(x.vence)}</span>
+          <button type="button" class="fv-btn fp-recuperar" data-url="${escHtml(x.url)}"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> Recuperar</button>
+        </div>`).join('')}</div>
+    </div>`;
+}
+function _papeleraFalta(vence) {
+  const s = Math.max(0, Math.ceil((vence - Date.now()) / 1000));
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+// Cuenta regresiva: cuando vence una, desaparece de la lista
+function _papeleraTic() {
+  const marcas = document.querySelectorAll('#fotos-grid .fp-tiempo');
+  if (!marcas.length) { clearInterval(_papeleraReloj); _papeleraReloj = null; return; }
+  let vencio = false;
+  marcas.forEach(el => { const v = Number(el.dataset.vence); el.textContent = _papeleraFalta(v); if (v <= Date.now()) vencio = true; });
+  if (vencio && _prodActual) renderFotos(_prodActual);
+}
+function _recuperarFoto(p, url, enVariante) {
+  const k = _claveGal(p), antes = (_papelera[k] || []).slice();
+  const err = e => { if (e.message !== 'auth') toast('No se pudo recuperar: ' + e.message, 'err'); };
+  _papeleraSacar(p, url); _repintarFotos(p);
+  _enColaFotos(() => {
+    if (enVariante) {
+      const urls = _fotosVarDe(p);
+      if (urls.some(u => fotoSrcCRM(u) === fotoSrcCRM(url))) return;
+      return _guardarFotosVariante(p, p, urls.concat(url), 'Foto recuperada ✓');
+    }
+    const urls = _galeriaDe(p);
+    if (urls.some(u => fotoSrcCRM(u) === fotoSrcCRM(url))) return;
+    return guardarFotos(p, urls.concat(url), 'Foto recuperada ✓');
+  }).catch(e => { _papelera[k] = antes; _repintarFotos(p); err(e); });
+}
+
 function _normFoto(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
@@ -962,6 +1030,7 @@ async function cargarFotos(p) {
     _fotosProd = fotos;
     renderFotos(p);
     if (_fotosProd[0]) _fijarFotoPrincipal(p, _fotosProd[0]);
+    _cargarPapelera(p);
   } catch (e) {
     grid.innerHTML = '<p class="text-muted">No se pudieron cargar las fotos</p>';
   }
@@ -1018,14 +1087,17 @@ function renderFotos(p) {
     : '';
 
   const deGaleria = _fotosProd.filter(u => !lista.some(f => fotoSrcCRM(f) === fotoSrcCRM(u)));
+  const papeleraHTML = _papeleraHTML(_papeleraDe(p, enVariante));
   grid.innerHTML = enVariante
     ? `<div class="fotos-bloque-tit"><span>Son las fotos que ve el cliente al elegir esta variante. La primera es la principal; con ★ elegís otra.</span></div>
-       <div class="fotos-tiles">${fotosHTML}</div>
+       <div class="fotos-tiles">${fotosHTML}</div>${papeleraHTML}
        ${deGaleria.length ? `<div class="fv-desde-galeria"><button type="button" class="fv-btn" data-acc="var-elegir"><i class="fa-regular fa-images" aria-hidden="true"></i> Sumar una foto de la galería del producto</button>
          <div class="fv-galeria" hidden>${deGaleria.map(u => `<button type="button" class="fv-elegir" data-acc="var-usar" data-url="${escHtml(u)}" aria-label="Sumar esta foto a la variante"><img src="${escHtml(fotoSrcCRM(u))}" alt="" loading="lazy" onerror="fotoRespaldo(this)"></button>`).join('')}</div></div>` : ''}
        ${aviso}`
-    : `<div class="fotos-bloque-tit"><span>Se ven en la ficha de la tienda, en este orden. La primera es la principal; con ★ elegís otra.</span></div><div class="fotos-tiles">${fotosHTML}</div>${varsHTML}${aviso}`;
+    : `<div class="fotos-bloque-tit"><span>Se ven en la ficha de la tienda, en este orden. La primera es la principal; con ★ elegís otra.</span></div><div class="fotos-tiles">${fotosHTML}</div>${papeleraHTML}${varsHTML}${aviso}`;
   _activarArrastreFotos(grid);
+  grid.querySelectorAll('.fp-recuperar').forEach(b => b.addEventListener('click', () => _recuperarFoto(p, b.dataset.url, enVariante)));
+  if (papeleraHTML && !_papeleraReloj) _papeleraReloj = setInterval(_papeleraTic, 1000);
   grid.querySelectorAll('.foto-btn').forEach(b => {
     b.addEventListener('click', () => {
       if (b.dataset.acc === 'copiar') copiarFoto(b.dataset.url, b);
@@ -1183,11 +1255,11 @@ function accionFotoVariante(p, acc, url) {
       return _guardarFotosVariante(p, p, urls, 'Encuadre guardado ✓');
     }));
   } else if (acc === 'quitar') {
-    confirmar('¿Quitar esta foto de la variante?', () => {
+    confirmar('¿Quitar esta foto de la variante? La vas a poder recuperar durante 5 minutos.', () => {
       const k = _claveSub(p, true) + '|' + url;
       _fotosQuitando.add(k); _repintarFotos(p);
-      _enColaFotos(() => _guardarFotosVariante(p, p, _fotosVarDe(p).filter(u => u !== url), 'Foto quitada ✓'))
-        .catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
+      _enColaFotos(() => _guardarFotosVariante(p, p, _fotosVarDe(p).filter(u => u !== url), 'Foto quitada ✓ Podés recuperarla durante 5 minutos'))
+        .then(() => _papeleraAnotar(p, url, true)).catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
     });
   }
 }
@@ -1372,11 +1444,11 @@ function accionFoto(p, acc, url) {
       return guardarFotos(p, urls, 'Encuadre guardado ✓');
     }));
   } else if (acc === 'quitar') {
-    confirmar('¿Quitar esta foto del producto en la tienda?', () => {
+    confirmar('¿Quitar esta foto del producto en la tienda? La vas a poder recuperar durante 5 minutos.', () => {
       const k = _claveSub(p, false) + '|' + url;
       _fotosQuitando.add(k); _repintarFotos(p);
-      _enColaFotos(() => guardarFotos(p, _galeriaDe(p).filter(u => u !== url), 'Foto quitada ✓'))
-        .catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
+      _enColaFotos(() => guardarFotos(p, _galeriaDe(p).filter(u => u !== url), 'Foto quitada ✓ Podés recuperarla durante 5 minutos'))
+        .then(() => _papeleraAnotar(p, url, false)).catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
     });
   }
 }

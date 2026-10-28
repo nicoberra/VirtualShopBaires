@@ -122,7 +122,7 @@ function manejar(e) {
       'ext_productos_list':1,'ext_producto_update':1,'ext_producto_guardar':1,'variante_foto_subir':1,'variante_fotos_set':1,'ext_producto_agregar':1,'ext_variantes_set':1,
       'gh_estado':1,'sb_estado':1,'producto_foto_subir':1,'producto_fotos_set':1,'ext_variante_agregar':1,
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
-      'ext_categorias_list':1,'ext_categoria_foto':1,
+      'ext_categorias_list':1,'ext_categoria_foto':1,'fotos_papelera':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1,
       'push_suscribir':1,'push_desuscribir':1,'push_probar':1
     };
@@ -170,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v19-fotos-variante' };
+    else if (accion === 'version')              out = { ok:true, version: 'v20-papelera-fotos' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1675,7 +1675,13 @@ var SBP = {
     if (!Array.isArray(urls) || urls.length > 30) return { ok: false, error: 'Lista de fotos inválida' };
     urls = urls.map(function(u) { return String(u || '').trim(); }).filter(function(u) { return /^https:\/\/[^\s"<>]+$/.test(u); });
     var v = _sbVariante(_sbVid(p.row));
-    _sbR(_sb('patch', 'variantes?id=eq.' + v.id, { imagenes: urls, imagen_url: urls[0] || null }, 'return=minimal'), 'Fotos de la variante');
+    var lock = LockService.getScriptLock(); lock.waitLock(20000);
+    try {
+      var fila = _sbR(_sb('get', 'variantes?select=imagenes,imagen_url&id=eq.' + v.id), 'Fotos de la variante')[0] || {};
+      var antes = (fila.imagenes || []).concat(fila.imagen_url ? [fila.imagen_url] : []);
+      _sbR(_sb('patch', 'variantes?id=eq.' + v.id, { imagenes: urls, imagen_url: urls[0] || null }, 'return=minimal'), 'Fotos de la variante');
+      _papeleraAnotar(antes, urls, { categoria: v.productos.categoria, nombre: v.productos.nombre, vid: v.id });
+    } finally { lock.releaseLock(); }
     return { ok: true, fotos: urls };
   },
 
@@ -1750,9 +1756,17 @@ var SBP = {
     var v = _sbVariante(_sbVid(p.row));
     if (p.nombre && v.productos && v.productos.nombre !== String(p.nombre).trim())
       return { ok: false, error: 'La lista de productos está desactualizada: tocá actualizar y volvé a intentar.' };
+    var fila = _sbR(_sb('get', 'variantes?select=imagenes,imagen_url&id=eq.' + v.id), 'Eliminar')[0] || {};
+    var fotos = (fila.imagenes || []).concat(fila.imagen_url ? [fila.imagen_url] : []);
     _sbR(_sb('delete', 'variantes?id=eq.' + v.id, undefined, 'return=minimal'), 'Eliminar');
     var quedan = _sbR(_sb('get', 'variantes?select=id&producto_id=eq.' + v.producto_id), 'Eliminar');
-    if (!quedan.length) _sbR(_sb('delete', 'productos?id=eq.' + v.producto_id, undefined, 'return=minimal'), 'Eliminar');
+    if (!quedan.length) {
+      var prod = _sbR(_sb('get', 'productos?select=imagenes&id=eq.' + v.producto_id), 'Eliminar')[0] || {};
+      fotos = fotos.concat(prod.imagenes || []);
+      _sbR(_sb('delete', 'productos?id=eq.' + v.producto_id, undefined, 'return=minimal'), 'Eliminar');
+    }
+    // Sus fotos van a la papelera: a los 5 minutos se borran, salvo que otro producto las use
+    try { _papeleraAnotar(fotos, [], { categoria: v.productos.categoria, nombre: v.productos.nombre, vid: v.id }); } catch (e) {}
     return { ok: true };
   },
 
@@ -1822,11 +1836,126 @@ var SBP = {
     var urls;
     try { urls = JSON.parse(p.urls || '[]'); } catch (e) { return { ok: false, error: 'urls inválidas' }; }
     if (!Array.isArray(urls) || !String(p.categoria || '').trim() || !String(p.nombre || '').trim()) return { ok: false, error: 'Faltan parámetros' };
-    _sbImagenesSet(String(p.categoria).trim(), String(p.nombre).trim(), urls);
+    var categoria = String(p.categoria).trim(), nombre = String(p.nombre).trim();
+    var lock = LockService.getScriptLock(); lock.waitLock(20000);
+    try {
+      var act = _sbR(_sb('get', 'productos?select=imagenes&categoria=eq.' + encodeURIComponent(categoria) +
+        '&nombre=eq.' + encodeURIComponent(nombre)), 'Fotos');
+      _sbImagenesSet(categoria, nombre, urls);
+      _papeleraAnotar(act.length ? (act[0].imagenes || []) : [], urls, { categoria: categoria, nombre: nombre });
+    } finally { lock.releaseLock(); }
     try { productoFotosSet(p); } catch (e) {}   // el manifest viejo queda igual que Supabase (respaldo)
     return { ok: true, fotos: urls };
+  },
+
+  // Fotos quitadas hace menos de 5 minutos de este producto (se pueden recuperar desde la ficha)
+  fotos_papelera: function(p) {
+    var categoria = String(p.categoria || '').trim(), nombre = String(p.nombre || '').trim();
+    try { purgarFotosPapelera(); } catch (e) {}   // de paso, borra las vencidas (por si no está el activador)
+    var ahora = new Date().getTime();
+    var fotos = [];
+    _papeleraLeer().forEach(function(f) {
+      var d = f.valores || {};
+      if (d.categoria !== categoria || d.nombre !== nombre) return;
+      var quedan = Math.round((Number(d.quitada) + PAPELERA_MS - ahora) / 1000);
+      if (quedan > 0) fotos.push({ url: d.original || d.url, vid: d.vid || null, quedan: quedan });
+    });
+    return { ok: true, fotos: fotos };
   }
 };
+
+// ─── PAPELERA DE FOTOS ───────────────────────────────────────
+// Una foto quitada de un producto o de una variante queda 5 minutos en la papelera (el CRM la
+// muestra con "Recuperar"). Pasado ese tiempo, si ningún producto, variante, descripción ni
+// categoría la usa, se borra del repo para siempre. La limpieza corre sola cada 5 minutos
+// (instalarPapeleraFotos, una vez desde el editor) y también al abrir una ficha en el CRM.
+var PAPELERA_HOJA = 'papelera-fotos';
+var PAPELERA_MS = 5 * 60 * 1000;
+var PAPELERA_RUTA = /^img\/productos\/[A-Za-z0-9._\-\/]+\.(jpe?g|png|webp|gif|avif)$/i;
+
+function _fotoBase(u) { return String(u || '').split('#')[0].split('?')[0].trim(); }
+// Solo se borran archivos de img/productos de la propia tienda
+function _rutaRepo(u) {
+  var b = _fotoBase(u);
+  if (b.indexOf(STORE_BASE_URL) !== 0) return '';
+  var r = b.slice(STORE_BASE_URL.length);
+  return (PAPELERA_RUTA.test(r) && r.indexOf('..') < 0) ? r : '';
+}
+function _papeleraLeer() {
+  return _sbR(_sb('get', 'crm_filas?select=id,valores&hoja=eq.' + PAPELERA_HOJA + '&order=orden'), 'Papelera') || [];
+}
+function _papeleraBorrarFilas(ids) {
+  if (ids.length) _sbR(_sb('delete', 'crm_filas?id=in.(' + ids.join(',') + ')', undefined, 'return=minimal'), 'Papelera');
+}
+// Anota las fotos que se quitaron y saca de la papelera las que volvieron a usarse
+function _papeleraAnotar(antes, despues, dato) {
+  var ahora = (despues || []).map(_fotoBase), quitadas = [], vistas = {};
+  (antes || []).forEach(function(u) {
+    var b = _fotoBase(u);
+    if (ahora.indexOf(b) < 0 && _rutaRepo(b) && !vistas[b]) { vistas[b] = 1; quitadas.push({ base: b, original: String(u) }); }
+  });
+  var filas = _papeleraLeer();
+  _papeleraBorrarFilas(filas.filter(function(f) {
+    var b = f.valores && f.valores.url;
+    return ahora.indexOf(b) >= 0 || vistas[b];
+  }).map(function(f) { return f.id; }));
+  if (!quitadas.length) return;
+  var t = new Date().getTime();
+  _sbR(_sb('post', 'crm_filas', quitadas.map(function(q) {
+    return { hoja: PAPELERA_HOJA, orden: t, valores: { url: q.base, original: q.original, quitada: t,
+      categoria: dato.categoria, nombre: dato.nombre, vid: dato.vid || null } };
+  }), 'return=minimal'), 'Papelera');
+}
+// Todas las fotos que la tienda usa hoy (ante cualquier duda, se considera en uso)
+function _fotosEnUso() {
+  var uso = {};
+  var marcar = function(u) { var b = _fotoBase(u); if (b) uso[b] = 1; };
+  var enTexto = /https:\/\/virtualshopbaires\.com\.ar\/img\/[^\s"'<>)]+/g;
+  for (var desde = 0; ; desde += 1000) {
+    var pag = _sbR(_sb('get', 'productos?select=descripcion,imagenes,variantes(imagen_url,imagenes)&offset=' + desde + '&limit=1000'), 'Fotos en uso');
+    pag.forEach(function(p) {
+      (p.imagenes || []).forEach(marcar);
+      (String(p.descripcion || '').match(enTexto) || []).forEach(marcar);
+      (p.variantes || []).forEach(function(v) { marcar(v.imagen_url); (v.imagenes || []).forEach(marcar); });
+    });
+    if (pag.length < 1000) break;
+  }
+  (_sbR(_sb('get', 'categorias?select=imagen_url'), 'Fotos en uso') || []).forEach(function(c) { marcar(c.imagen_url); });
+  return uso;
+}
+function purgarFotosPapelera() {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(2000)) return { borradas: 0, ocupado: true };
+  try {
+    var limite = new Date().getTime() - PAPELERA_MS;
+    var vencidas = _papeleraLeer().filter(function(f) { return f.valores && Number(f.valores.quitada) <= limite; }).slice(0, 15);
+    if (!vencidas.length) return { borradas: 0 };
+    var enUso = _fotosEnUso(), hechas = [], borradas = 0;
+    vencidas.forEach(function(f) {
+      var ruta = _rutaRepo(f.valores.url);
+      if (ruta && !enUso[_fotoBase(f.valores.url)] && GH_TOKEN) {
+        var path = 'contents/' + encPath(ruta);
+        var g = ghApi('get', path + '?ref=' + GH_BRANCH);
+        if (g.code === 200 && g.json && g.json.sha) {
+          var d = ghApi('delete', path, { message: 'Foto borrada (papelera): ' + ruta.split('/').pop(), sha: g.json.sha, branch: GH_BRANCH });
+          if (d.code < 200 || d.code >= 300) return;   // se reintenta en la próxima pasada
+          borradas++;
+        } else if (g.code !== 404) return;
+      }
+      hechas.push(f.id);
+    });
+    _papeleraBorrarFilas(hechas);
+    return { borradas: borradas };
+  } finally { lock.releaseLock(); }
+}
+// Ejecutar UNA vez a mano desde el editor de Apps Script: limpia la papelera cada 5 minutos.
+function instalarPapeleraFotos() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'purgarFotosPapelera') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('purgarFotosPapelera').timeBased().everyMinutes(5).create();
+  return 'Papelera de fotos instalada: se limpia cada 5 minutos';
+}
 
 // ─── RANKING DE PRODUCTOS (más vendidos y con más interés, arriba) ────
 // Puntaje = unidades vendidas (últimos 180 días) × 10 + carritos × 3 + favoritos × 2 + vistas × 1

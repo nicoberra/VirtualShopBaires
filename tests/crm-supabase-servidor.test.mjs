@@ -18,6 +18,7 @@ function crearSupabase() {
     variantes: [{ id: 10, producto_id: 1, color: "Azul", talle: "", precio: 30000, precio_descuento: null, stock: true, sku_costo: "S-1", imagen_url: "https://img/a.jpg", orden: 0 },
                 { id: 11, producto_id: 1, color: "Rojo", talle: "", precio: 30000, precio_descuento: null, stock: false, sku_costo: null, imagen_url: null, orden: 1 },
                 { id: 20, producto_id: 2, color: "Verde", talle: "", precio: 50000, precio_descuento: null, stock: true, sku_costo: null, imagen_url: null, orden: 0 }],
+    crm_filas: [],   // papelera de fotos
   };
   let nextId = 100; const llamadas = [];
   const resp = (code, body) => ({ getResponseCode: () => code, getContentText: () => body === undefined ? "" : JSON.stringify(body) });
@@ -25,7 +26,8 @@ function crearSupabase() {
     const u = new URL(url), tabla = u.pathname.replace("/rest/v1/", ""), metodo = (opt.method || "get").toLowerCase();
     llamadas.push({ metodo, tabla, url, key: opt.headers && opt.headers.apikey });
     const filtros = [...u.searchParams].filter(([k, v]) => v.startsWith("eq.")).map(([k, v]) => [k, v.slice(3)]);
-    const T = db[tabla], sel = T.filter(r => filtros.every(([c, v]) => String(r[c]) === v));
+    const enLista = [...u.searchParams].filter(([k, v]) => v.startsWith("in.(")).map(([k, v]) => [k, v.slice(4, -1).split(",")]);
+    const T = db[tabla], sel = T.filter(r => filtros.every(([c, v]) => String(r[c]) === v) && enLista.every(([c, l]) => l.includes(String(r[c]))));
     const body = opt.payload ? JSON.parse(opt.payload) : undefined;
     if (metodo === "post") {
       const filas = [].concat(body);

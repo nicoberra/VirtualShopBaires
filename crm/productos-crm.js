@@ -837,7 +837,12 @@ async function guardarProducto() {
   if (f.destacado !== ini.destacado) producto.destacado = f.destacado;
 
   hide('modal-producto');
-  if (!Object.keys(variante).length && !Object.keys(producto).length) { toast('Sin cambios'); return; }
+  // Las fotos que todavía se están subiendo se terminan de guardar solas, aunque se cierre la ficha
+  const fotosEnCurso = _fotosPendientes();
+  if (!Object.keys(variante).length && !Object.keys(producto).length) {
+    toast(fotosEnCurso ? 'Guardando las fotos… no cierres el CRM hasta que terminen' : 'Sin cambios');
+    return;
+  }
 
   // Se ve el cambio enseguida en la lista
   const antesP = { color: p.color, talle: p.talle, sku: p.sku, precio: p.precio, descuento: p.descuento, stock: p.stock };
@@ -845,10 +850,12 @@ async function guardarProducto() {
   Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, precio, descuento, stock: f.stock });
   vars.forEach(v => Object.assign(v, { nombre: f.nombre || v.nombre, descripcion: f.descripcion, destacado: f.destacado }));
   filtrarProductos(true);
-  toast('Guardando…');
+  toast(fotosEnCurso ? 'Guardando… (las fotos se terminan de subir solas)' : 'Guardando…');
 
   try {
-    await _guardarCambiosProducto(p, vars, variante, producto);
+    // Si cambia el nombre, se espera a que terminen las fotos (se suben con el nombre de antes)
+    if (producto.producto && fotosEnCurso) await _enColaFotos(() => _guardarCambiosProducto(p, vars, variante, producto));
+    else await _guardarCambiosProducto(p, vars, variante, producto);
     lsGuardar('productos', _productos);
     toast('Producto guardado ✓');
   } catch (e) {
@@ -904,6 +911,9 @@ function _enColaFotos(fn) {
   _colaFotos = r.catch(() => {});
   return r;
 }
+function _fotosPendientes() { return _opsFotos + Object.values(_subidas).reduce((a, b) => a + b, 0); }
+// Cerrar o recargar el CRM con fotos subiéndose las perdería: el navegador pregunta antes
+window.addEventListener('beforeunload', e => { if (_fotosPendientes() > 0) { e.preventDefault(); e.returnValue = ''; } });
 function _claveGal(p) { return (p._sheet || p.categoria) + '|' + String(p.nombre || '').trim(); }
 function _claveSub(p, enVariante) { return enVariante ? 'v:' + p._row : 'p:' + _claveGal(p); }
 function _galeriaDe(p) { return (_galerias[_claveGal(p)] || []).slice(); }
@@ -1481,6 +1491,7 @@ async function subirFoto(input) {
   if (_ghOk === false) { toast('Falta configurar GH_TOKEN para subir fotos', 'err'); return; }
   const enVariante = _modoFicha === 'variante';
   const clave = _claveSub(p, enVariante);
+  const categoria = p._sheet || p.categoria, nombre = p.nombre;   // los de este momento, aunque después se renombre
   // Cada foto aparece enseguida como "Subiendo…"; mientras tanto se pueden quitar u ordenar otras
   _subidas[clave] = (_subidas[clave] || 0) + files.length; _repintarFotos(p);
   let ok = 0;
@@ -1489,13 +1500,13 @@ async function subirFoto(input) {
       const data = await _prepararFoto(file);
       await _enColaFotos(async () => {
         if (enVariante) {
-          const r = await crmEnviar({ action: 'variante_foto_subir', sheet: p._sheet || p.categoria, row: String(p._row), color: p.color || p.talle || '', data });
+          const r = await crmEnviar({ action: 'variante_foto_subir', sheet: categoria, row: String(p._row), color: p.color || p.talle || '', data });
           if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
           p.imagenes = r.fotos || _fotosVarDe(p).concat(r.url); p.imagen = p.imagenes[0] || '';
           lsGuardar('productos', _productos); filtrarProductos(true);
           return;
         }
-        const r = await crmEnviar({ action: 'producto_foto_subir', categoria: p._sheet || p.categoria, nombre: p.nombre, data });
+        const r = await crmEnviar({ action: 'producto_foto_subir', categoria, nombre, data });
         if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
         _ponerGaleria(p, r.fotos || _galeriaDe(p).concat(r.url));
         _fijarFotoPrincipal(p, _galeriaDe(p)[0]);

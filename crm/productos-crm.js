@@ -72,6 +72,24 @@ async function _completarFotosProducto() {
   } catch (e) { /* sin conexión: quedan las fotos de las variantes */ }
 }
 
+// Interruptor de stock (tipo iPhone): verde con la bolita a la derecha = con stock
+function _switchStock(on) {
+  return `<span class="sw-stock${on ? ' on' : ''}" role="switch" tabindex="0" aria-checked="${on ? 'true' : 'false'}" aria-label="${on ? 'Con stock' : 'Sin stock'}"><span class="sw-bola"></span></span>`;
+}
+// Cambia el interruptor que ya está en pantalla (así la bolita se desliza)
+function _ponerSwitch(cont, on) {
+  const sw = cont && cont.querySelector('.sw-stock');
+  if (!sw) { if (cont) cont.innerHTML = _switchStock(on); return; }
+  sw.classList.toggle('on', !!on);
+  sw.setAttribute('aria-checked', on ? 'true' : 'false');
+  sw.setAttribute('aria-label', on ? 'Con stock' : 'Sin stock');
+}
+// El interruptor también se usa con el teclado (Espacio o Enter)
+document.addEventListener('keydown', e => {
+  const sw = e.target && e.target.closest && e.target.closest('.sw-stock');
+  if (sw && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); (sw.closest('.td-stock, .pvar-stock') || sw).click(); }
+});
+
 function prodThumb(src, size) {
   const s = size || 44;
   return src
@@ -576,9 +594,7 @@ function buildProdRow(p, esVariante) {
   const talle = String(p.talle || '').trim();
   let pVal = precioN, sVal = p.stock ? 1 : 0;
 
-  const renderStock = v => (v
-    ? '<span class="badge badge-conf">Con stock</span>'
-    : '<span class="badge badge-cancel">Sin stock</span>') + '<i class="fa-solid fa-pen edit-hint"></i>';
+  const renderStock = v => _switchStock(v);
   const sub = esVariante ? talle : (p.subcategoria || (_prodCatFil === 'Todos' ? p.categoria : ''));
   const variante = [talle, colorMarca].filter(Boolean).join(' · ') || 'Único';
 
@@ -597,7 +613,7 @@ function buildProdRow(p, esVariante) {
     <td class="td-editable td-sku">${renderSku(p.sku)}</td>
     <td><span class="pill-var">${escHtml(variante)}</span></td>
     <td class="td-editable td-precio"><strong>${fmtPrecioSheet(p.precio)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
-    <td class="td-toggle td-stock" title="Tocá para cambiar">${renderStock(sVal)}</td>
+    <td class="td-toggle td-stock" title="Tocá para cambiar el stock">${renderStock(sVal)}</td>
     ${celdaAcciones()}`;
 
   tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
@@ -607,10 +623,10 @@ function buildProdRow(p, esVariante) {
   tr.querySelector('.td-sku').addEventListener('click', function() { editarCeldaSku(this, p); });
   tr.querySelector('.td-stock').addEventListener('click', function() {
     sVal = sVal ? 0 : 1; p.stock = !!sVal;
-    this.innerHTML = renderStock(sVal);
+    _ponerSwitch(this, sVal);
     actualizarCampo(p, 'stock', !!sVal)
       .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); })
-      .catch(() => { sVal = sVal ? 0 : 1; p.stock = !!sVal; this.innerHTML = renderStock(sVal); toast('Error al guardar stock', 'err'); });
+      .catch(() => { sVal = sVal ? 0 : 1; p.stock = !!sVal; _ponerSwitch(this, sVal); toast('Error al guardar stock', 'err'); });
   });
   tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
   const mas = tr.querySelector('.btn-mas');
@@ -1442,7 +1458,7 @@ function buildProdCard(g) {
       fila.innerHTML = `
         ${prodThumb(v.imagen, 40)}
         <div class="pvar-info"><b>${escHtml(String(v.color || v.talle || '—'))}</b><span>${fmtPrecioSheet(v.precio)}</span></div>
-        <button type="button" class="pvar-btn pvar-stock ${v.stock ? 'on' : ''}" title="Stock">${v.stock ? 'Con stock' : 'Sin stock'}</button>
+        <button type="button" class="pvar-btn pvar-stock ${v.stock ? 'on' : ''}" title="Tocá para cambiar el stock" aria-label="Stock">${_switchStock(v.stock)}</button>
         <button type="button" class="pvar-btn" data-a="editar" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button type="button" class="pvar-btn pvar-del" data-a="eliminar" title="Eliminar esta variante"><i class="fa-solid fa-trash"></i></button>`;
       fila.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(v, 'variante'));
@@ -1474,7 +1490,7 @@ function buildProdCard(g) {
 function cambiarStockTarjeta(p, boton) {
   const nuevo = !p.stock;
   p.stock = nuevo;
-  if (boton) { boton.classList.toggle('on', nuevo); boton.textContent = nuevo ? 'Con stock' : 'Sin stock'; }
+  if (boton) { boton.classList.toggle('on', nuevo); _ponerSwitch(boton, nuevo); }
   actualizarCampo(p, 'stock', nuevo)
     .then(r => {
       if (r && r.ok === false) throw new Error(r.error);
@@ -1484,7 +1500,7 @@ function cambiarStockTarjeta(p, boton) {
     })
     .catch(() => {
       p.stock = !nuevo;
-      if (boton) { boton.classList.toggle('on', !nuevo); boton.textContent = !nuevo ? 'Con stock' : 'Sin stock'; }
+      if (boton) { boton.classList.toggle('on', !nuevo); _ponerSwitch(boton, !nuevo); }
       toast('No se pudo cambiar el stock', 'err');
     });
 }

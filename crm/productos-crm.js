@@ -346,7 +346,8 @@ function celdaAcciones() {
 function _estrella(p) { return p.destacado ? '<i class="fa-solid fa-star dest-star" title="Destacado" aria-label="Destacado"></i>' : ''; }
 
 function renderProductos(list) {
-  const el = $('prod-table'), pag = $('prod-pag');
+  const el = $('prod-table');
+  const pag = { set innerHTML(h) { ['prod-pag', 'prod-pag-arriba'].forEach(id => { if ($(id)) $(id).innerHTML = h; }); } };
   _prodLista = list;
   cerrarMenuAcciones();
   if (!list.length) {
@@ -440,8 +441,11 @@ function buildGrupoRow(g, hijos) {
   return tr;
 }
 
+// Los botones de páginas van abajo y también arriba de la lista
 function pintarPaginacion(total, desde, n, paginas) {
-  const el = $('prod-pag');
+  ['prod-pag', 'prod-pag-arriba'].forEach(id => _pintarPaginacionEn($(id), total, desde, n, paginas));
+}
+function _pintarPaginacionEn(el, total, desde, n, paginas) {
   if (!el) return;
   const nums = [];
   if (paginas <= 7) for (let i = 1; i <= paginas; i++) nums.push(i);

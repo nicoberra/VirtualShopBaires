@@ -3522,45 +3522,6 @@ body { background: #f4f5f7; }
 }
 .header-search-form input::placeholder { color: #6b7280; }
 
-/* ---------- Portada: hero legible ---------- */
-@media (min-width: 481px) {
-  .hero-video-bg {
-    display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); align-items: center;
-    gap: 48px; min-height: 0; padding: 56px max(24px, calc((100vw - 1200px) / 2)) 64px;
-    background: #fff; border-bottom: 1px solid var(--line);
-  }
-  .hero-video-overlay { display: none; }
-  .hero-video-bg > .container { grid-column: 1; grid-row: 1; padding: 0; justify-content: flex-start; }
-  .hero-video-bg .hero-split-inner { justify-content: flex-start; }
-  .hero-video-bg .hero-text-col { text-align: left; align-items: flex-start; max-width: 560px; }
-  .hero-video-bg .hero-slogan, .hero-video-bg .hero-subtitle, .hero-video-bg .hero-eyebrow, .hero-video-bg .hero-trust { text-align: left; }
-  .hero-video-bg .hero-slogan { color: var(--ink); text-shadow: none; font-size: clamp(2rem, 3.4vw, 3rem); line-height: 1.08; letter-spacing: -.02em; text-wrap: balance; }
-  .hero-video-bg .hero-slogan .highlight { color: var(--red); }
-  .hero-video-bg .hero-slogan .kw-line { color: var(--ink-3); }
-  .hero-video-bg .hero-subtitle { color: var(--ink-2); text-shadow: none; max-width: 46ch; }
-  .hero-video-bg .hero-buttons { justify-content: flex-start; }
-  .hero-badges { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
-  .hero-badge-off { box-shadow: none; font-size: .78rem; letter-spacing: .06em; padding: 7px 14px; }
-  .hero-badge-direct { background: #f3f4f6; color: var(--ink-2); border-color: var(--line); backdrop-filter: none; letter-spacing: .06em; padding: 6px 12px; }
-
-  /* Dos celulares a la derecha, con borde fino */
-  .hero-video-grid {
-    position: relative; inset: auto; grid-column: 2; grid-row: 1;
-    grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; padding: 0; height: clamp(380px, 38vw, 500px);
-  }
-  .hero-phone-frame:nth-child(n+3) { display: none; }
-  .hero-phone-frame, .hero-phone-frame:nth-child(1), .hero-phone-frame:nth-child(4) {
-    opacity: 1; transform: none; max-width: 230px; border: 0; border-radius: 30px;
-    box-shadow: 0 0 0 1px rgba(17, 24, 39, .14), 0 18px 40px rgba(17, 24, 39, .16);
-  }
-  .hero-phone-frame:nth-child(2) { transform: translateY(28px); }
-  .hero-phone-frame::before { width: 56px; height: 16px; top: 10px; }
-}
-@media (min-width: 481px) and (max-width: 860px) {
-  .hero-video-bg { grid-template-columns: 1fr; gap: 28px; padding-top: 36px; }
-  .hero-video-grid { grid-column: 1; grid-row: 2; height: 340px; max-width: 460px; margin: 0 auto; width: 100%; }
-}
-
 /* Botones principales: verde oscuro legible para WhatsApp */
 .btn-wa { background: var(--verde-compra); }
 .btn-wa:hover { background: var(--verde-compra-hover); }

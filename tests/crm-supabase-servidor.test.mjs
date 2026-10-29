@@ -191,6 +191,31 @@ const PROPS = { FUENTE_PRODUCTOS: "supabase", SUPABASE_SECRET: "sb_secret_test",
   ok("foto de categoría (carrusel de la portada): solo con la clave del CRM, se sube al repo y se puede quitar");
 }
 {
+  const { pedir, db } = cargar({ FUENTE_PRODUCTOS: "supabase", SUPABASE_SECRET: "sb_secret_x" });
+  const v10 = () => db.variantes.find(v => v.id === 10);
+  assert.equal(pedir({ action: "ext_producto_update", row: "v10", campo: "cantidad", valor: "12" }).ok, true);
+  assert.equal(v10().stock_cantidad, 12); assert.equal(v10().stock, true);
+  assert.equal(pedir({ action: "ext_productos_list" }).rows.find(x => x._row === "v10").cantidad, 12);
+  ok("cantidad de stock: se guarda el número y la variante queda con stock");
+  pedir({ action: "ext_producto_update", row: "v10", campo: "cantidad", valor: "0" });
+  assert.equal(v10().stock_cantidad, 0); assert.equal(v10().stock, false);
+  ok("cantidad 0 = sin stock");
+  pedir({ action: "ext_producto_update", row: "v10", campo: "stock", valor: "true" });
+  assert.equal(v10().stock, true); assert.equal(v10().stock_cantidad, null);
+  pedir({ action: "ext_producto_update", row: "v10", campo: "cantidad", valor: "5" });
+  pedir({ action: "ext_producto_update", row: "v10", campo: "stock", valor: "false" });
+  assert.equal(v10().stock, false); assert.equal(v10().stock_cantidad, 0);
+  ok("apagar el stock deja 0 unidades; prenderlo sin número borra el 0 viejo");
+  assert.equal(pedir({ action: "ext_producto_guardar", row: "v10", variante: JSON.stringify({ cantidad: 7, precio: 31000 }), producto: "{}" }).ok, true);
+  assert.equal(v10().stock_cantidad, 7); assert.equal(v10().stock, true); assert.equal(Number(v10().precio), 31000);
+  assert.equal(pedir({ action: "ext_producto_guardar", row: "v10", variante: JSON.stringify({ cantidad: "" }), producto: "{}" }).ok, true);
+  assert.equal(v10().stock_cantidad, null); assert.equal(v10().stock, true);
+  assert.equal(pedir({ action: "ext_producto_update", row: "v10", campo: "cantidad", valor: "-3" }).ok, false);
+  assert.equal(pedir({ action: "ext_producto_update", row: "v10", campo: "cantidad", valor: "abc" }).ok, false);
+  assert.equal(pedir({ action: "ext_producto_update", row: "v10", campo: "cantidad", valor: "4", token: "MALO" }).error, "auth");
+  ok("ficha: cantidad junto con otros cambios; vacío = sin contar; rechaza negativos, texto y sin clave");
+}
+{
   const { pedir } = cargar({ FUENTE_PRODUCTOS: "supabase" });
   const r = pedir({ action: "ext_productos_list" });
   assert.equal(r.ok, false); assert.match(r.error, /SUPABASE_SECRET/);

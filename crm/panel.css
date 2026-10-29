@@ -1620,3 +1620,17 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 
 /* ── Páginas también arriba de la lista ── */
 .prod-pag-arriba { padding: 4px 4px 14px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+
+/* ── Cantidad de stock: casillero con las unidades al lado del interruptor ── */
+.stock-ctl { display: inline-flex; align-items: center; gap: 10px; }
+.stock-cant {
+  width: 66px; height: 34px; padding: 0 6px; border: 1px solid var(--border); border-radius: 10px; background: #fff;
+  font: inherit; font-weight: 700; font-size: .92rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--text);
+  -moz-appearance: textfield; appearance: textfield; transition: border-color .15s, box-shadow .15s;
+}
+.stock-cant::-webkit-outer-spin-button, .stock-cant::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.stock-cant::placeholder { color: #a3a9b6; font-weight: 600; }
+.stock-cant:hover { border-color: #b9c0cf; }
+.stock-cant:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
+.stock-cant-ficha { width: 100%; max-width: 180px; height: 44px; margin-bottom: 8px; font-size: 1.05rem; }
+.pvar .stock-cant { width: 58px; height: 32px; flex-shrink: 0; }

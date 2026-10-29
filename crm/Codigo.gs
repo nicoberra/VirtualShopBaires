@@ -170,7 +170,7 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v20-papelera-fotos' };
+    else if (accion === 'version')              out = { ok:true, version: 'v21-stock-cantidad' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1621,21 +1621,38 @@ function _sbImagenesSet(categoria, nombre, urls) {
   _sbR(_sb('patch', 'productos?categoria=eq.' + encodeURIComponent(categoria) + '&nombre=eq.' + encodeURIComponent(nombre),
     { imagenes: urls }, 'return=minimal'), 'Fotos');
 }
-var _SB_CAMPOS_VARIANTE = { precio:'precio', descuento:'precio_descuento', stock:'stock', color:'color', marca:'color',
+var _SB_CAMPOS_VARIANTE = { precio:'precio', descuento:'precio_descuento', stock:'stock', cantidad:'stock_cantidad', stock_cantidad:'stock_cantidad', color:'color', marca:'color',
   'talle/medida':'talle', talle:'talle', sku_costo:'sku_costo', sku:'sku_costo', imagen_url:'imagen_url' };
 var _SB_CAMPOS_PRODUCTO = { descripcion:'descripcion', destacado:'destacado', producto:'nombre', nombre:'nombre', subcategoria:'subcategoria' };
 
 function _sbValorCampo(campo, valor) {
   if (campo === 'stock' || campo === 'destacado') return esVerdadero(valor);
+  if (campo === 'cantidad' || campo === 'stock_cantidad') {   // unidades en stock; vacío = sin contar
+    if (valor === undefined || valor === null || String(valor).trim() === '') return null;
+    var n = Math.floor(Number(String(valor).replace(',', '.')));
+    if (!isFinite(n) || n < 0) throw 'La cantidad de stock tiene que ser un número de 0 en adelante';
+    return Math.min(n, 1000000);
+  }
   if (campo === 'precio') return _numPrecio(valor) || 0;
   if (campo === 'descuento') { valor = _numPrecio(valor); return valor > 0 ? valor : null; }
   return String(valor === undefined || valor === null ? '' : valor).trim();
 }
 
+// Stock y cantidad siempre de acuerdo: con unidades = con stock; 0 = sin stock.
+// Apagar el stock deja la cantidad en 0; prenderlo sin número borra un 0 viejo (queda "sin contar").
+function _sbStockCoherente(cv, vid) {
+  if (cv.stock_cantidad !== undefined && cv.stock_cantidad !== null) cv.stock = cv.stock_cantidad > 0;
+  else if (cv.stock === false && cv.stock_cantidad === undefined) cv.stock_cantidad = 0;
+  return function() {
+    if (cv.stock === true && cv.stock_cantidad === undefined)
+      _sbR(_sb('patch', 'variantes?id=eq.' + vid + '&stock_cantidad=eq.0', { stock_cantidad: null }, 'return=minimal'), 'Guardar');
+  };
+}
+
 var SBP = {
   ext_productos_list: function() {
     var sel = 'id,categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,' +
-              'variantes(id,color,talle,precio,precio_descuento,stock,sku_costo,imagen_url,imagenes,orden)';
+              'variantes(id,color,talle,precio,precio_descuento,stock,stock_cantidad,sku_costo,imagen_url,imagenes,orden)';
     var prods = [];
     for (var desde = 0; ; desde += 1000) {   // Supabase entrega hasta 1000 por pedido
       var pag = _sbR(_sb('get', 'productos?select=' + encodeURIComponent(sel) + '&order=orden,id&offset=' + desde + '&limit=1000'), 'Productos');
@@ -1646,7 +1663,7 @@ var SBP = {
     prods.forEach(function(p) {
       (p.variantes || []).sort(function(a, b) { return a.orden - b.orden || a.id - b.id; }).forEach(function(v) {
         filas.push({ _sheet: p.categoria, _row: 'v' + v.id, categoria: p.categoria, nombre: p.nombre,
-          precio: Number(v.precio), stock: !!v.stock, color: v.color || '', marca: '', talle: v.talle || '',
+          precio: Number(v.precio), stock: !!v.stock, cantidad: (v.stock_cantidad === null || v.stock_cantidad === undefined) ? '' : Number(v.stock_cantidad), color: v.color || '', marca: '', talle: v.talle || '',
           descripcion: p.descripcion || '', destacado: !!p.destacado,
           descuento: v.precio_descuento === null ? '' : Number(v.precio_descuento),
           subcategoria: p.subcategoria || '', sku: v.sku_costo || '', imagen: v.imagen_url || (p.imagenes || [])[0] || '',
@@ -1704,7 +1721,8 @@ var SBP = {
       if (_SB_CAMPOS_PRODUCTO[campo2] === 'nombre' && !val2) throw 'El nombre no puede quedar vacío';
       cp[_SB_CAMPOS_PRODUCTO[campo2]] = val2;
     }
-    if (Object.keys(cv).length) _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cv, 'return=minimal'), 'Guardar');
+    var despues = _sbStockCoherente(cv, v.id);
+    if (Object.keys(cv).length) { _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cv, 'return=minimal'), 'Guardar'); despues(); }
     if (Object.keys(cp).length) _sbR(_sb('patch', 'productos?id=eq.' + v.producto_id, cp, 'return=minimal'), 'Guardar');
     return { ok: true };
   },
@@ -1719,7 +1737,8 @@ var SBP = {
         if (valor) { if (lista.length) lista[0] = valor; else lista = [valor]; } else lista = [];
         cuerpo.imagenes = lista;
       }
-      _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cuerpo, 'return=minimal'), 'Guardar');
+      var luego = _sbStockCoherente(cuerpo, v.id);
+      _sbR(_sb('patch', 'variantes?id=eq.' + v.id, cuerpo, 'return=minimal'), 'Guardar'); luego();
     } else if (_SB_CAMPOS_PRODUCTO[campo]) {
       if (_SB_CAMPOS_PRODUCTO[campo] === 'nombre' && !valor) throw 'El nombre no puede quedar vacío';
       cuerpo[_SB_CAMPOS_PRODUCTO[campo]] = valor;
@@ -1733,7 +1752,8 @@ var SBP = {
     if (!categoria || !nombre) return { ok: false, error: 'Faltan categoría o nombre' };
     var nuevo = _sbR(_sb('post', 'productos?select=id', { categoria: categoria, nombre: nombre, orden: 999999 }, 'return=representation'), 'Agregar producto')[0];
     _sbR(_sb('post', 'variantes', { producto_id: nuevo.id, color: String(p.marca || p.color || '').trim(),
-      precio: _numPrecio(p.precio) || 0, stock: (_numPrecio(p.stock) || 0) > 0 || esVerdadero(p.stock) }, 'return=minimal'), 'Agregar producto');
+      precio: _numPrecio(p.precio) || 0, stock: (_numPrecio(p.stock) || 0) > 0 || esVerdadero(p.stock),
+      stock_cantidad: /^\d+$/.test(String(p.stock || '').trim()) ? Number(p.stock) : null }, 'return=minimal'), 'Agregar producto');
     return { ok: true, id: nuevo.id };
   },
 

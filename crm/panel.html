@@ -344,8 +344,8 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Stock</label>
-            <input type="hidden" id="mprod-stock-num" value="0">
+            <label for="mprod-stock-num">Stock (unidades)</label>
+            <input type="number" id="mprod-stock-num" class="stock-cant stock-cant-ficha" min="0" step="1" inputmode="numeric" placeholder="Unidades" aria-label="Unidades en stock">
             <div class="seg seg-grande" role="group" aria-label="Stock">
               <button type="button" class="seg-btn" data-stock-m="1"><i class="fa-solid fa-circle-check"></i> Con stock</button>
               <button type="button" class="seg-btn" data-stock-m="0"><i class="fa-solid fa-circle-minus"></i> Sin stock</button>
@@ -483,7 +483,7 @@
 
 <script src="estados.js?v=1"></script>
 <script src="panel.js?v=21"></script>
-<script src="productos-crm.js?v=25"></script>
+<script src="productos-crm.js?v=26"></script>
 <script src="nav-movil.js?v=1"></script>
 <script src="login-glass.js?v=3"></script>
 <script src="confianza.js?v=2"></script>

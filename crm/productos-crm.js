@@ -72,6 +72,55 @@ async function _completarFotosProducto() {
   } catch (e) { /* sin conexión: quedan las fotos de las variantes */ }
 }
 
+// ─── CANTIDAD DE STOCK: unidades de cada variante ('' = sin contar) ───
+function _leerCantidad(v) {
+  const t = String(v == null ? '' : v).trim();
+  if (t === '') return '';
+  const n = Math.floor(Number(t));
+  return isFinite(n) && n >= 0 ? n : '';
+}
+function _valCantidad(p) { return p.cantidad === '' || p.cantidad == null ? '' : Number(p.cantidad); }
+// Suma de unidades de las variantes que tienen número cargado (para los resúmenes)
+function _totalUnidadesTxt(g) {
+  const con = g.filter(v => _valCantidad(v) !== '');
+  if (!con.length) return '';
+  const t = con.reduce((a, v) => a + _valCantidad(v), 0);
+  return ` · ${t} u.`;
+}
+function _unidadesTxt(p) { const c = _valCantidad(p); return c === '' ? '' : ` · ${c} ${c === 1 ? 'unidad' : 'unidades'}`; }
+// Igual que el servidor: apagar deja 0 unidades; prender borra un 0 viejo
+function _stockLocal(p, con) {
+  p.stock = con;
+  if (!con && _valCantidad(p) !== '') p.cantidad = 0;
+  if (con && _valCantidad(p) === 0) p.cantidad = '';
+}
+function _inputCantidad(p) {
+  return `<input type="number" class="stock-cant" min="0" step="1" inputmode="numeric" placeholder="—" value="${_valCantidad(p)}" aria-label="Unidades en stock de ${escHtml(p.color || p.talle || p.nombre || 'la variante')}" title="Unidades en stock">`;
+}
+function _activarCantidad(inp, p, pintar) {
+  if (!inp) return;
+  inp.addEventListener('click', e => e.stopPropagation());
+  inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = _valCantidad(p); inp.blur(); } });
+  inp.addEventListener('change', async () => {
+    const n = _leerCantidad(inp.value);
+    if (inp.value.trim() !== '' && n === '') { toast('Poné un número de 0 en adelante', 'err'); inp.value = _valCantidad(p); return; }
+    if (n === _valCantidad(p)) { inp.value = n; return; }
+    const antes = { stock: p.stock, cantidad: p.cantidad };
+    p.cantidad = n; if (n !== '') p.stock = n > 0;
+    pintar();
+    try {
+      const r = await actualizarCampo(p, 'cantidad', n);
+      if (r && r.ok === false) throw new Error(/Campo no encontrado/.test(r.error || '') ? 'falta implementar la versión nueva del servidor' : r.error);
+      lsGuardar('productos', _productos);
+      toast(n === '' ? 'Cantidad borrada ✓' : `Stock: ${n} ${n === 1 ? 'unidad' : 'unidades'} ✓`);
+      filtrarProductos(true);   // los resúmenes ("· 7 u.") y el filtro de stock quedan al día
+    } catch (e) {
+      Object.assign(p, antes); pintar();
+      if (e.message !== 'auth') toast('No se guardó la cantidad: ' + e.message, 'err');
+    }
+  });
+}
+
 // Interruptor de stock (tipo iPhone): verde con la bolita a la derecha = con stock
 function _switchStock(on) {
   return `<span class="sw-stock${on ? ' on' : ''}" role="switch" tabindex="0" aria-checked="${on ? 'true' : 'false'}" aria-label="${on ? 'Con stock' : 'Sin stock'}"><span class="sw-bola"></span></span>`;
@@ -401,7 +450,7 @@ function buildGrupoRow(g, hijos) {
   const skus = [...new Set(g.map(v => String(v.sku || '').trim()).filter(Boolean))];
   const conStock = g.filter(v => v.stock).length;
   const opciones = [...new Set(g.map(v => [v.talle, v.color || v.marca].map(x => String(x || '').trim()).filter(Boolean).join(' ')).filter(Boolean))];
-  const stockTxt = conStock === g.length ? 'Con stock' : conStock ? `${conStock} de ${g.length} con stock` : 'Sin stock';
+  const stockTxt = (conStock === g.length ? 'Con stock' : conStock ? `${conStock} de ${g.length} con stock` : 'Sin stock') + _totalUnidadesTxt(g);
   const stockCls = conStock === g.length ? 'badge-conf' : conStock ? 'badge-pend' : 'badge-cancel';
   const tr = document.createElement('tr');
   tr.className = 'prod-group-row';
@@ -617,7 +666,7 @@ function buildProdRow(p, esVariante) {
     <td class="td-editable td-sku">${renderSku(p.sku)}</td>
     <td><span class="pill-var">${escHtml(variante)}</span></td>
     <td class="td-editable td-precio"><strong>${fmtPrecioSheet(p.precio)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
-    <td class="td-toggle td-stock" title="Tocá para cambiar el stock">${renderStock(sVal)}</td>
+    <td class="td-toggle td-stock" title="Tocá el interruptor o escribí cuántas unidades hay"><div class="stock-ctl">${renderStock(sVal)}${_inputCantidad(p)}</div></td>
     ${celdaAcciones()}`;
 
   tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
@@ -625,13 +674,17 @@ function buildProdRow(p, esVariante) {
     editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; }, '$');
   });
   tr.querySelector('.td-sku').addEventListener('click', function() { editarCeldaSku(this, p); });
-  tr.querySelector('.td-stock').addEventListener('click', function() {
-    sVal = sVal ? 0 : 1; p.stock = !!sVal;
-    _ponerSwitch(this, sVal);
-    actualizarCampo(p, 'stock', !!sVal)
+  const tdStock = tr.querySelector('.td-stock'), inpCant = tdStock.querySelector('.stock-cant');
+  const pintarStock = () => { sVal = p.stock ? 1 : 0; _ponerSwitch(tdStock.querySelector('.stock-ctl'), sVal); inpCant.value = _valCantidad(p); };
+  tdStock.addEventListener('click', function(e) {
+    if (e.target.closest('.stock-cant')) return;   // escribir el número no cambia el interruptor
+    const antes = { stock: p.stock, cantidad: p.cantidad };
+    _stockLocal(p, !p.stock); pintarStock();
+    actualizarCampo(p, 'stock', p.stock)
       .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); })
-      .catch(() => { sVal = sVal ? 0 : 1; p.stock = !!sVal; _ponerSwitch(this, sVal); toast('Error al guardar stock', 'err'); });
+      .catch(() => { Object.assign(p, antes); pintarStock(); toast('Error al guardar stock', 'err'); });
   });
+  _activarCantidad(inpCant, p, pintarStock);
   tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
   const mas = tr.querySelector('.btn-mas');
   mas.addEventListener('click', () => abrirMenuAcciones(mas, [
@@ -734,7 +787,7 @@ function editarProducto(p, modo) {
   const conRebaja = desc > 0 && desc < base;
   $('mprod-precio').value      = conRebaja ? desc : base;
   $('mprod-descuento').value   = conRebaja ? base : '';
-  setStockModal(!!p.stock);
+  setStockModal(!!p.stock, p.cantidad);
   $('mprod-destacado').checked = !!p.destacado;
   $('mprod-destacado').closest('.dest-tile').classList.toggle('on', !!p.destacado);
 
@@ -762,7 +815,7 @@ function editarProducto(p, modo) {
   if (_modoFicha === 'producto') {
     info.innerHTML = `<label>Variantes (${vars.length})</label>
        <div class="mprod-var-list mprod-var-edit">${vars.map((v, j) => `
-         <div class="mprod-var">${prodThumb(v.imagen, 36)}<span class="mv-txt"><b>${escHtml(v.color || v.talle || '—')}</b> · ${fmtPrecioSheet(v.precio)} · ${v.stock ? 'Con stock' : 'Sin stock'}</span>
+         <div class="mprod-var">${prodThumb(v.imagen, 36)}<span class="mv-txt"><b>${escHtml(v.color || v.talle || '—')}</b> · ${fmtPrecioSheet(v.precio)} · ${v.stock ? 'Con stock' : 'Sin stock'}${_unidadesTxt(v)}</span>
            <button type="button" class="fv-btn" data-j="${j}"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar variante</button></div>`).join('')}
        </div>
        <p class="text-muted" style="font-size:.75rem;margin-top:6px">Precio, stock, SKU y foto se cambian en cada variante.</p>`;
@@ -812,7 +865,8 @@ function _leerFormProd() {
     sku:         $('mprod-sku') ? $('mprod-sku').value.trim() : '',
     actual:      Number($('mprod-precio').value) || 0,
     anterior:    Number($('mprod-descuento').value) || 0,
-    stock:       (Number($('mprod-stock-num').value) || 0) > 0,
+    cantidad:    _leerCantidad($('mprod-stock-num').value),
+    stock:       !!document.querySelector('#modal-producto [data-stock-m="1"].on'),
     destacado:   $('mprod-destacado').checked,
   };
 }
@@ -836,6 +890,7 @@ async function guardarProducto() {
   if (f.sku !== ini.sku) variante.sku_costo = f.sku;
   if (f.actual !== ini.actual || f.anterior !== ini.anterior) { variante.precio = precio; variante.descuento = descuento; }
   if (f.stock !== ini.stock) variante.stock = f.stock;
+  if (f.cantidad !== ini.cantidad) variante.cantidad = f.cantidad;
   if (f.nombre && f.nombre !== ini.nombre) producto.producto = f.nombre;
   if (f.descripcion !== ini.descripcion) producto.descripcion = f.descripcion;
   if (f.destacado !== ini.destacado) producto.destacado = f.destacado;
@@ -849,9 +904,9 @@ async function guardarProducto() {
   }
 
   // Se ve el cambio enseguida en la lista
-  const antesP = { color: p.color, talle: p.talle, sku: p.sku, precio: p.precio, descuento: p.descuento, stock: p.stock };
+  const antesP = { color: p.color, talle: p.talle, sku: p.sku, precio: p.precio, descuento: p.descuento, stock: p.stock, cantidad: p.cantidad };
   const antesV = vars.map(v => ({ v, nombre: v.nombre, descripcion: v.descripcion, destacado: v.destacado }));
-  Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, precio, descuento, stock: f.stock });
+  Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, precio, descuento, stock: f.stock, cantidad: f.cantidad });
   vars.forEach(v => Object.assign(v, { nombre: f.nombre || v.nombre, descripcion: f.descripcion, destacado: f.destacado }));
   filtrarProductos(true);
   toast(fotosEnCurso ? 'Guardando… (las fotos se terminan de subir solas)' : 'Guardando…');
@@ -884,17 +939,25 @@ async function _guardarCambiosProducto(p, vars, variante, producto) {
 }
 
 // Stock y destacado de la ficha
-function setStockModal(con) {
-  $('mprod-stock-num').value = con ? 1 : 0;
+// "cant": unidades en stock ('' = sin contar). Los botones y el número siempre van de acuerdo.
+function setStockModal(con, cant) {
+  const inp = $('mprod-stock-num');
+  if (cant !== undefined) inp.value = cant === '' || cant == null ? '' : Number(cant);
+  else if (!con) inp.value = 0;
+  else if (inp.value === '0') inp.value = '';
+  _pintarBotonesStock(con);
+}
+function _pintarBotonesStock(con) {
   document.querySelectorAll('[data-stock-m]').forEach(b => {
     const on = (b.dataset.stockM === '1') === con;
     b.classList.toggle('on', on);
     b.setAttribute('aria-pressed', String(on));
   });
 }
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-stock-m]');
-  if (b) setStockModal(b.dataset.stockM === '1');
+// Directo en los botones: la ficha frena los clics antes de que lleguen al documento
+document.querySelectorAll('[data-stock-m]').forEach(b => b.addEventListener('click', () => setStockModal(b.dataset.stockM === '1')));
+document.addEventListener('input', e => {
+  if (e.target.id === 'mprod-stock-num' && e.target.value !== '') _pintarBotonesStock(Number(e.target.value) > 0);
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'mprod-destacado') e.target.closest('.dest-tile').classList.toggle('on', e.target.checked);
@@ -1579,7 +1642,7 @@ function buildProdCard(g) {
         <div class="pcard-meta">
           <b>${min === max ? fmtPrecioSheet(min) : fmtPrecioSheet(min) + ' – ' + fmtPrecioSheet(max)}</b>
           ${varios ? `<span class="badge">${g.length} variantes</span>` : (String(p0.color || '').trim() ? `<span class="badge-color">${escHtml(p0.color)}</span>` : '')}
-          <span class="badge ${conStock ? 'badge-conf' : 'badge-cancel'}">${conStock ? (varios ? conStock + ' con stock' : 'Con stock') : 'Sin stock'}</span>
+          <span class="badge ${conStock ? 'badge-conf' : 'badge-cancel'}">${(conStock ? (varios ? conStock + ' con stock' : 'Con stock') : 'Sin stock') + _totalUnidadesTxt(g)}</span>
         </div>
       </div>
     </div>
@@ -1601,12 +1664,15 @@ function buildProdCard(g) {
         ${prodThumb(v.imagen, 40)}
         <div class="pvar-info"><b>${escHtml(String(v.color || v.talle || '—'))}</b><span>${fmtPrecioSheet(v.precio)}</span></div>
         <button type="button" class="pvar-btn pvar-stock ${v.stock ? 'on' : ''}" title="Tocá para cambiar el stock" aria-label="Stock">${_switchStock(v.stock)}</button>
+        ${_inputCantidad(v)}
         <button type="button" class="pvar-btn" data-a="editar" title="Editar"><i class="fa-solid fa-pen"></i></button>
         <button type="button" class="pvar-btn pvar-del" data-a="eliminar" title="Eliminar esta variante"><i class="fa-solid fa-trash"></i></button>`;
       fila.querySelector('[data-a="editar"]').addEventListener('click', () => editarProducto(v, 'variante'));
       fila.querySelector('[data-a="eliminar"]').addEventListener('click', () => eliminarProducto(v));
       const bs = fila.querySelector('.pvar-stock');
-      bs.addEventListener('click', () => cambiarStockTarjeta(v, bs));
+      const ic = fila.querySelector('.stock-cant');
+      bs.addEventListener('click', () => cambiarStockTarjeta(v, bs, ic));
+      _activarCantidad(ic, v, () => { bs.classList.toggle('on', !!v.stock); bs.innerHTML = _switchStock(v.stock); ic.value = _valCantidad(v); });
       vars.appendChild(fila);
     });
   };
@@ -1629,9 +1695,10 @@ function buildProdCard(g) {
   return card;
 }
 
-function cambiarStockTarjeta(p, boton) {
-  const nuevo = !p.stock;
-  p.stock = nuevo;
+function cambiarStockTarjeta(p, boton, inputCant) {
+  const nuevo = !p.stock, cantAntes = p.cantidad;
+  _stockLocal(p, nuevo);
+  if (inputCant) inputCant.value = _valCantidad(p);
   if (boton) { boton.classList.toggle('on', nuevo); _ponerSwitch(boton, nuevo); }
   actualizarCampo(p, 'stock', nuevo)
     .then(r => {
@@ -1641,7 +1708,8 @@ function cambiarStockTarjeta(p, boton) {
       if (!boton) filtrarProductos();
     })
     .catch(() => {
-      p.stock = !nuevo;
+      p.stock = !nuevo; p.cantidad = cantAntes;
+      if (inputCant) inputCant.value = _valCantidad(p);
       if (boton) { boton.classList.toggle('on', !nuevo); _ponerSwitch(boton, !nuevo); }
       toast('No se pudo cambiar el stock', 'err');
     });

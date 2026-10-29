@@ -152,6 +152,6 @@ console.log("Papelera de fotos");
   const s = cargar();
   assert.equal(s.pedir({ action: "fotos_papelera", token: "MALO", categoria: "Camping", nombre: "Silla" }).error, "auth");
   ok("ver la papelera pide la clave del CRM");
-  assert.equal(s.pedir({ action: "version" }).version, "v20-papelera-fotos"); ok("versión del servidor: v20-papelera-fotos");
+  assert.match(s.pedir({ action: "version" }).version, /^v\d+-/); ok("el servidor responde su versión");
 }
 console.log(`\n${n} pruebas OK`);

@@ -101,7 +101,7 @@ header {
   gap: 16px;
 }
 .logo { display: flex; justify-content: center; line-height: 0; position: relative; z-index: 101; align-self: flex-end; }
-.logo img { height: 82px; width: auto; display: block; }
+.logo img { height: 64px; width: auto; max-width: none; display: block; }
 
 /* Columna izquierda: hamburger + buscador */
 .header-left {
@@ -1689,7 +1689,7 @@ footer {
 }
 .footer-col ul li a:hover { color: var(--white); }
 .footer-col ul li { color: var(--gray-light); font-size: 0.84rem; }
-.footer-col .logo-footer { height: 64px; width: auto; margin-bottom: 14px; }
+.footer-col .logo-footer { height: 56px; width: auto; margin-bottom: 14px; }
 .social-links { display: flex; gap: 10px; margin-top: 14px; }
 .social-links a {
   width: 38px; height: 38px;
@@ -1777,7 +1777,7 @@ footer {
   .header-nav { display: none; }
   .hamburger { display: flex; flex-direction: column; }
   .header-inner { padding: 8px 0; gap: 6px; }
-  .logo img { height: 66px; }
+  .logo img { height: 36px; }
   .header-search-form { max-width: 160px; padding: 0 4px 0 10px; }
   .header-search-form input { font-size: 0.82rem; padding: 7px 0; }
   /* En móvil: solo carrito, ocultar todas las redes */
@@ -3626,3 +3626,45 @@ body { background: #f4f5f7; }
 .modal-desc .desc-tit { margin-top: 10px; font-weight: 700; color: var(--ink); }
 .modal-desc .desc-tit + ul { margin-top: 4px; }
 .modal-desc .desc-garantia { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: #f4f6fb; color: var(--accent); font-weight: 600; font-size: .84rem; }
+
+/* ── Portada: celulares más anchos y con marco de iPhone (compu y tablet; el celular queda igual) ── */
+@media (min-width: 481px) {
+  .hero-video-grid { padding: 40px 56px; gap: 28px; }
+  .hero-phone-frame {
+    height: auto; width: min(100%, 300px); max-width: none; aspect-ratio: 9 / 19;
+    overflow: visible; border-radius: 46px; border: 0; padding: 7px;
+    /* Marco de titanio: borde fino claro, cuerpo oscuro y vidrio negro alrededor de la pantalla */
+    background: linear-gradient(145deg, #3d3d42 0%, #17171a 45%, #2b2b30 100%);
+    box-shadow:
+      0 0 0 1.5px #9a9aa2,
+      0 0 0 3px #2a2a2e,
+      inset 0 0 0 1px rgba(255,255,255,.18),
+      0 30px 60px rgba(0,0,0,.45),
+      0 8px 20px rgba(0,0,0,.25);
+  }
+  .hero-phone-frame .hero-vid { border-radius: 39px; background: #000; }
+  .hero-phone-frame::before { top: 17px; width: 30%; height: 22px; border-radius: 14px; }
+  /* Botones del costado: silencio y volumen a la izquierda, encendido a la derecha */
+  .hero-phone-frame::after {
+    content: ""; position: absolute; inset: 0 -5px; z-index: -1; pointer-events: none;
+    background:
+      linear-gradient(90deg, #5c5c63, #2a2a2e) left 0 top 17% / 6px 4.5% no-repeat,
+      linear-gradient(90deg, #5c5c63, #2a2a2e) left 0 top 26% / 6px 8% no-repeat,
+      linear-gradient(90deg, #5c5c63, #2a2a2e) left 0 top 37% / 6px 8% no-repeat,
+      linear-gradient(270deg, #5c5c63, #2a2a2e) right 0 top 30% / 6px 12% no-repeat;
+  }
+}
+@media (min-width: 481px) and (max-width: 768px) {
+  .hero-video-grid { padding: 24px 16px; gap: 12px; }
+  .hero-phone-frame { border-radius: 26px; padding: 4px; }
+  .hero-phone-frame .hero-vid { border-radius: 22px; }
+  .hero-phone-frame::before { top: 9px; height: 12px; }
+  .hero-phone-frame::after { inset: 0 -3px; background-size: 3px 4.5%, 3px 8%, 3px 8%, 3px 12%; }
+}
+
+/* ── Logo 2026 en el celular: el buscador se achica para que entre el logo completo ── */
+@media (max-width: 640px) {
+  .header-inner { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .header-left { min-width: 0; }
+  .header-search-form { min-width: 0; max-width: 100%; }
+}

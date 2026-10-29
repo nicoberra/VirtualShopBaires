@@ -13,7 +13,7 @@
     var test = new Image();
     test.onload = function () {
       if (test.width !== 1) return;
-      document.querySelectorAll('img[src$="logo.png"]').forEach(function (img) {
+      document.querySelectorAll('img[src*="logo.png"]').forEach(function (img) {
         img.src = img.src.replace('logo.png', 'logo.webp');
       });
     };

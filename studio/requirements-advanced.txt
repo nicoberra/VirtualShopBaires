@@ -1,0 +1,8 @@
+# Capa avanzada — instalar solo cuando una tarea lo requiera (CPU-only, ~2-3 GB)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+torchvision
+faster-whisper      # transcripción / subtítulos automáticos
+demucs              # separación de voz / música
+librosa             # análisis de audio, detección de beats para editar a ritmo
+scenedetect[opencv] # detección de escenas

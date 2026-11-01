@@ -1,0 +1,19 @@
+{
+  "formatos": {
+    "reel":      {"w": 1080, "h": 1920, "desc": "Reels / TikTok / Shorts / Stories 9:16"},
+    "story":     {"w": 1080, "h": 1920, "desc": "Historias 9:16"},
+    "feed45":    {"w": 1080, "h": 1350, "desc": "Feed vertical 4:5"},
+    "feed11":    {"w": 1080, "h": 1080, "desc": "Feed cuadrado 1:1"},
+    "yt":        {"w": 1920, "h": 1080, "desc": "Video horizontal 16:9"},
+    "ml":        {"w": 1200, "h": 1200, "desc": "Mercado Libre: fondo blanco, producto ocupa ~85-95%"},
+    "web":       {"w": 1200, "h": 1200, "desc": "Ficha de producto del sitio (WebP)"},
+    "whatsapp":  {"w": 720,  "h": 1280, "desc": "Estados de WhatsApp 9:16 liviano"}
+  },
+  "perfiles_video": {
+    "social": {"crf": 18, "preset": "slow",   "fps_max": 60, "audio_k": 192, "lufs": -14, "desc": "IG/TikTok/Shorts: alta calidad, la plataforma recodifica"},
+    "web":    {"crf": 24, "preset": "slow",   "fps_max": 30, "audio_k": 128, "lufs": -16, "desc": "Hero del sitio: liviano, faststart"},
+    "wa":     {"crf": 24, "preset": "medium", "fps_max": 30, "audio_k": 128, "lufs": -14, "desc": "WhatsApp: archivo chico"},
+    "master": {"crf": 14, "preset": "slow",   "fps_max": 60, "audio_k": 256, "lufs": -14, "desc": "Archivo maestro para reeditar"}
+  },
+  "imagen": {"jpg_q": 92, "webp_q": 90, "margen_producto": 0.08, "margen_ml": 0.05}
+}

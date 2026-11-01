@@ -1,0 +1,10 @@
+# Capa mínima (CPU) — ~600 MB con modelos
+pillow
+numpy
+opencv-python-headless
+scipy
+scikit-image
+av
+soundfile
+pyloudnorm
+rembg[cpu]

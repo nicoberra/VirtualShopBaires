@@ -1,0 +1,4 @@
+proyectos/*
+!proyectos/README.md
+.venv/
+__pycache__/

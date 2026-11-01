@@ -143,6 +143,28 @@ def matte_quality(a):
     return float(((a > 0) & (a < 230)).sum() / fg.sum())
 
 
+def content_loss(im, a, tol=40):
+    """Solo para originales sobre fondo claro y uniforme: fracción de píxeles del 'objeto'
+    (claramente distintos del fondo) que el recorte dejó transparentes. Detecta piezas
+    del producto eliminadas (accesorios, mallas oscuras interiores). None si no aplica."""
+    rgb = np.array(im.convert("RGB")).astype(np.int16)
+    border = np.concatenate([rgb[:3].reshape(-1, 3), rgb[-3:].reshape(-1, 3),
+                             rgb[:, :3].reshape(-1, 3), rgb[:, -3:].reshape(-1, 3)])
+    bgc = np.median(border, axis=0)
+    if bgc.min() < 225 or (np.abs(border - bgc).max(axis=1) > tol).mean() > 0.10:
+        return None  # fondo no uniforme/claro: la métrica no es confiable
+    obj = np.abs(rgb - bgc).max(axis=2) > tol
+    # las sombras de apoyo y degradés son lisos y claros: quitarlos es correcto, no cuentan
+    g = cv2.GaussianBlur(rgb.mean(axis=2).astype(np.float32), (0, 0), 1)
+    tex = cv2.blur(np.abs(cv2.Laplacian(g, cv2.CV_32F)), (5, 5))
+    obj &= ~((tex < 1.0) & (rgb.mean(axis=2) > 100))
+    obj = cv2.morphologyEx(obj.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8)).astype(bool)
+    if obj.sum() < 500:
+        return None
+    a = cv2.resize(a, (rgb.shape[1], rgb.shape[0]), interpolation=cv2.INTER_NEAREST)
+    return float(((a < 128) & obj).sum() / obj.sum())
+
+
 def trim(rgba, thr=8):
     a = np.array(rgba.split()[3])
     ys, xs = np.where(a > thr)
@@ -209,6 +231,7 @@ def product_shot(src, out_size=(1080, 1080), bg="white", margin=None, shadow=Tru
     im = load(src) if not isinstance(src, Image.Image) else src
     rgba = im if already_cut else cutout(im, model, box=box)
     mq = matte_quality(np.array(rgba.split()[3]))
+    loss = None if (already_cut or box) else content_loss(im, np.array(rgba.split()[3]))
     rgba = trim(rgba)
     margin = PRESETS["imagen"]["margen_producto"] if margin is None else margin
     W, H = out_size
@@ -226,7 +249,8 @@ def product_shot(src, out_size=(1080, 1080), bg="white", margin=None, shadow=Tru
         canvas = Image.composite(dark, canvas, sh)
     canvas.alpha_composite(prod, (x, y))
     return canvas, {"escala": round(k, 3), "producto_px": (nw, nh), "upscaled": k > 1.0,
-                    "mascara_semitransp": round(mq, 3), "mascara_dudosa": mq > 0.15, "cutout": rgba}
+                    "mascara_semitransp": round(mq, 3), "mascara_dudosa": mq > 0.15, "cutout": rgba,
+                    "contenido_perdido": loss}
 
 
 def fit(im, out_size, mode="blur", color="#FFFFFF"):

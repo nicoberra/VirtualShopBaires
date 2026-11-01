@@ -18,6 +18,15 @@ Consultar la sección relevante antes de una tarea similar. Agregar entradas cor
 - Fotos de ambiente o collages (packaging con logos, fotos de uso y miniaturas) → la máscara sale
   "nublada". La métrica `calidad de máscara` lo detecta (>15 % = FAIL). El halo y la nitidez NO lo detectan.
 - Un modelo de saliencia no distingue el producto de un mueble vecino. Hace falta `--box` o SAM.
+- 2026-11-01 · Rueda abdominal: el recorte automático se comió la mitad del mat (accesorio del kit)
+  y volvió transparente la malla oscura interior de la rueda. La calidad de máscara dio PASS (4-7 %).
+  Ahora `img product` mide el **contenido eliminado** (lo que no es fondo y quedó transparente,
+  ignorando zonas lisas y claras = sombras). Más de 3 % es FAIL. Las sombras dan ~0,4 de textura;
+  el mat 7,3 y la malla 2,2.
+- Si la foto ya viene sobre fondo blanco uniforme, preferir `img fit --mode pad --bg "#FFFFFF"`:
+  conserva el 100 % del producto. Recortar solo cuando haga falta cambiar el fondo o unificar escala/sombra.
+- Fotos con cotas de medidas o con el producto cortado por el borde: no recortar nunca (se pierden
+  las líneas finas o el corte queda "flotando"). Usar encuadre con relleno.
 - Descontaminar bordes (resolver I = aF + (1−a)B) elimina los halos blancos del fondo original.
 - Reescalar RGBA en alfa premultiplicado evita bordes oscuros.
 

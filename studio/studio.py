@@ -108,6 +108,13 @@ def cmd_img(a):
             cut = out.with_name(out.stem + "_recorte.png")
         I.save(meta["cutout"], cut)
         rc = _qc(cut)
+        loss = meta["contenido_perdido"]
+        if loss is not None:
+            lvl = "✖" if loss > 0.03 else "▲" if loss > 0.01 else "✔"
+            print(f"  {lvl} contenido eliminado: {loss*100:.1f}% de lo que no es fondo quedó transparente "
+                  "(>3% = se perdieron partes del producto: usar `img fit --mode pad` si el fondo ya es blanco)")
+            if loss > 0.03:
+                rc.add("FAIL", "contenido eliminado", f"{loss*100:.1f}%")
         if rc.status == "FAIL":
             print("  ✖ RECORTE NO APTO: no entregar. Indicar --box x0,y0,x1,y1 o usar otra foto.")
         if meta["upscaled"]:

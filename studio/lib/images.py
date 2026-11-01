@@ -113,7 +113,43 @@ def decontaminate(rgb, a):
     return out.clip(0, 255).astype(np.uint8)
 
 
-def cutout(im, model="birefnet-general-lite", feather=0.6, box=None):
+def solid_bg_mask(im, tol=28):
+    """Máscara 'todo lo que no es fondo' para fotos sobre fondo claro uniforme.
+    Excluye sombras/degradés lisos y claros, rellena huecos interiores. None si no aplica."""
+    rgb = np.array(im.convert("RGB")).astype(np.int16)
+    border = np.concatenate([rgb[:3].reshape(-1, 3), rgb[-3:].reshape(-1, 3),
+                             rgb[:, :3].reshape(-1, 3), rgb[:, -3:].reshape(-1, 3)])
+    bgc = np.median(border, axis=0)
+    if bgc.min() < 225:
+        return None
+    lum = rgb.mean(axis=2)
+    obj = np.abs(rgb - bgc).max(axis=2) > tol
+    g = cv2.GaussianBlur(lum.astype(np.float32), (0, 0), 1)
+    tex = cv2.blur(np.abs(cv2.Laplacian(g, cv2.CV_32F)), (5, 5))
+    obj &= ~((tex < 1.0) & (lum > 100))
+    m = obj.astype(np.uint8) * 255
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    m = cv2.morphologyEx(m, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8))
+    # rellenar huecos encerrados (no conectados con el borde del lienzo)
+    h, w = m.shape
+    ff = m.copy()
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    for (x, y) in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]:
+        if ff[y, x] == 0:
+            cv2.floodFill(ff, mask, (x, y), 128)
+    m = np.where(ff == 128, 0, 255).astype(np.uint8)
+    # los huecos rellenados que son exactamente color de fondo son aire entre piezas, no producto
+    m[(ff == 0) & (np.abs(rgb - bgc).max(axis=2) < 14)] = 0
+    # quitar islas chicas
+    n, lab, st, _ = cv2.connectedComponentsWithStats((m > 0).astype(np.uint8), 8)
+    tot = st[1:, cv2.CC_STAT_AREA].sum() if n > 1 else 0
+    for i in range(1, n):
+        if st[i, cv2.CC_STAT_AREA] < 0.002 * tot:
+            m[lab == i] = 0
+    return m
+
+
+def cutout(im, model="birefnet-general-lite", feather=0.6, box=None, solid_bg=False):
     """Devuelve RGBA con alfa real y bordes descontaminados.
     box=(x0,y0,x1,y1): zona donde está el producto (fotos de ambiente / collages).
     Se segmenta solo esa zona y lo de afuera queda transparente."""
@@ -125,6 +161,20 @@ def cutout(im, model="birefnet-general-lite", feather=0.6, box=None):
         im = im.crop((cx0, cy0, cx1, cy1))
     rgb = np.array(im.convert("RGB"))
     a = alpha_mask(im, model)
+    if solid_bg:  # unión con 'todo lo que no es fondo': recupera accesorios y zonas oscuras
+        m = solid_bg_mask(im)
+        if m is not None:
+            k = np.ones((3, 3), np.uint8)
+            interior = cv2.erode(m, k, iterations=2)
+            band = cv2.dilate(m, k, iterations=2) > 0
+            # borde: alfa proporcional a la distancia de color al fondo (antialias real, sin halo)
+            dist = np.abs(rgb.astype(np.int16) - 255).max(axis=2).astype(np.float32)
+            # contraste local real del producto contra el fondo (máximo del interior cercano)
+            ref = cv2.dilate(np.where(interior > 0, dist, 0).astype(np.float32), np.ones((9, 9), np.uint8))
+            ref = np.maximum(ref, 40)
+            soft = (np.clip((dist - 6) / ref, 0, 1) * 255).astype(np.uint8)
+            soft[~band] = 0
+            a = np.maximum.reduce([a, interior, soft])
     if feather > 0:  # suavizado sub-pixel muy leve: evita bordes 'serruchados'
         a = cv2.GaussianBlur(a, (0, 0), feather)
     clean = decontaminate(rgb, a)
@@ -224,12 +274,12 @@ def contact_shadow(prod, canvas_size, pos, strength=0.22):
 
 
 def product_shot(src, out_size=(1080, 1080), bg="white", margin=None, shadow=True,
-                 model="birefnet-general-lite", already_cut=False, box=None, area=None):
+                 model="birefnet-general-lite", already_cut=False, box=None, area=None, solid_bg=False):
     """Producto recortado, centrado, con margen, sombra de apoyo opcional y fondo.
     area=(x0,y0,x1,y1) en fracciones del lienzo: zona donde ubicar el producto
     (p. ej. dejar libre la franja del logo y la del texto en un reel)."""
     im = load(src) if not isinstance(src, Image.Image) else src
-    rgba = im if already_cut else cutout(im, model, box=box)
+    rgba = im if already_cut else cutout(im, model, box=box, solid_bg=solid_bg)
     mq = matte_quality(np.array(rgba.split()[3]))
     loss = None if (already_cut or box) else content_loss(im, np.array(rgba.split()[3]))
     rgba = trim(rgba)

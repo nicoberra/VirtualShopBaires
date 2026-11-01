@@ -90,7 +90,7 @@ def cmd_img(a):
     from lib import images as I
     out = Path(a.output)
     if a.op == "cutout":
-        res = I.cutout(I.load(a.input), model=a.model, box=a.box)
+        res = I.cutout(I.load(a.input), model=a.model, box=a.box, solid_bg=a.fondo_blanco)
         if a.trim:
             res = I.trim(res)
         I.save(res, out)
@@ -101,7 +101,7 @@ def cmd_img(a):
         if out.suffix.lower() == ".png" and a.bg == "white" and a.transparent:
             bg = "transparent"
         res, meta = I.product_shot(a.input, size, bg=bg, margin=margin, shadow=not a.no_shadow,
-                                   model=a.model, box=a.box)
+                                   model=a.model, box=a.box, solid_bg=a.fondo_blanco)
         # el recorte intermedio se guarda y pasa por QC: el JPG final ya no tiene alfa para evaluar
         cut = out.parent.parent / "01_trabajo" / (out.stem + "_recorte.png")
         if not cut.parent.exists():
@@ -128,6 +128,22 @@ def cmd_img(a):
         I.save(res, out)
     print(f"→ {out}")
     _qc(out, expect=a.fmt if a.op in ("product", "fit") else None)
+
+
+def cmd_escena(a):
+    from lib import images as I, scenes as S
+    from PIL import Image
+    src = Image.open(a.input)
+    if src.mode != "RGBA" or src.getextrema()[3][0] == 255:  # no es un recorte: recortar primero
+        src = I.cutout(I.load(a.input), solid_bg=a.fondo_blanco)
+    kw = dict(width_frac=a.ancho, contact_y=a.apoyo, real_width_cm=a.cm, mode=a.apoyo_modo,
+              light_dx=a.luz, reflection=a.reflejo, dof=a.dof)
+    if a.horizonte is not None:
+        kw["horizon"] = a.horizonte
+    im, meta = S.compose(src, a.ambiente, size=fmt_size(a.fmt), **kw)
+    I.save(im, a.output)
+    print(f"  {meta}\n→ {a.output}")
+    _qc(a.output, expect=a.fmt)
 
 
 def cmd_vid(a):
@@ -177,8 +193,23 @@ def main():
     im.add_argument("--model", default="birefnet-general-lite", help="birefnet-general-lite (calidad) | isnet-general-use (rápido) | u2net")
     im.add_argument("--box", type=lambda v: tuple(int(x) for x in v.split(",")),
                     help="x0,y0,x1,y1 zona del producto (fotos de ambiente)")
+    im.add_argument("--fondo-blanco", action="store_true",
+                    help="original sobre fondo blanco: une la máscara IA con todo lo que no es fondo (recupera accesorios/zonas oscuras)")
     im.add_argument("--sharpen", type=float, default=0.6); im.add_argument("--denoise", type=int, default=0)
     im.set_defaults(fn=cmd_img)
+
+    e = sp.add_parser("escena", help="producto en ambiente procedural (gimnasio/casa)")
+    e.add_argument("input", help="recorte PNG con alfa, o foto (se recorta)"); e.add_argument("-o", "--output", required=True)
+    e.add_argument("--ambiente", default="gym", choices=["gym", "home"]); e.add_argument("--fmt", default="feed45")
+    e.add_argument("--cm", type=float, required=True, help="ancho real del producto en cm (fija la escala del piso)")
+    e.add_argument("--ancho", type=float, default=0.8, help="fracción del ancho del lienzo que ocupa")
+    e.add_argument("--apoyo", type=float, default=0.72, help="altura (0-1) de la línea de apoyo en el piso")
+    e.add_argument("--horizonte", type=float, help="0-1; omitir = toma a ras del piso (horizonte a media altura del producto)")
+    e.add_argument("--apoyo-modo", default="standing", choices=["standing", "flat"], help="flat = objeto apoyado plano (mat, alfombra)")
+    e.add_argument("--luz", type=float, default=0.0, help="desplazamiento de sombra: -1 izquierda .. 1 derecha")
+    e.add_argument("--reflejo", type=float, default=0.0); e.add_argument("--dof", type=float, default=1.0)
+    e.add_argument("--fondo-blanco", action="store_true")
+    e.set_defaults(fn=cmd_escena)
 
     v = sp.add_parser("vid")
     v.add_argument("op", choices=["encode", "slideshow"])

@@ -30,6 +30,20 @@ Consultar la sección relevante antes de una tarea similar. Agregar entradas cor
 - Descontaminar bordes (resolver I = aF + (1−a)B) elimina los halos blancos del fondo original.
 - Reescalar RGBA en alfa premultiplicado evita bordes oscuros.
 
+## Ambientes (studio escena)
+- 2026-11-01 · Rueda abdominal: piso de caucho de gimnasio y parqué. Lecciones:
+  - La escala física manda: con el ancho real (`--cm`) se calcula la cámara (10 cm de altura en la toma
+    a ras del piso, 63 cm en la cenital). Así la textura del piso nunca se ve "gigante".
+  - Horizonte: toma frontal → a media altura del producto; toma desde arriba → `--horizonte 0.1`.
+  - Motas de caucho grandes o contrastadas = "nieve". Usar gránulos a nivel de píxel con bajo contraste.
+  - Juntas de placas/tablas rectas que no coinciden con la perspectiva del objeto delatan el montaje.
+    Usar piso continuo, o tablas que corran hacia la cámara.
+  - Tira de luz a la altura del producto compite con él: mejor un resplandor sutil detrás.
+  - Recorte con `--fondo-blanco`: el borde necesita alfa = distancia/contraste local (si no, aparece una
+    línea clara de 1 px). Los huecos encerrados de color de fondo son aire, no producto.
+  - La sombra original que queda en la máscara se nota sobre piso oscuro: en tomas frontales preferir el
+    recorte del modelo solo si ya está completo.
+
 ## Video
 - Revisar la ROTACIÓN por metadato: `videos/hero4.mp4` figura como 1280×720, pero es vertical
   (−90°). FFmpeg la aplica sola al decodificar; `studio probe` y QC ahora la informan.

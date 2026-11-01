@@ -40,6 +40,8 @@ Los originales **nunca** se modifican: se copian a `00_original/` y se trabaja s
 | Ficha Mercado Libre (1200², fondo blanco) | `studio img product foto.jpg -o ml.jpg --fmt ml` |
 | Producto en feed 4:5 con degradé | `studio img product foto.jpg -o feed.jpg --fmt feed45 --bg "grad:#FFFFFF:#E6EBF2"` |
 | Producto en foto de ambiente | `... --box x0,y0,x1,y1` (zona del producto en píxeles) |
+| Producto en ambiente (gimnasio / casa) | `studio escena recorte.png -o out.jpg --ambiente gym\|home --cm 34 [--horizonte 0.1 --apoyo-modo flat --reflejo 0.1]` |
+| Recorte de foto con fondo blanco (recupera accesorios) | `studio img cutout foto.jpg -o out.png --trim --fondo-blanco` |
 | Cambiar formato sin deformar | `studio img fit foto.jpg -o story.jpg --fmt story --mode blur\|pad\|crop` |
 | Corrección suave de luz/color | `studio img enhance foto.jpg -o out.jpg [--denoise 5]` |
 | Video a Reel 9:16 | `studio vid encode in.mp4 -o reel.mp4 --fmt reel --mode blur\|crop [--x 0.3]` |
@@ -79,5 +81,8 @@ hoja de contacto del video).
 - Recorte automático: excelente en fotos de catálogo. En fotos de ambiente o collages, el
   modelo puede quedarse con objetos vecinos (por ejemplo, un sillón junto a la mesa). Para
   separar un objeto entre varios hace falta `--box` o segmentación por punto (SAM, capa avanzada).
+- Ambientes: se construyen por código (piso en perspectiva con escala física, pared, luz, profundidad
+  de campo, sombras). No hay IA generativa (sin GPU): no se inventan escenas fotorrealistas complejas
+  (muebles, personas). El producto nunca se modifica.
 - Las partes del producto que no se ven en la foto original no se reconstruyen. Si alguna
   vez se hace, se informa como reconstrucción estimada.

@@ -20,6 +20,9 @@ Solo preferencias de ESTA marca. No mezclar con otros clientes o proyectos.
 - Reel de productos: fondo en degradé `#FFFFFF → #E6EBF2`, logo arriba, nombre del producto en
   una pastilla azul marino y placa final azul con CTA en una pastilla roja «Comprá online» + dominio.
   (Prueba del 2026-10-31, pendiente de aprobación del usuario.)
+- Ambientes de producto (2026-11-01, pendientes de aprobación): fitness → "gimnasio" (caucho negro,
+  pared oscura, foco cálido, resplandor rojo de marca sutil) y "casa" (roble claro, pared cálida,
+  luz de ventana a la izquierda).
 - Mercado Libre: fondo blanco puro, margen del 5 %, sombra de apoyo suave.
 
 ## Catálogo

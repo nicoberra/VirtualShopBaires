@@ -1431,8 +1431,8 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .prod-tabla { min-width: 0; width: 100%; table-layout: fixed; }
   .prod-tabla th:nth-child(2) { width: 100px; }   /* SKU */
   .prod-tabla th:nth-child(3) { width: 132px; }   /* Variante */
-  .prod-tabla th:nth-child(4) { width: 132px; }   /* Precio */
-  .prod-tabla th:nth-child(5) { width: 124px; }   /* Stock */
+  .prod-tabla th:nth-child(4) { width: 120px; }   /* Precio */
+  .prod-tabla th:nth-child(5) { width: 184px; }   /* Stock: interruptor + casillero con el número entero */
   .prod-tabla th:nth-child(6) { width: 184px; }   /* Acciones */
   .prod-tabla td { overflow: hidden; text-overflow: ellipsis; }
   .prod-tabla .prod-name-cell { min-width: 0; }
@@ -1447,8 +1447,10 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .prod-tabla .btn-editar { padding-left: 10px; padding-right: 10px; }
   .prod-tabla .btn-editar-txt { display: none; }
   .prod-tabla th:nth-child(2) { width: 84px; }
-  .prod-tabla th:nth-child(3), .prod-tabla th:nth-child(4) { width: 126px; }
-  .prod-tabla th:nth-child(5) { width: 112px; }
+  .prod-tabla th:nth-child(3) { width: 112px; }
+  .prod-tabla th:nth-child(4) { width: 108px; }
+  .prod-tabla th:nth-child(5) { width: 164px; }
+  .prod-tabla .stock-ctl { gap: 8px; }
   .prod-tabla th:nth-child(6) { width: 122px; }
 }
 @media (min-width: 769px) and (max-width: 1100px) {
@@ -1647,3 +1649,5 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .stock-cant:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .15); }
 .stock-cant-ficha { width: 100%; max-width: 180px; height: 44px; margin-bottom: 8px; font-size: 1.05rem; }
 .pvar .stock-cant { width: 58px; height: 32px; flex-shrink: 0; }
+/* Que se lea el número entero (10, 100, 1250): la regla general de input[type=number] le ponía 12 px de relleno y la columna lo achicaba */
+.stock-ctl .stock-cant, .pvar .stock-cant { width: 84px; min-width: 84px; height: 38px; padding: 0 6px; font-size: 1.05rem; flex-shrink: 0; }

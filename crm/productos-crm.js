@@ -709,9 +709,11 @@ function buildProdRow(p, esVariante) {
     if (e.target.closest('.stock-cant')) return;   // escribir el número no cambia el interruptor
     const antes = { stock: p.stock, cantidad: p.cantidad };
     _stockLocal(p, !p.stock); pintarStock();
+    // El resumen del producto ("1 de 2 con stock · 7 u.") se recalcula después de que la bolita se desliza
+    setTimeout(() => filtrarProductos(true), 260);
     actualizarCampo(p, 'stock', p.stock)
       .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); })
-      .catch(() => { Object.assign(p, antes); pintarStock(); toast('Error al guardar stock', 'err'); });
+      .catch(() => { Object.assign(p, antes); filtrarProductos(true); toast('Error al guardar stock', 'err'); });
   });
   _activarCantidad(inpCant, p, pintarStock);
   tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
@@ -1765,7 +1767,7 @@ function cambiarStockTarjeta(p, boton, inputCant) {
   const nuevo = !p.stock, cantAntes = p.cantidad;
   _stockLocal(p, nuevo);
   if (inputCant) inputCant.value = _valCantidad(p);
-  if (boton) { boton.classList.toggle('on', nuevo); _ponerSwitch(boton, nuevo); }
+  if (boton) { boton.classList.toggle('on', nuevo); _ponerSwitch(boton, nuevo); setTimeout(() => filtrarProductos(true), 260); }   // el resumen de la tarjeta queda al día
   actualizarCampo(p, 'stock', nuevo)
     .then(r => {
       if (r && r.ok === false) throw new Error(r.error);
@@ -1777,6 +1779,7 @@ function cambiarStockTarjeta(p, boton, inputCant) {
       p.stock = !nuevo; p.cantidad = cantAntes;
       if (inputCant) inputCant.value = _valCantidad(p);
       if (boton) { boton.classList.toggle('on', !nuevo); _ponerSwitch(boton, !nuevo); }
+      filtrarProductos(true);
       toast('No se pudo cambiar el stock', 'err');
     });
 }

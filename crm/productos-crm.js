@@ -133,10 +133,35 @@ function _ponerSwitch(cont, on) {
   sw.setAttribute('aria-checked', on ? 'true' : 'false');
   sw.setAttribute('aria-label', on ? 'Con stock' : 'Sin stock');
 }
+// Interruptor del producto con variantes: prendido = todas con stock.
+// Al tocarlo: si están todas con stock, se apagan todas; si no, se prenden todas.
+function _resumenStock(g) {
+  const con = g.filter(v => v.stock).length;
+  return (con === g.length ? 'Todas con stock' : con ? `${con} de ${g.length} con stock` : 'Todas sin stock') + _totalUnidadesTxt(g);
+}
+function _cambiarStockTodas(g, cont) {
+  const nuevo = !g.every(v => v.stock);
+  const cambian = g.filter(v => !!v.stock !== nuevo);
+  const antes = cambian.map(v => ({ v, stock: v.stock, cantidad: v.cantidad }));
+  cambian.forEach(v => _stockLocal(v, nuevo));
+  _ponerSwitch(cont, nuevo);
+  setTimeout(() => filtrarProductos(true), 260);   // deja ver la bolita deslizarse y después actualiza las variantes
+  Promise.all(cambian.map(v => actualizarCampo(v, 'stock', nuevo).then(r => { if (r && r.ok === false) throw new Error(r.error); return null; }).catch(e => v)))
+    .then(fallaron => {
+      const mal = fallaron.filter(Boolean);
+      if (mal.length) {
+        antes.filter(a => mal.includes(a.v)).forEach(a => Object.assign(a.v, { stock: a.stock, cantidad: a.cantidad }));
+        filtrarProductos(true);
+        toast(`No se pudo cambiar el stock de ${mal.length} variante${mal.length === 1 ? '' : 's'}`, 'err');
+      } else toast(nuevo ? `Stock activado en las ${g.length} variantes ✓` : `Las ${g.length} variantes quedaron sin stock ✓`);
+      lsGuardar('productos', _productos);
+    });
+}
+
 // El interruptor también se usa con el teclado (Espacio o Enter)
 document.addEventListener('keydown', e => {
   const sw = e.target && e.target.closest && e.target.closest('.sw-stock');
-  if (sw && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); (sw.closest('.td-stock, .pvar-stock') || sw).click(); }
+  if (sw && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); (sw.closest('.td-stock, .td-stock-grupo, .pvar-stock, .pcard-todas') || sw).click(); }
 });
 
 // Mientras la lista viene de la copia guardada en el navegador, las fotos pueden ser viejas:
@@ -453,10 +478,7 @@ function buildGrupoRow(g, hijos) {
   const precios = g.map(v => _precioNum(v.precio));
   const min = Math.min(...precios), max = Math.max(...precios);
   const skus = [...new Set(g.map(v => String(v.sku || '').trim()).filter(Boolean))];
-  const conStock = g.filter(v => v.stock).length;
   const opciones = [...new Set(g.map(v => [v.talle, v.color || v.marca].map(x => String(x || '').trim()).filter(Boolean).join(' ')).filter(Boolean))];
-  const stockTxt = (conStock === g.length ? 'Con stock' : conStock ? `${conStock} de ${g.length} con stock` : 'Sin stock') + _totalUnidadesTxt(g);
-  const stockCls = conStock === g.length ? 'badge-conf' : conStock ? 'badge-pend' : 'badge-cancel';
   const tr = document.createElement('tr');
   tr.className = 'prod-group-row';
   tr.innerHTML = `
@@ -470,9 +492,9 @@ function buildGrupoRow(g, hijos) {
       </div>
     </td>
     <td class="td-sku">${skus.length ? escHtml(skus.join(', ')) : '<span class="text-muted">—</span>'}</td>
-    <td><span class="pill-var">${g.length} variantes</span></td>
+    <td><span class="pill-var pill-grupo"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> ${g.length} variantes</span></td>
     <td><strong>${min === max ? fmtPrecioSheet(min) : 'desde ' + fmtPrecioSheet(min)}</strong></td>
-    <td><span class="badge ${stockCls}">${stockTxt}</span></td>
+    <td class="td-toggle td-stock-grupo" title="Prende o apaga el stock de todas las variantes"><div class="stock-ctl">${_switchStock(g.every(v => v.stock))}<span class="stock-resumen">${_resumenStock(g)}</span></div></td>
     ${celdaAcciones()}`;
 
   const clave = grupoClave(g[0]);
@@ -483,7 +505,9 @@ function buildGrupoRow(g, hijos) {
     if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
   };
   fijar(_gruposAbiertos.has(clave));
-  tr.addEventListener('click', e => { if (!e.target.closest('.td-acc')) fijar(hijos[0].hidden); });
+  tr.addEventListener('click', e => { if (!e.target.closest('.td-acc, .td-stock-grupo')) fijar(hijos[0].hidden); });
+  const tdTodas = tr.querySelector('.td-stock-grupo');
+  tdTodas.addEventListener('click', () => _cambiarStockTodas(g, tdTodas.querySelector('.stock-ctl')));
   tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(g[0], 'producto'));
   const mas = tr.querySelector('.btn-mas');
   mas.addEventListener('click', () => abrirMenuAcciones(mas, [
@@ -1691,6 +1715,7 @@ function buildProdCard(g) {
       ${varios ? '<button type="button" class="pact" data-a="variantes"><i class="fa-solid fa-chevron-down"></i><span>Ver variantes</span></button>' : '<button type="button" class="pact" data-a="stock"><i class="fa-solid fa-box"></i><span>Stock</span></button>'}
       <button type="button" class="pact pact-del" data-a="eliminar"><i class="fa-solid fa-trash"></i><span>Eliminar</span></button>
     </div>
+    ${varios ? `<button type="button" class="pcard-todas" title="Prende o apaga el stock de todas las variantes"><span class="stock-ctl">${_switchStock(g.every(v => v.stock))}</span><span><b>Stock de todas las variantes</b><small>${_resumenStock(g)}</small></span></button>` : ''}
     ${varios ? '<div class="pcard-vars" hidden></div>' : ''}`;
 
   const vars = card.querySelector('.pcard-vars');
@@ -1729,6 +1754,8 @@ function buildProdCard(g) {
     card.classList.toggle('abierta', abrir);
     if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
   });
+  const bTodas = card.querySelector('.pcard-todas');
+  if (bTodas) bTodas.addEventListener('click', () => _cambiarStockTodas(g, bTodas.querySelector('.stock-ctl')));
   const bStock = card.querySelector('[data-a="stock"]');
   if (bStock) bStock.addEventListener('click', () => cambiarStockTarjeta(p0, null));
   return card;

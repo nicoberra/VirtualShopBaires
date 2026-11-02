@@ -810,6 +810,17 @@ a:focus-visible {
 .prod-group-chev { color: var(--text2); width: 12px; transition: transform .2s ease; }
 .prod-group-row.abierto .prod-group-chev { transform: rotate(90deg); }
 .prod-var-row td { background: var(--bg3); }
+/* Producto con variantes: barra roja a la izquierda; sus variantes, la misma barra más suave */
+.prod-group-row td:first-child { box-shadow: inset 4px 0 0 var(--red); }
+.prod-var-row td:first-child { box-shadow: inset 4px 0 0 color-mix(in srgb, var(--red) 30%, transparent); }
+.pill-var.pill-grupo { background: color-mix(in srgb, var(--red) 9%, var(--bg2)); border-color: color-mix(in srgb, var(--red) 30%, var(--border)); color: var(--red); }
+.pill-var.pill-grupo i { margin-right: 4px; font-size: .8em; }
+.prod-group-row .td-stock-grupo, .prod-group-row:hover .td-stock-grupo { cursor: pointer; }
+.td-stock-grupo .stock-ctl { flex-direction: column; align-items: flex-start; gap: 4px; }
+.td-stock-grupo .stock-resumen { font-size: .72rem; color: var(--text2); line-height: 1.2; white-space: nowrap; }
+.pcard-todas { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg3); text-align: left; cursor: pointer; font: inherit; color: var(--text); }
+.pcard-todas b { display: block; font-size: .85rem; }
+.pcard-todas small { color: var(--text2); font-size: .75rem; }
 .mprod-var-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
 .mprod-var { display: flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 4px 6px; border-radius: 6px; }
 .mprod-var.actual { background: rgba(204,18,18,0.08); font-weight: 600; }

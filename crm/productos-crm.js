@@ -792,6 +792,7 @@ function editarProducto(p, modo) {
   const conRebaja = desc > 0 && desc < base;
   $('mprod-precio').value      = conRebaja ? desc : base;
   $('mprod-descuento').value   = conRebaja ? base : '';
+  if (_modoFicha === 'producto' && vars.length > 1) _precioDeTodas(vars);
   setStockModal(!!p.stock, p.cantidad);
   $('mprod-destacado').checked = !!p.destacado;
   $('mprod-destacado').closest('.dest-tile').classList.toggle('on', !!p.destacado);
@@ -823,7 +824,7 @@ function editarProducto(p, modo) {
          <div class="mprod-var">${prodThumb(v.imagen, 36)}<span class="mv-txt"><b>${escHtml(v.color || v.talle || '—')}</b> · ${fmtPrecioSheet(v.precio)} · ${v.stock ? 'Con stock' : 'Sin stock'}${_unidadesTxt(v)}</span>
            <button type="button" class="fv-btn" data-j="${j}"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar variante</button></div>`).join('')}
        </div>
-       <p class="text-muted" style="font-size:.75rem;margin-top:6px">Precio, stock, SKU y foto se cambian en cada variante.</p>`;
+       <p class="text-muted" style="font-size:.75rem;margin-top:6px">El precio de "Precio y visibilidad" se aplica a todas. Stock, SKU, foto o un precio distinto se cambian en cada variante.</p>`;
     info.querySelectorAll('button[data-j]').forEach(b => b.addEventListener('click', () => editarProducto(vars[Number(b.dataset.j)], 'variante')));
   } else if (_modoFicha === 'variante') info.innerHTML = '';
   _aplicarModoFicha(p, vars);
@@ -834,6 +835,25 @@ function editarProducto(p, modo) {
   if (typeof cargarFotos === 'function') cargarFotos(p);
 }
 
+// Ficha del producto con variantes: el precio se carga una vez y se aplica a todas.
+// Si hoy tienen precios distintos, los casilleros quedan vacíos y no se toca nada hasta escribir uno.
+function _precioDeTodas(vars) {
+  const par = v => { const b = _precioNum(v.precio), d = _precioNum(v.descuento); return d > 0 && d < b ? [d, b] : [b, 0]; };
+  const pares = vars.map(par), igual = pares.every(x => x[0] === pares[0][0] && x[1] === pares[0][1]);
+  $('mprod-precio').value = igual ? pares[0][0] : '';
+  $('mprod-descuento').value = igual && pares[0][1] ? pares[0][1] : '';
+  $('mprod-precio').placeholder = igual ? '' : 'Precios distintos';
+  const min = Math.min(...pares.map(x => x[0])), max = Math.max(...pares.map(x => x[0]));
+  let nota = $('mprod-precio-nota');
+  if (!nota) {
+    nota = document.createElement('small'); nota.id = 'mprod-precio-nota'; nota.className = 'mprod-ayuda';
+    $('mprod-precio').closest('.input-pesos').insertAdjacentElement('afterend', nota);
+  }
+  nota.textContent = igual
+    ? `Se aplica a las ${vars.length} variantes. Si una variante tiene que tener otro precio, cambialo desde "Editar variante".`
+    : `Hoy las variantes tienen precios distintos (${fmtPrecioSheet(min)} a ${fmtPrecioSheet(max)}). Si escribís un precio acá, las ${vars.length} quedan con ese precio.`;
+}
+
 // Muestra solo los campos que corresponden a cada modo
 function _aplicarModoFicha(p, vars) {
   const m = _modoFicha, grupo = id => $(id) && $(id).closest('.form-group');
@@ -841,12 +861,15 @@ function _aplicarModoFicha(p, vars) {
   const prod = m !== 'variante', varia = m !== 'producto';
   ver(grupo('mprod-nombre'), prod); ver(grupo('mprod-cats-chips'), prod);
   ver(grupo('mprod-color'), varia); ver(grupo('mprod-talle'), varia);
-  ver(grupo('mprod-precio'), varia); ver(grupo('mprod-descuento'), varia); ver(grupo('mprod-stock-num'), varia); ver(grupo('mprod-sku'), varia);
+  const precioTodas = m === 'producto' && vars.length > 1;   // en el producto, el precio vale para todas las variantes
+  ver(grupo('mprod-precio'), varia || precioTodas); ver(grupo('mprod-descuento'), varia || precioTodas);
+  ver($('mprod-precio-nota'), precioTodas); if (!precioTodas) $('mprod-precio').placeholder = '';
+  ver(grupo('mprod-stock-num'), varia); ver(grupo('mprod-sku'), varia);
   ver(grupo('mprod-destacado'), prod); ver(grupo('mprod-descripcion'), prod);
   const secs = document.querySelectorAll('#modal-producto .mprod-sec');
   const h = (i, t) => { const e = secs[i] && secs[i].querySelector('h4'); if (e) e.textContent = t; };
   h(0, m === 'variante' ? 'Datos de la variante' : 'Información del producto');
-  h(1, m === 'producto' ? 'Visibilidad' : 'Precio e inventario');
+  h(1, m === 'producto' ? (precioTodas ? 'Precio y visibilidad' : 'Visibilidad') : 'Precio e inventario');
   h(2, m === 'variante' ? 'Foto de la variante' : (m === 'producto' ? 'Descripción y fotos del producto' : 'Descripción e imágenes'));
   const lblFotos = grupo('fotos-grid') && grupo('fotos-grid').querySelector('label');
   if (lblFotos) { lblFotos.textContent = 'Imágenes del producto'; lblFotos.style.display = m === 'variante' ? 'none' : ''; }
@@ -883,7 +906,10 @@ async function guardarProducto() {
   const p = _prodActual;
   const vars = hermanos(p);
   const f = _leerFormProd(), ini = _mprodInicial || {};
-  if (f.actual <= 0) { toast('Poné el precio actual', 'err'); $('mprod-precio').focus(); return; }
+  // Ficha del producto con variantes: el precio (si se cambió) va a todas
+  const aTodas = _modoFicha === 'producto' && vars.length > 1;
+  const cambioPrecio = f.actual !== ini.actual || f.anterior !== ini.anterior;
+  if ((!aTodas || cambioPrecio) && f.actual <= 0) { toast('Poné el precio actual', 'err'); $('mprod-precio').focus(); return; }
   if (f.anterior && f.anterior <= f.actual) { toast('El precio anterior tiene que ser mayor que el actual', 'err'); $('mprod-descuento').focus(); return; }
   // Con precio anterior: se guarda como precio (tachado) y el actual como descuento
   const precio    = f.anterior ? f.anterior : f.actual;
@@ -893,7 +919,8 @@ async function guardarProducto() {
   if (f.color !== ini.color) variante.color = f.color;
   if (f.talle !== ini.talle) variante['talle/medida'] = f.talle;
   if (f.sku !== ini.sku) variante.sku_costo = f.sku;
-  if (f.actual !== ini.actual || f.anterior !== ini.anterior) { variante.precio = precio; variante.descuento = descuento; }
+  if (cambioPrecio) { variante.precio = precio; variante.descuento = descuento; }
+  const otras = aTodas && cambioPrecio ? vars.filter(v => v !== p) : [];
   if (f.stock !== ini.stock) variante.stock = f.stock;
   if (f.cantidad !== ini.cantidad) variante.cantidad = f.cantidad;
   if (f.nombre && f.nombre !== ini.nombre) producto.producto = f.nombre;
@@ -910,22 +937,29 @@ async function guardarProducto() {
 
   // Se ve el cambio enseguida en la lista
   const antesP = { color: p.color, talle: p.talle, sku: p.sku, precio: p.precio, descuento: p.descuento, stock: p.stock, cantidad: p.cantidad };
-  const antesV = vars.map(v => ({ v, nombre: v.nombre, descripcion: v.descripcion, destacado: v.destacado }));
-  Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, precio, descuento, stock: f.stock, cantidad: f.cantidad });
+  const antesV = vars.map(v => ({ v, nombre: v.nombre, descripcion: v.descripcion, destacado: v.destacado, precio: v.precio, descuento: v.descuento }));
+  Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, stock: f.stock, cantidad: f.cantidad });
+  if (cambioPrecio) Object.assign(p, { precio, descuento });
+  otras.forEach(v => Object.assign(v, { precio, descuento }));
   vars.forEach(v => Object.assign(v, { nombre: f.nombre || v.nombre, descripcion: f.descripcion, destacado: f.destacado }));
   filtrarProductos(true);
   toast(fotosEnCurso ? 'Guardando… (las fotos se terminan de subir solas)' : 'Guardando…');
 
   try {
     // Si cambia el nombre, se espera a que terminen las fotos (se suben con el nombre de antes)
-    if (producto.producto && fotosEnCurso) await _enColaFotos(() => _guardarCambiosProducto(p, vars, variante, producto));
-    else await _guardarCambiosProducto(p, vars, variante, producto);
+    const guardar = () => Promise.all([_guardarCambiosProducto(p, vars, variante, producto)]
+      .concat(otras.map(v => _guardarCambiosProducto(v, vars, { precio, descuento }, {}))));
+    if (producto.producto && fotosEnCurso) await _enColaFotos(guardar);
+    else await guardar();
     lsGuardar('productos', _productos);
-    toast('Producto guardado ✓');
+    toast(otras.length ? `Producto guardado ✓ (precio en las ${vars.length} variantes)` : 'Producto guardado ✓');
   } catch (e) {
     Object.assign(p, antesP);
     antesV.forEach(a => Object.assign(a.v, { nombre: a.nombre, descripcion: a.descripcion, destacado: a.destacado }));
+    otras.forEach(v => { const a = antesV.find(x => x.v === v); Object.assign(v, { precio: a.precio, descuento: a.descuento }); });
     filtrarProductos(true);
+    // Algunas variantes pudieron guardarse y otras no: se trae la lista real del servidor
+    if (otras.length && e.message !== 'auth') { delete _cache['ext_productos_list']; _productos = []; loadProductos(true); }
     if (e.message !== 'auth') toast('No se guardó "' + (f.nombre || p.nombre) + '": ' + e.message, 'err');
   }
 }

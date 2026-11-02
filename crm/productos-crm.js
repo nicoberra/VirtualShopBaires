@@ -139,8 +139,13 @@ document.addEventListener('keydown', e => {
   if (sw && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); (sw.closest('.td-stock, .pvar-stock') || sw).click(); }
 });
 
+// Mientras la lista viene de la copia guardada en el navegador, las fotos pueden ser viejas:
+// se muestra un recuadro de carga y la foto aparece recién con la lista actual del servidor.
+let _fotosDeCopia = false;
 function prodThumb(src, size) {
   const s = size || 44;
+  if (src && _fotosDeCopia && !String(src).startsWith('data:'))
+    return `<span class="prod-thumb prod-thumb-cargando" style="width:${s}px;height:${s}px" aria-label="Cargando foto"></span>`;
   return src
     ? `<img class="prod-thumb" src="${escHtml(src)}" alt="" loading="lazy" style="width:${s}px;height:${s}px" onerror="if(!fotoRespaldo(this))this.replaceWith(Object.assign(document.createElement('span'),{className:'prod-thumb prod-thumb-empty',innerHTML:'<i class=\\'fa-solid fa-image\\'></i>'}))">`
     : `<span class="prod-thumb prod-thumb-empty" style="width:${s}px;height:${s}px"><i class="fa-solid fa-image"></i></span>`;

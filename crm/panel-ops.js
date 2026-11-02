@@ -514,8 +514,10 @@ async function loadProductos(force=false) {
   // Al instante desde la caché local; se actualiza en segundo plano si tiene más de 40 s
   const local = !force && lsLeer('productos');
   if (local) {
+    const reciente = Date.now() - local.t < LS_TTL;
+    _fotosDeCopia = !reciente;   // con más de 40 s, las fotos esperan a la lista actual
     _productos = local.d; _cache[key] = _productos; buildProdCats(); filtrarProductos();
-    if (Date.now() - local.t < LS_TTL) return;
+    if (reciente) return;
   } else {
     $('prod-table').innerHTML = uiCargando(6, true);
   }
@@ -526,8 +528,10 @@ async function loadProductos(force=false) {
     _productos = r.rows || [];
     _cache[key] = _productos;
     lsGuardar('productos', _productos);
+    _fotosDeCopia = false;
     if (currentSec === 'productos') { buildProdCats(); filtrarProductos(true); }   // mantiene la página
   } catch(e) {
+    if (_fotosDeCopia) { _fotosDeCopia = false; if (currentSec === 'productos') filtrarProductos(true); }
     if (local) return;
     $('prod-table').innerHTML = uiError(e.message, 'loadProductos(true)');
   }

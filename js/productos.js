@@ -3,7 +3,23 @@ const WA_NUMBER = "5491149457266";
 
 // Encuadre de fotos elegido en el CRM: viaja en la URL como "#vsb=x,y,zoom"
 // (el navegador ignora lo que va después de #). Sin encuadre: la foto entera, sin recortes.
-function fotoSrc(url) { return String(url || "").split("#")[0]; }
+// Foto recién subida desde el CRM (la hora va en el nombre: ...-1793710123262.jpg): la tienda tarda 1-2 min
+// en publicarla y, si alguien la pide antes, Cloudflare guarda el "no encontrado" por 4 horas.
+// Por eso, durante sus primeros 30 minutos se muestra directo desde GitHub.
+const _FOTO_RAW = "https://raw.githubusercontent.com/nicoberra/VirtualShopBaires/main/";
+function fotoSrc(url) {
+  const u = String(url || "").split("#")[0];
+  const m = /^https:\/\/virtualshopbaires\.com\.ar\/(img\/productos\/.+-(\d{13})\.\w+)$/.exec(u);
+  return m && Date.now() - Number(m[2]) < 30 * 60 * 1000 ? _FOTO_RAW + m[1] : u;
+}
+// Si una foto de la tienda falla igual (p. ej. quedó guardado el "no encontrado"), se prueba la de GitHub
+function fotoRespaldo(img) {
+  const m = /^https:\/\/virtualshopbaires\.com\.ar\/(img\/.+)$/.exec(img.getAttribute("src") || "");
+  if (!m || img.dataset.respaldo === m[1]) return false;
+  img.dataset.respaldo = m[1];
+  img.src = _FOTO_RAW + m[1];
+  return true;
+}
 function fotoEstilo(url) {
   const m = /#vsb=(\d+(?:\.\d+)?),(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)/.exec(String(url || ""));
   if (!m) return "";
@@ -117,7 +133,7 @@ function _fotosDetalle(p) {
 
 function _galeriaModalHTML(p, imgs) {
   return imgs.length
-    ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" />
+    ? `<img src="${fotoSrc(imgs[0])}" alt="${p.nombre}" id="modal-img-main" onerror="fotoRespaldo(this)" />
        ${imgs.length > 1 ? `
          <button type="button" class="modal-img-prev" aria-label="Foto anterior" onclick="modalGaleria(${p.id},-1)"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
          <button type="button" class="modal-img-next" aria-label="Foto siguiente" onclick="modalGaleria(${p.id},1)"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
@@ -488,7 +504,7 @@ function renderProductCard(p) {
   const imgs = (p.imagenes && p.imagenes.length > 0) ? p.imagenes : (p.imagen ? [p.imagen] : []);
   const hasMultiImgs = imgs.length > 1;
   const imgHTML = imgs.length > 0
-    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${_escAttr(nombreVisible(p))}" loading="lazy" decoding="async" data-idx="0" onerror="this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
+    ? `<img src="${fotoSrc(imgs[0])}" style="${fotoEstilo(imgs[0])}" alt="${_escAttr(nombreVisible(p))}" loading="lazy" decoding="async" data-idx="0" onerror="if(fotoRespaldo(this))return;this.src='';this.style.display='none';this.parentElement.classList.add('img-fallback')" />`
     : `<i class="fa-solid fa-box-open" style="font-size:3rem; color:var(--red);"></i>`;
   const carouselHTML = hasMultiImgs
     ? `<button type="button" class="card-arrow card-arrow-prev" aria-label="Foto anterior" tabindex="-1" onclick="event.stopPropagation();cardImgNav(this,-1)">&#8249;</button><button type="button" class="card-arrow card-arrow-next" aria-label="Foto siguiente" tabindex="-1" onclick="event.stopPropagation();cardImgNav(this,1)">&#8250;</button><div class="card-img-dots">${imgs.map((_,i)=>`<span class="card-img-dot${i===0?' active':''}"></span>`).join('')}</div>`

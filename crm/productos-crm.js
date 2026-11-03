@@ -172,7 +172,7 @@ function prodThumb(src, size) {
   if (src && _fotosDeCopia && !String(src).startsWith('data:'))
     return `<span class="prod-thumb prod-thumb-cargando" style="width:${s}px;height:${s}px" aria-label="Cargando foto"></span>`;
   return src
-    ? `<img class="prod-thumb" src="${escHtml(src)}" alt="" loading="lazy" style="width:${s}px;height:${s}px" onerror="if(!fotoRespaldo(this))this.replaceWith(Object.assign(document.createElement('span'),{className:'prod-thumb prod-thumb-empty',innerHTML:'<i class=\\'fa-solid fa-image\\'></i>'}))">`
+    ? `<img class="prod-thumb" src="${escHtml(fotoSrcCRM(src))}" alt="" loading="lazy" style="width:${s}px;height:${s}px" onerror="if(!fotoRespaldo(this))this.replaceWith(Object.assign(document.createElement('span'),{className:'prod-thumb prod-thumb-empty',innerHTML:'<i class=\\'fa-solid fa-image\\'></i>'}))">`
     : `<span class="prod-thumb prod-thumb-empty" style="width:${s}px;height:${s}px"><i class="fa-solid fa-image"></i></span>`;
 }
 
@@ -1367,7 +1367,13 @@ async function copiarFoto(url, btn) {
 
 // ─── ENCUADRE DE FOTOS (cómo se ve en la tarjeta de la tienda) ───────
 // Se guarda en la propia URL: "foto.jpg#vsb=x,y,zoom". Sin eso, la tienda muestra la foto entera.
-function fotoSrcCRM(url) { return String(url || '').split('#')[0]; }
+// Igual que la tienda: una foto recién subida (hora en el nombre) se muestra desde GitHub sus primeros 30 min,
+// así el CRM no la pide al sitio antes de que se publique (Cloudflare guardaría el "no encontrado" 4 horas)
+function fotoSrcCRM(url) {
+  const u = String(url || '').split('#')[0];
+  const m = /^https:\/\/virtualshopbaires\.com\.ar\/(img\/productos\/.+-(\d{13})\.\w+)$/.exec(u);
+  return m && Date.now() - Number(m[2]) < 30 * 60 * 1000 ? 'https://raw.githubusercontent.com/nicoberra/VirtualShopBaires/main/' + m[1] : u;
+}
 function _leerEncuadre(url) {
   const m = /#vsb=(\d+(?:\.\d+)?),(\d+(?:\.\d+)?),(\d+(?:\.\d+)?)/.exec(String(url || ''));
   return m ? { x: Math.min(100, +m[1]), y: Math.min(100, +m[2]), z: Math.min(4, Math.max(1, +m[3])) } : null;

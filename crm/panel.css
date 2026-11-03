@@ -875,8 +875,10 @@ a:focus-visible {
 
 /* ─── CELULAR: menú fijo arriba sin tapar el contenido + tarjetas de productos ─── */
 @media (max-width: 768px) {
-  html, body { overflow-x: hidden; -webkit-tap-highlight-color: transparent; }
-  body { overscroll-behavior-y: none; }
+  /* clip (no hidden): recorta los costados sin volver al body una caja con su propio scroll.
+     Con hidden + overscroll-behavior en el body, la ruedita del mouse quedaba atrapada y no bajaba. */
+  html, body { overflow-x: clip; -webkit-tap-highlight-color: transparent; }
+  html { overscroll-behavior-y: none; }
   button { touch-action: manipulation; }
   input, select, textarea { font-size: 16px !important; }   /* iPhone no hace zoom al escribir */
   #app { flex-direction: column; }

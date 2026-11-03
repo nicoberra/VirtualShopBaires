@@ -29,7 +29,7 @@
 //  Luego pegá la URL en APPS_SCRIPT_URL abajo.
 // ============================================================
 
-const STOCK_ACTIVO = false; // false = todos sin stock (pausar ventas sin tocar el Sheet)
+const STOCK_ACTIVO = true; // false = todos sin stock (pausar ventas sin tocar el Sheet)
 
 const SHEET_ID        = "1sufFbmZQzjG8i8FP-XybYReqeQgsHFjhSV2KEMaNTnA";
 const DRIVE_FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
@@ -43,7 +43,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v15';
+const _CACHE_DATA   = 'vsb_data_v16';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 5 * 60 * 1000;    // 5 minutos: los cambios del CRM se ven rápido
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora

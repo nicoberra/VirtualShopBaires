@@ -1653,3 +1653,20 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .pvar .stock-cant { width: 58px; height: 32px; flex-shrink: 0; }
 /* Que se lea el número entero (10, 100, 1250): la regla general de input[type=number] le ponía 12 px de relleno y la columna lo achicaba */
 .stock-ctl .stock-cant, .pvar .stock-cant { width: 84px; min-width: 84px; height: 38px; padding: 0 6px; font-size: 1.05rem; flex-shrink: 0; }
+
+/* Botones "Con stock" / "Sin stock" arriba de la lista de productos: cada uno muestra u oculta su grupo */
+.stock-ver { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }
+.stock-ver-tit { font-size: .8rem; font-weight: 700; color: var(--text2); margin-right: 2px; }
+.stock-ver-btn {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid var(--border); background: var(--bg2); color: var(--text2); font: inherit; font-size: .85rem; font-weight: 700;
+  cursor: pointer; transition: background .15s, border-color .15s, color .15s;
+}
+.stock-ver-btn .stock-ver-n { min-width: 22px; padding: 1px 7px; border-radius: 999px; background: var(--bg3); font-size: .75rem; text-align: center; font-variant-numeric: tabular-nums; }
+.stock-ver-btn.sv-con.on { border-color: #16a34a; background: #effbf3; color: #15803d; }
+.stock-ver-btn.sv-sin.on { border-color: #9ca3af; background: #f3f4f6; color: #374151; }
+.stock-ver-btn.on .stock-ver-n { background: #fff; }
+.stock-ver-btn:not(.on) { text-decoration: line-through; opacity: .75; }
+.stock-ver-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.stock-ver-btn:active { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) { .stock-ver-btn { transition: none; } .stock-ver-btn:active { transform: none; } }

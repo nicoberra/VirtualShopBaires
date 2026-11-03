@@ -290,7 +290,8 @@ async function subirFotoCategoria(input) {
 // ── Filtros, páginas y menú "⋯" de la tabla de productos ─────────────
 const PROD_POR_PAG = 25;
 let _prodPag = 1, _prodLista = [];
-const _prodFiltros = { stock: '', destacados: false, sinSku: false, sinFoto: false };
+// verCon / verSin: los dos botones de arriba de la lista (se prenden y apagan por separado)
+const _prodFiltros = { verCon: true, verSin: true, destacados: false, sinSku: false, sinFoto: false };
 
 // mantenerPagina=true cuando la lista se actualiza sola (no por una búsqueda o filtro nuevo)
 function filtrarProductos(mantenerPagina) {
@@ -304,18 +305,35 @@ function filtrarProductos(mantenerPagina) {
     String(p.color || '').toLowerCase().includes(q) ||
     String(p.marca || '').toLowerCase().includes(q) ||
     String(p.sku || '').toLowerCase().includes(q));
-  if (f.stock === 'con') list = list.filter(p => p.stock);
-  if (f.stock === 'sin') list = list.filter(p => !p.stock);
   if (f.destacados) list = list.filter(p => p.destacado);
   if (f.sinSku) list = list.filter(p => !String(p.sku || '').trim());
   if (f.sinFoto) list = list.filter(p => !p.imagen);
+  // Con stock = el producto tiene al menos una variante con stock (se muestran todas sus variantes)
+  const conStock = {};
+  _productos.forEach(p => { if (p.stock) conStock[grupoClave(p)] = true; });
+  const grupos = { con: new Set(), sin: new Set() };
+  list.forEach(p => grupos[conStock[grupoClave(p)] ? 'con' : 'sin'].add(grupoClave(p)));
+  pintarVerStock(grupos.con.size, grupos.sin.size);
+  if (!f.verCon || !f.verSin) list = list.filter(p => conStock[grupoClave(p)] ? f.verCon : f.verSin);
   actualizarBotonFiltros();
   renderProductos(list);
 }
 
 function _filtrosActivos() {
   const f = _prodFiltros;
-  return (f.stock ? 1 : 0) + (f.destacados ? 1 : 0) + (f.sinSku ? 1 : 0) + (f.sinFoto ? 1 : 0);
+  return (f.destacados ? 1 : 0) + (f.sinSku ? 1 : 0) + (f.sinFoto ? 1 : 0);
+}
+// Botones "Con stock" / "Sin stock": cada uno muestra u oculta ese grupo
+function pintarVerStock(nCon, nSin) {
+  const el = $('prod-stock-ver');
+  if (!el) return;
+  const f = _prodFiltros;
+  const btn = (k, on, txt, n, cls) => `<button type="button" class="stock-ver-btn ${cls}${on ? ' on' : ''}" data-ver="${k}" aria-pressed="${on}" title="${on ? 'Ocultar' : 'Mostrar'} los productos ${txt.toLowerCase()}">
+      <i class="fa-solid ${on ? 'fa-eye' : 'fa-eye-slash'}" aria-hidden="true"></i> ${txt} <span class="stock-ver-n">${n}</span></button>`;
+  el.innerHTML = `<span class="stock-ver-tit">Mostrar:</span>${btn('verCon', f.verCon, 'Con stock', nCon, 'sv-con')}${btn('verSin', f.verSin, 'Sin stock', nSin, 'sv-sin')}`;
+  el.querySelectorAll('[data-ver]').forEach(b => b.addEventListener('click', () => {
+    f[b.dataset.ver] = !f[b.dataset.ver]; filtrarProductos();
+  }));
 }
 function actualizarBotonFiltros() {
   const n = _filtrosActivos(), b = $('filtros-n'), btn = $('btn-filtros');
@@ -334,25 +352,17 @@ function toggleFiltros(forzar) {
 function pintarFiltros() {
   const f = _prodFiltros, panel = $('filtros-panel');
   const check = (k, txt) => `<label class="filtros-check"><input type="checkbox" data-f="${k}" ${f[k] ? 'checked' : ''}> ${txt}</label>`;
+  // El stock se elige con los botones "Con stock" / "Sin stock" de arriba de la lista
   panel.innerHTML = `
-    <div><span class="filtros-tit">Stock</span>
-      <div class="seg" role="group" aria-label="Stock">
-        ${[['', 'Todos'], ['con', 'Con stock'], ['sin', 'Sin stock']].map(([v, t]) =>
-          `<button type="button" class="seg-btn${f.stock === v ? ' on' : ''}" data-stock="${v}" aria-pressed="${f.stock === v}">${t}</button>`).join('')}
-      </div>
-    </div>
     ${check('destacados', 'Solo destacados')}
     ${check('sinSku', 'Sin SKU cargado')}
     ${check('sinFoto', 'Sin foto')}
     <button type="button" class="filtros-limpiar"${_filtrosActivos() ? '' : ' disabled'}>Limpiar filtros</button>`;
-  panel.querySelectorAll('[data-stock]').forEach(b => b.addEventListener('click', () => {
-    f.stock = b.dataset.stock; pintarFiltros(); filtrarProductos();
-  }));
   panel.querySelectorAll('[data-f]').forEach(c => c.addEventListener('change', () => {
     f[c.dataset.f] = c.checked; pintarFiltros(); filtrarProductos();
   }));
   panel.querySelector('.filtros-limpiar').addEventListener('click', () => {
-    Object.assign(f, { stock: '', destacados: false, sinSku: false, sinFoto: false });
+    Object.assign(f, { destacados: false, sinSku: false, sinFoto: false });
     pintarFiltros(); filtrarProductos();
   });
 }
@@ -430,9 +440,11 @@ function renderProductos(list) {
   _prodLista = list;
   cerrarMenuAcciones();
   if (!list.length) {
-    const hayFiltro = val('prod-search') || _prodCatFil !== 'Todos' || _filtrosActivos();
-    el.innerHTML = hayFiltro
-      ? uiVacio('fa-magnifying-glass', 'No encontramos productos', 'Probá con otra búsqueda, categoría o filtro.', { texto: 'Ver todos', onclick: "$('prod-search').value='';Object.assign(_prodFiltros,{stock:'',destacados:false,sinSku:false,sinFoto:false});setProdCat('Todos')" })
+    const hayFiltro = val('prod-search') || _prodCatFil !== 'Todos' || _filtrosActivos() || !_prodFiltros.verCon || !_prodFiltros.verSin;
+    el.innerHTML = (!_prodFiltros.verCon && !_prodFiltros.verSin)
+      ? uiVacio('fa-eye-slash', 'Están ocultos todos los productos', 'Prendé "Con stock" o "Sin stock" para verlos.', { texto: 'Ver todos', onclick: "Object.assign(_prodFiltros,{verCon:true,verSin:true});filtrarProductos()" })
+      : hayFiltro
+      ? uiVacio('fa-magnifying-glass', 'No encontramos productos', 'Probá con otra búsqueda, categoría o filtro.', { texto: 'Ver todos', onclick: "$('prod-search').value='';Object.assign(_prodFiltros,{verCon:true,verSin:true,destacados:false,sinSku:false,sinFoto:false});setProdCat('Todos')" })
       : uiVacio('fa-box-open', 'Todavía no hay productos', 'Cargá el primero y va a aparecer en la tienda.', { texto: 'Agregar producto', icono: 'fa-plus', onclick: 'abrirModalNuevoProd()' });
     if (pag) pag.innerHTML = '';
     return;

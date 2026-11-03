@@ -249,6 +249,14 @@ function estadoCompra(pid) {
   const v = varianteElegida(p);
   return (v && v.stock) ? { estado: "listo", variante: v } : { estado: "sinstock", variante: v, opcion: true };
 }
+// Sin stock (todo el producto, no una opción): botón para preguntar por WhatsApp cuándo vuelve a entrar
+function hayStock(p) { return estadoCompra(p.id).estado !== "sinstock"; }
+function _waAvisame(p) {
+  return "https://wa.me/5491149457266?text=" + encodeURIComponent(`Hola! Quería saber cuándo vuelve a entrar: ${p.nombre} (${p.categoria})`);
+}
+function btnAvisameHTML(p) {
+  return `<a class="btn-avisame" href="${_waAvisame(p)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Avisame cuándo entra</a>`;
+}
 function _waConsulta(p) {
   return "https://wa.me/5491149457266?text=" + encodeURIComponent("Hola! Quería consultar por: " + p.nombre);
 }
@@ -524,10 +532,11 @@ function renderProductCard(p) {
   }
 
   const ec = estadoCompra(p.id), puede = ec.estado === "listo", elegir = ec.estado === "elegir";
-  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${(puede || elegir) ? " hidden" : ""}>${(puede || elegir) ? "" : htmlEstadoCompra(p, ec)}</div>`;
+  const agotado = ec.estado === "sinstock" && !ec.opcion;   // nada para comprar: va el botón "Avisame cuándo entra"
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${(puede || elegir || agotado) ? " hidden" : ""}>${(puede || elegir || agotado) ? "" : htmlEstadoCompra(p, ec)}</div>`;
   const nom = nombreVisible(p);
 
-  const addBtnHTML = `
+  const addBtnHTML = agotado ? btnAvisameHTML(p) : `
     <button type="button" class="btn-add${(puede || elegir) ? '' : ' btn-variant-disabled'}"
             onclick="accionTarjeta(${p.id})" data-ready="${puede}" ${(puede || elegir) ? '' : 'disabled'}>
       ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock'
@@ -535,7 +544,7 @@ function renderProductCard(p) {
         : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = `<button type="button" class="btn-wa-product" onclick="return buyWithWA(${p.id})"
+  const waBtnHTML = agotado ? "" : `<button type="button" class="btn-wa-product" onclick="return buyWithWA(${p.id})"
                data-ready="${puede}"${puede ? '' : ' hidden disabled'}>
          <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
@@ -546,7 +555,7 @@ function renderProductCard(p) {
 
   // Tarjeta compacta: categoría, nombre (2 líneas), precio y acciones. Descripción y variantes van al detalle.
   return `
-    <article class="product-card" data-id="${p.id}" onclick="openProductModal(${p.id})"
+    <article class="product-card${agotado ? ' agotado' : ''}" data-id="${p.id}" onclick="openProductModal(${p.id})"
              tabindex="0" aria-label="${_escAttr(nom)}"
              onkeydown="if((event.key==='Enter'||event.key===' ')&&event.target===this){event.preventDefault();openProductModal(${p.id})}">
       <div class="product-img">${imgHTML}${carouselHTML}${badgeHTML}${favBtn}</div>
@@ -557,10 +566,10 @@ function renderProductCard(p) {
         </div>
         <div class="product-info-bottom" onclick="event.stopPropagation()">
           <div class="product-price">
-            <span class="price-main">${formatPrecio(displayPrice)}</span>
-            ${oldPriceHTML}
+            ${p.agotado ? '<span class="price-main price-agotado">Sin stock</span>' : `<span class="price-main">${formatPrecio(displayPrice)}</span>
+            ${oldPriceHTML}`}
           </div>
-          ${htmlTransfer(displayPrice)}
+          ${p.agotado ? "" : htmlTransfer(displayPrice)}
           ${hintHTML}
           <div class="card-actions">
             ${addBtnHTML}
@@ -640,18 +649,19 @@ function openProductModal(pid) {
   }
 
   const ec = estadoCompra(pid), puede = ec.estado === "listo";
-  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${puede ? " hidden" : ""}>${htmlEstadoCompra(p, ec)}</div>`;
+  const agotado = ec.estado === "sinstock" && !ec.opcion;
+  const hintHTML = `<div class="compra-estado" role="status" data-estado="${ec.estado}"${(puede || agotado) ? " hidden" : ""}>${agotado ? "" : htmlEstadoCompra(p, ec)}</div>`;
 
   const oldPriceHTML = displayOldPrice
     ? `<span class="price-old" id="modal-old-price">${formatPrecio(displayOldPrice)}</span>` : "";
 
-  const addBtnHTML = `
+  const addBtnHTML = agotado ? btnAvisameHTML(p) : `
     <button type="button" class="btn-add${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-add"
             onclick="addToCartFromModal(${pid})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
       ${ec.estado === "sinstock" ? '<i class="fa-solid fa-ban" aria-hidden="true"></i> Sin stock' : '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'}
     </button>`;
 
-  const waBtnHTML = `<button type="button" class="btn-wa-product${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-wa"
+  const waBtnHTML = agotado ? "" : `<button type="button" class="btn-wa-product${puede ? '' : ' btn-variant-disabled'}" id="modal-btn-wa"
                onclick="return buyWithWAModal(${pid})" data-ready="${puede}" ${puede ? '' : 'disabled'}>
          <i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora
        </button>`;
@@ -668,10 +678,10 @@ function openProductModal(pid) {
         <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
         ${hintHTML}
         <div class="modal-price">
-          <span class="price-main" id="modal-price">${formatPrecio(displayPrice)}</span>
-          ${oldPriceHTML}
+          ${p.agotado ? '<span class="price-main price-agotado" id="modal-price">Sin stock por el momento</span>' : `<span class="price-main" id="modal-price">${formatPrecio(displayPrice)}</span>
+          ${oldPriceHTML}`}
         </div>
-        ${htmlTransfer(displayPrice)}
+        ${p.agotado ? "" : htmlTransfer(displayPrice)}
         <div class="modal-actions">
           ${addBtnHTML}
           ${waBtnHTML}

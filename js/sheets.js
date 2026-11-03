@@ -43,7 +43,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v16';
+const _CACHE_DATA   = 'vsb_data_v17';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 5 * 60 * 1000;    // 5 minutos: los cambios del CRM se ven rápido
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -156,6 +156,7 @@ const SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM";
 let _sbImagenes = null;   // { categoria: { nombre: [urls] } } para sumar a IMAGE_MAP
 let _sbOrden = {};        // "categoria|nombre" → orden del ranking (más vendidos primero)
 let _sbVarFotos = {};     // "categoria|nombre|color" → fotos propias de esa variante
+let _sbAgotados = [];     // productos sin ninguna variante con stock: se muestran al final con "Avisame cuándo entra"
 
 async function _catalogoSupabase() {
   const h = { apikey: SUPABASE_PUB };
@@ -168,6 +169,7 @@ async function _catalogoSupabase() {
   // Mismo formato de columnas que la planilla, para que fetchHoja no cambie
   const cols = ["producto","precio","stock","color","talle/medida","descripcion","destacado","subcategoria","","","imagen_url","descuento"].map(label => ({ label }));
   const hojas = {}; const imgs = {};
+  _sbAgotados = [];
   cats.forEach(c => { hojas[c.nombre] = { cols, rows: [] }; });
   prods.forEach(p => {
     const hoja = hojas[p.categoria]; if (!hoja) return;
@@ -179,6 +181,8 @@ async function _catalogoSupabase() {
       hoja.rows.push({ c: [cel(p.nombre), cel(Number(v.precio)), { v: !!v.stock }, cel(v.color), cel(v.talle), cel(p.descripcion),
         { v: !!p.destacado }, cel(p.subcategoria), null, null, cel(v.imagen_url), cel(v.precio_descuento === null ? null : Number(v.precio_descuento))] });
     });
+    // La clave pública solo ve las variantes con stock: sin ninguna, el producto está agotado
+    if (!(p.variantes || []).length) _sbAgotados.push({ categoria: p.categoria, nombre: String(p.nombre).trim(), descripcion: String(p.descripcion || "").trim(), subcategoria: p.subcategoria || null });
   });
   _sbImagenes = imgs;
   return { ok: true, categorias: cats.map(c => c.nombre), hojas };
@@ -389,6 +393,15 @@ async function cargarProductos() {
     PRODUCTOS = resultados.flat()
       .filter(p => p.precio > 0 || p.descripcion)
       .map(p => ({ ...p, orden: _sbOrden[p.categoria + "|" + String(p.nombre).trim()], categoria: CATEGORY_ALIASES[p.categoria] || p.categoria, id: id++ }));
+    // Sin stock: también se muestran (al final del listado), sin precio y con "Avisame cuándo entra"
+    const yaEsta = new Set(PRODUCTOS.map(p => p.categoria + "|" + p.nombre));
+    _sbAgotados.forEach(a => {
+      const cat = CATEGORY_ALIASES[a.categoria] || a.categoria;
+      if (yaEsta.has(cat + "|" + a.nombre) || !hojasCargables.includes(a.categoria)) return;
+      PRODUCTOS.push({ nombre: a.nombre, descripcion: a.descripcion, precio: 0, precioOriginal: null, badge: null, destacado: false,
+        imagen: getImagenDrive(a.categoria, a.nombre), imagenes: getImagenesDrive(a.categoria, a.nombre), categoria: cat, subcategoria: a.subcategoria,
+        disponible: false, agotado: true, tieneVariantes: false, variantes: [], colores: [], talles: [], orden: _sbOrden[a.categoria + "|" + a.nombre], id: id++ });
+    });
 
     // 4. Categorías: las que tienen productos + las externas del Sheet
     const catsConProductos = [...new Set(PRODUCTOS.map(p => p.categoria))];

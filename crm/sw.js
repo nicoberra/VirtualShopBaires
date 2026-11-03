@@ -1,5 +1,5 @@
 /* Service Worker — VSB CRM / Operaciones */
-const CACHE_NAME = 'vsb-crm-v4';
+const CACHE_NAME = 'vsb-crm-v5';
 
 const PRECACHE_URLS = [
   '/crm/panel.css',
@@ -46,10 +46,11 @@ self.addEventListener('fetch', event => {
   // APIs dinámicas: siempre red
   if (isNetworkOnly(url)) return;
 
-  // Navegación HTML: red primero
+  // Navegación HTML: siempre la versión nueva del servidor. GitHub Pages manda max-age=600 y el
+  // navegador reusaba la página vieja hasta 10 minutos (los cambios "no aparecían"): no-store lo evita.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request).catch(() =>
+      fetch(request, { cache: 'no-store' }).catch(() =>
         caches.match(request).then(r => r || caches.match('/crm/panel.html'))
       )
     );

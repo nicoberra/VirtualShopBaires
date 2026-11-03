@@ -815,6 +815,8 @@ a:focus-visible {
 .prod-var-row td:first-child { box-shadow: inset 4px 0 0 color-mix(in srgb, var(--red) 30%, transparent); }
 .pill-var.pill-grupo { background: color-mix(in srgb, var(--red) 9%, var(--bg2)); border-color: color-mix(in srgb, var(--red) 30%, var(--border)); color: var(--red); }
 .pill-var.pill-grupo i { margin-right: 4px; font-size: .8em; }
+/* La etiqueta se achica dentro de su columna (si no, la celda la cortaba y quedaba un "…" suelto al lado) */
+.prod-tabla .pill-var { max-width: 100%; box-sizing: border-box; }
 .prod-group-row .td-stock-grupo, .prod-group-row:hover .td-stock-grupo { cursor: pointer; }
 .td-stock-grupo .stock-ctl { flex-direction: column; align-items: flex-start; gap: 4px; }
 .td-stock-grupo .stock-resumen { font-size: .72rem; color: var(--text2); line-height: 1.2; white-space: nowrap; }

@@ -151,14 +151,25 @@ function renderFavCard(p) {
       <div style="padding:12px;">
         <div style="font-size:0.85rem;font-weight:700;color:var(--white);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nombre}</div>
         <div style="font-size:1rem;font-weight:800;color:var(--red);">${formatPrecio(p.precio)}</div>
-        <button onclick="Cart.add(${p.id}); showToast('✓ Agregado al carrito')" style="width:100%;margin-top:10px;padding:8px;background:var(--red);color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:0.85rem;">Agregar al carrito</button>
+        ${botonFav(p)}
       </div>
     </div>`;
 }
 
+// Sin stock: botón apagado. Con opciones (color/talle): abre la ficha para elegir. Si no: al carrito.
+function botonFav(p) {
+  const base = "display:block;width:100%;margin-top:10px;padding:8px;border:none;border-radius:8px;font-weight:700;font-size:0.85rem;text-align:center;text-decoration:none;box-sizing:border-box;";
+  const e = estadoCompra(p.id);
+  if (e.estado === "sinstock") return `<button type="button" disabled style="${base}background:var(--black-2);color:var(--gray-light);cursor:not-allowed;">Sin stock</button>`;
+  if (e.estado === "listo" && !p.tieneVariantes) return `<button type="button" onclick="Cart.add(${p.id}); showToast('✓ Agregado al carrito')" style="${base}background:var(--red);color:#fff;cursor:pointer;">Agregar al carrito</button>`;
+  return `<a href="productos.html?id=${p.id}&cat=${encodeURIComponent(p.categoria || "")}&buscar=${encodeURIComponent(p.nombre || "")}" style="${base}background:var(--red);color:#fff;">Elegir opción</a>`;
+}
+
+// Los favoritos se guardan con categoría + nombre (los viejos, con el número): se quitan los dos
 function removeFav(id, btn) {
-  let favs = JSON.parse(localStorage.getItem("vsb_favoritos") || "[]");
-  favs = favs.filter(f => f !== id);
+  const p = PRODUCTOS.find(x => x.id === id);
+  let favs = getFavoritos();
+  favs = favs.filter(f => f !== id && (!p || f !== favClave(p)));
   localStorage.setItem("vsb_favoritos", JSON.stringify(favs));
   btn.closest("div[style]").remove();
   const grid = document.querySelector(".fav-grid");

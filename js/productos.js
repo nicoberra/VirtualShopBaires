@@ -254,6 +254,9 @@ function hayStock(p) { return estadoCompra(p.id).estado !== "sinstock"; }
 function _waAvisame(p) {
   return "https://wa.me/5491149457266?text=" + encodeURIComponent(`Hola! Quería saber cuándo vuelve a entrar: ${p.nombre} (${p.categoria})`);
 }
+function precioUltimoHTML(p) {
+  return p.ultimoPrecio ? `<span class="precio-ultimo">Último precio: ${formatPrecio(p.ultimoPrecio)}</span>` : "";
+}
 function btnAvisameHTML(p) {
   return `<a class="btn-avisame" href="${_waAvisame(p)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Avisame cuándo entra</a>`;
 }
@@ -566,7 +569,7 @@ function renderProductCard(p) {
         </div>
         <div class="product-info-bottom" onclick="event.stopPropagation()">
           <div class="product-price">
-            ${p.agotado ? '<span class="price-main price-agotado">Sin stock</span>' : `<span class="price-main">${formatPrecio(displayPrice)}</span>
+            ${p.agotado ? `<span class="price-main price-agotado">Sin stock</span>${precioUltimoHTML(p)}` : `<span class="price-main">${formatPrecio(displayPrice)}</span>
             ${oldPriceHTML}`}
           </div>
           ${p.agotado ? "" : htmlTransfer(displayPrice)}
@@ -678,7 +681,7 @@ function openProductModal(pid) {
         <div class="modal-variantes" id="modal-variantes">${variantesHTML}</div>
         ${hintHTML}
         <div class="modal-price">
-          ${p.agotado ? '<span class="price-main price-agotado" id="modal-price">Sin stock por el momento</span>' : `<span class="price-main" id="modal-price">${formatPrecio(displayPrice)}</span>
+          ${p.agotado ? `<span class="price-main price-agotado" id="modal-price">Sin stock por el momento</span>${precioUltimoHTML(p)}` : `<span class="price-main" id="modal-price">${formatPrecio(displayPrice)}</span>
           ${oldPriceHTML}`}
         </div>
         ${p.agotado ? "" : htmlTransfer(displayPrice)}

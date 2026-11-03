@@ -43,7 +43,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v17';
+const _CACHE_DATA   = 'vsb_data_v18';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 5 * 60 * 1000;    // 5 minutos: los cambios del CRM se ven rápido
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -156,16 +156,21 @@ const SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM";
 let _sbImagenes = null;   // { categoria: { nombre: [urls] } } para sumar a IMAGE_MAP
 let _sbOrden = {};        // "categoria|nombre" → orden del ranking (más vendidos primero)
 let _sbVarFotos = {};     // "categoria|nombre|color" → fotos propias de esa variante
-let _sbAgotados = [];     // productos sin ninguna variante con stock: se muestran al final con "Avisame cuándo entra"
+let _sbAgotados = [];
+let _sbUltimoPrecio = {};  // "categoria|nombre" → último precio de los agotados (vista precios_sin_stock)     // productos sin ninguna variante con stock: se muestran al final con "Avisame cuándo entra"
 
 async function _catalogoSupabase() {
   const h = { apikey: SUPABASE_PUB };
   const sel = "categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,variantes(color,talle,precio,precio_descuento,stock,imagen_url,imagenes,orden)";
   const json = r => r.ok ? r.json() : Promise.reject(new Error("Supabase " + r.status));
-  const [cats, prods] = await Promise.all([
+  const [cats, prods, ultimos] = await Promise.all([
     fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre&visible=eq.true&order=orden`, { headers: h }).then(json),
     fetch(`${SUPABASE_URL}/rest/v1/productos?select=${sel}&order=orden`, { headers: h }).then(json),
+    // Opcional: si la vista todavía no existe, los agotados se muestran sin precio
+    fetch(`${SUPABASE_URL}/rest/v1/precios_sin_stock?select=categoria,nombre,precio`, { headers: h }).then(json).catch(() => []),
   ]);
+  _sbUltimoPrecio = {};
+  (Array.isArray(ultimos) ? ultimos : []).forEach(u => { if (Number(u.precio) > 0) _sbUltimoPrecio[u.categoria + "|" + String(u.nombre).trim()] = Number(u.precio); });
   // Mismo formato de columnas que la planilla, para que fetchHoja no cambie
   const cols = ["producto","precio","stock","color","talle/medida","descripcion","destacado","subcategoria","","","imagen_url","descuento"].map(label => ({ label }));
   const hojas = {}; const imgs = {};
@@ -400,7 +405,8 @@ async function cargarProductos() {
       if (yaEsta.has(cat + "|" + a.nombre) || !hojasCargables.includes(a.categoria)) return;
       PRODUCTOS.push({ nombre: a.nombre, descripcion: a.descripcion, precio: 0, precioOriginal: null, badge: null, destacado: false,
         imagen: getImagenDrive(a.categoria, a.nombre), imagenes: getImagenesDrive(a.categoria, a.nombre), categoria: cat, subcategoria: a.subcategoria,
-        disponible: false, agotado: true, tieneVariantes: false, variantes: [], colores: [], talles: [], orden: _sbOrden[a.categoria + "|" + a.nombre], id: id++ });
+        disponible: false, agotado: true, ultimoPrecio: _sbUltimoPrecio[a.categoria + "|" + a.nombre] || null,
+        tieneVariantes: false, variantes: [], colores: [], talles: [], orden: _sbOrden[a.categoria + "|" + a.nombre], id: id++ });
     });
 
     // 4. Categorías: las que tienen productos + las externas del Sheet

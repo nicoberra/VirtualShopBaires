@@ -1684,3 +1684,11 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .toast.ok, .toast.err { border-left: 1px solid var(--border); border-top: 3px solid; }
 .toast.ok  { border-top-color: var(--green); }
 .toast.err { border-top-color: var(--red); }
+
+/* Categorías de productos: siempre en varias líneas, así se ven todas aunque la ventana sea chica
+   (antes quedaban en una fila con desplazamiento lateral oculto y con el mouse no se llegaba a las últimas) */
+#prod-cats.prod-chips { flex-wrap: wrap; overflow: visible; }
+@media (max-width: 768px) {
+  #prod-cats.prod-chips { margin: 0 0 14px; padding: 0; gap: 8px; }
+  #prod-cats.prod-chips .chip { min-height: 38px; padding: 0 14px; font-size: .88rem; }
+}

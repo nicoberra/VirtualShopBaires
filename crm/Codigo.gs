@@ -78,7 +78,8 @@ var TABS = {
     { k:'estado',      h:'Estado'       },
     { k:'notas',       h:'Notas'        },
     { k:'comprobante', h:'Comprobante'  },
-    { k:'clienteid',   h:'ClienteID'    }
+    { k:'clienteid',   h:'ClienteID'    },
+    { k:'utm',         h:'UTM'          }   // origen de la visita (utm_campaign=oferta, etc.)
   ],
   'Suscriptores': [
     { k:'id',     h:'ID'     },
@@ -124,7 +125,8 @@ function manejar(e) {
       'ext_producto_eliminar':1,'ext_categoria_agregar':1,'ext_categoria_eliminar':1,
       'ext_categorias_list':1,'ext_categoria_foto':1,'fotos_papelera':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1,
-      'push_suscribir':1,'push_desuscribir':1,'push_probar':1
+      'push_suscribir':1,'push_desuscribir':1,'push_probar':1,
+      'leads_list':1
     };
     if (ADMIN_ACTIONS[accion]) {
       var tok = String(p.token || '').trim();
@@ -169,8 +171,9 @@ function manejar(e) {
     else if (accion === 'ext_pedidos_list')     out = { ok:true, rows: extPedidosListar(p) };
     else if (accion === 'ext_pedidos_listar')   out = extPedidosListar(p);
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
+    else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v21-stock-cantidad' };
+    else if (accion === 'version')              out = { ok:true, version: 'v22-leads-utm' };
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -1408,6 +1411,41 @@ function _calcularPedidoServidor(items, envioId, descuentoPct) {
   return out;
 }
 
+// ─── ORIGEN DE LA VISITA (UTM) ───────────────────────────────
+// La tienda guarda los utm_… con los que llegó la visita (por ejemplo el link del mensaje
+// automático de Instagram: utm_campaign=oferta) y los manda con el pedido. Se guardan en la
+// columna UTM como "utm_source=instagram&utm_campaign=oferta": solo esas 5 claves y texto simple.
+var UTM_CLAVES = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+function _utmLimpio(txt) {
+  var s = String(txt || '').slice(0, 600), out = [], vistas = {};
+  if (!s) return '';
+  s.replace(/^\?/, '').split('&').forEach(function(par) {
+    var i = par.indexOf('='); if (i <= 0) return;
+    var k = par.slice(0, i).toLowerCase(), v = par.slice(i + 1);
+    try { v = decodeURIComponent(v.replace(/\+/g, ' ')); } catch(e) { return; }
+    v = v.replace(/[^\w\-. áéíóúñü@]/gi, '').trim().slice(0, 100);
+    if (UTM_CLAVES.indexOf(k) < 0 || !v || vistas[k]) return;
+    vistas[k] = 1;
+    out.push(k + '=' + encodeURIComponent(v));
+  });
+  return out.join('&');
+}
+function _utmAviso(txt) {
+  var u = _utmLimpio(txt);
+  if (!u) return '';
+  var c = (u.match(/utm_campaign=([^&]+)/) || [])[1], f = (u.match(/utm_source=([^&]+)/) || [])[1];
+  return '\n📣 Vino de: ' + [f, c].filter(Boolean).map(decodeURIComponent).join(' · ');
+}
+
+// ─── LEADS ("Avisame cuando entra" de ofertas.html) ──────────
+// La tienda solo puede insertar en public.leads; acá se leen con la clave secreta para el CRM.
+function leadsListar() {
+  var r = _sb('get', 'leads?select=id,creado,actualizado,nombre,whatsapp,categorias,utm_source,utm_medium,utm_campaign,utm_content,utm_term,origen,veces&order=actualizado.desc&limit=5000');
+  if (r.code === 404 || /42P01|does not exist|Could not find/i.test(r.text))
+    return { ok:false, error:'Falta crear la tabla de leads en Supabase (supabase/15-leads-y-recien-ingresados.sql).' };
+  return { ok:true, rows: _sbOk(r, 'Leads') || [] };
+}
+
 function _detalleItems(items) {
   return items.map(function(i) {
     return i.qty + 'x ' + i.nombre + (i.color ? ' · ' + i.color : '') + (i.talle ? ' / ' + i.talle : '');
@@ -1486,10 +1524,11 @@ function crearPreferencia(p) {
     detalle:  detalle,
     monto:    total,
     estado:   'Pendiente',
-    notas:    'MercadoPago · ref: ' + ref + (p.email ? ' · email: ' + String(p.email).trim().toLowerCase().slice(0, 120) : '')
+    notas:    'MercadoPago · ref: ' + ref + (p.email ? ' · email: ' + String(p.email).trim().toLowerCase().slice(0, 120) : ''),
+    utm:      _utmLimpio(p.utm)
   });
 
-  avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref);
+  avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref + _utmAviso(p.utm));
   var res = { ok:true, url: json.init_point, ref: ref, total: total };
   cacheMP.put(idem, JSON.stringify(res), 600);
   return res;
@@ -2432,7 +2471,8 @@ var PED_ALIAS = {
   descuento:     ['descuento'],
   total:         ['total'],
   observaciones: ['observaciones'],
-  estado:        ['estado', 'estadopedido']
+  estado:        ['estado', 'estadopedido'],
+  utm:           ['utm']
 };
 function _normH(h) { return _normKey(h).replace(/\s+/g, ''); }
 // Devuelve { campo: índice de columna (0-based) } según los encabezados reales de la pestaña.
@@ -2489,7 +2529,8 @@ function extPedidosListar(p) {
           metodoPago:    'mercadopago',
           estado:        dm[m][cols.indexOf('estado')] || 'Pendiente',
           observaciones: notas,
-          comprobante:   dm[m][cols.indexOf('comprobante')]
+          comprobante:   dm[m][cols.indexOf('comprobante')],
+          utm:           dm[m][cols.indexOf('utm')] || ''
         });
       }
     }
@@ -2507,7 +2548,7 @@ function crearPedido(p) {
   try {
     var COLS = ['timestamp','orderNumber','nombre','apellido','email','telefono','dni',
                 'metodoEntrega','metodoPago','provincia','localidad','calle','numeroCalle',
-                'piso','cp','productos','subtotal','descuento','total','observaciones','estado'];
+                'piso','cp','productos','subtotal','descuento','total','observaciones','estado','utm'];
 
     var prodsIdem = [];
     try { prodsIdem = (typeof p.productos === 'string') ? JSON.parse(p.productos) : (p.productos || []); } catch(ex) {}
@@ -2569,6 +2610,7 @@ function crearPedido(p) {
       if (col === 'orderNumber') return orderNum;
       if (col === 'estado')      return 'Pendiente';
       if (col === 'productos')   return productosStr;
+      if (col === 'utm')         return _utmLimpio(p.utm);
       return (p[col] !== undefined && p[col] !== null) ? p[col] : '';
     };
     // Escribir cada dato en la columna que corresponde según los encabezados reales
@@ -2607,7 +2649,7 @@ function crearPedido(p) {
     avisarTelegram('🛒 Nuevo pedido: ' + orderNum +
       '\n' + (p.nombre||'') + ' ' + (p.apellido||'') +
       '\n' + (p.email||'') + ' · ' + (p.telefono||'') +
-      '\nTotal: $' + (p.total||0) + ' · ' + (p.metodoPago||'') + ' · ' + (p.metodoEntrega||''));
+      '\nTotal: $' + (p.total||0) + ' · ' + (p.metodoPago||'') + ' · ' + (p.metodoEntrega||'') + _utmAviso(p.utm));
     avisarPush('🛒 Nueva venta en la web', ((p.nombre||'') + ' ' + (p.apellido||'')).trim() +
       ' · $' + (p.total||0) + (p.metodoPago ? ' · ' + p.metodoPago : '') + ' · Pedido ' + orderNum, 'pedidos');
 

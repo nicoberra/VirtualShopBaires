@@ -554,7 +554,7 @@
 </div>
 
 <script src="js/cart.js?v=5"></script>
-<script src="js/main.js?v=5"></script>
+<script src="js/main.js?v=6"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
@@ -873,6 +873,7 @@ async function submitOrder() {
     })),
     envioZona: envio.estado === "zona" ? envio.zona.id : "",
     website: v("f-website"),     // antispam: queda vacío para personas
+    utm: typeof vsbUtm === "function" ? vsbUtm() : "",   // origen de la visita (Instagram, anuncios…)
     subtotal: calcPrices().sub,
     descuento: calcPrices().disc,
     total: calcPrices().total,
@@ -911,6 +912,7 @@ async function submitOrder() {
         items:    JSON.stringify(mpItems),
         envio:    envio.estado === "zona" ? envio.zona.id : "",
         website:  v("f-website"),
+        utm:      typeof vsbUtm === "function" ? vsbUtm() : "",
         nombre:   nombre + ' ' + apellido,
         email,
         telefono,

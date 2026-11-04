@@ -247,13 +247,17 @@ console.log("Pestaña con formato viejo y Clientes ampliado");
 
   const r = gs.crearPedido({ nombre: "Ana", apellido: "Pérez", email: "ana@test.local", telefono: "11", dni: "30111222", metodoEntrega: "retiro",
     metodoPago: "transferencia", provincia: "CABA", localidad: "CABA", calle: "Calle", numeroCalle: "123", cp: "1000",
-    productos: [{ nombre: "Silla", categoria: "Camping", color: "Azul", qty: 1 }], envioZona: "", observaciones: "nota" });
+    productos: [{ nombre: "Silla", categoria: "Camping", color: "Azul", qty: 1 }], envioZona: "", observaciones: "nota",
+    utm: "utm_source=instagram&utm_campaign=oferta&utm_x=no&utm_medium=<script>dm" });
   assert.equal(r.ok, true);
   const fila = HOJAS["Pedidos externos"][1], col = (h) => fila[VIEJOS.indexOf(h)];
   assert.equal(col("N° Pedido"), r.orderNumber); assert.equal(col("Nombre"), "Ana"); assert.equal(col("Email"), "ana@test.local");
   assert.equal(col("DNI/CUIT"), "30111222"); assert.equal(col("Número"), "123"); assert.equal(col("Estado pedido"), "Pendiente"); assert.equal(col("Total"), 27000);
-  assert.equal(HOJAS["Pedidos externos"][0].length, VIEJOS.length);
-  ok("crear pedido en la pestaña vieja: cada dato cae en su columna (N° Pedido, DNI/CUIT, Estado pedido…), sin columnas nuevas");
+  // la única columna nueva es "utm" (origen de la visita), al final y con solo claves utm_ limpias
+  assert.equal(HOJAS["Pedidos externos"][0].length, VIEJOS.length + 1);
+  assert.equal(HOJAS["Pedidos externos"][0][VIEJOS.length], "utm");
+  assert.equal(fila[VIEJOS.length], "utm_source=instagram&utm_campaign=oferta&utm_medium=scriptdm");
+  ok("crear pedido en la pestaña vieja: cada dato cae en su columna (N° Pedido, DNI/CUIT, Estado pedido…) y el origen (utm) va en su columna nueva");
 
   const lista = gs.extPedidosListar({});
   const p = lista.find(x => x.fuente === "web");

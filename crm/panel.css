@@ -1692,3 +1692,19 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
   #prod-cats.prod-chips { margin: 0 0 14px; padding: 0; gap: 8px; }
   #prod-cats.prod-chips .chip { min-height: 38px; padding: 0 14px; font-size: .88rem; }
 }
+
+/* Leads (Avisame cuando entra) */
+.leads-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 14px 0 16px; }
+.leads-dato { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; display: grid; gap: 2px; }
+.leads-dato strong { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.leads-dato span { color: var(--text2); font-size: .85rem; }
+.leads-filtros { flex-wrap: wrap; gap: 10px; }
+.leads-filtros label { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--text2); }
+.leads-filtros select, .leads-filtros input[type=date] { min-height: 40px; }
+.leads-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.leads-ayuda { font-size: .8rem; flex-basis: 100%; }
+.leads-cat { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--bg3, rgba(27,42,74,.07)); font-size: .78rem; margin: 2px 2px 2px 0; white-space: nowrap; }
+@media (max-width: 768px) {
+  .leads-filtros label { justify-content: space-between; }
+  .leads-acciones > button { flex: 1; }
+}

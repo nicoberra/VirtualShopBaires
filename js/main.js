@@ -311,6 +311,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 })();
 
+// Origen de la visita: guarda los utm_… con los que llegó (ej. el link del mensaje automático de
+// Instagram: ?utm_source=instagram&utm_campaign=oferta) durante 30 días, para mandarlos con el
+// pedido y con los leads. Corre antes de que se limpie la barra de direcciones (abajo).
+const _UTM_CLAVE = "vsb_utm";
+(function () {
+  try {
+    const q = new URLSearchParams(window.location.search), u = {};
+    ["source", "medium", "campaign", "content", "term"].forEach(k => {
+      const v = (q.get("utm_" + k) || "").trim();
+      if (v) u["utm_" + k] = v.slice(0, 100);
+    });
+    // Sin utm pero desde Instagram (link de la biografía, por ejemplo): se anota igual
+    if (!Object.keys(u).length && /(^|\.)instagram\.com$/i.test((() => { try { return new URL(document.referrer).hostname; } catch (e) { return ""; } })())
+        && !vsbUtm()) { u.utm_source = "instagram"; u.utm_medium = "referral"; }
+    if (Object.keys(u).length) localStorage.setItem(_UTM_CLAVE, JSON.stringify({ ...u, t: Date.now() }));
+  } catch (e) {}
+})();
+// vsbUtm() → "utm_source=instagram&utm_campaign=oferta" · vsbUtm("obj") → { utm_source: "instagram", … }
+function vsbUtm(formato) {
+  try {
+    const u = JSON.parse(localStorage.getItem(_UTM_CLAVE) || "null");
+    if (!u || !(Date.now() - u.t < 30 * 864e5)) return formato === "obj" ? {} : "";
+    delete u.t;
+    return formato === "obj" ? u : new URLSearchParams(u).toString();
+  } catch (e) { return formato === "obj" ? {} : ""; }
+}
+
 // Limpia de la barra de direcciones los códigos de seguimiento que agregan Google, Meta, etc.
 // (?srsltid=…, gclid, fbclid, utm_…). No recarga la página ni toca los parámetros propios
 // de la tienda (cat, buscar, id, order, email, ref…).

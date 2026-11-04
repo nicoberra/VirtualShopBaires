@@ -1,0 +1,464 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Ofertas: lo que entró, con stock | Virtual Shop Baires</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icon-vsb.webp" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
+  <meta name="description" content="Lo que entró a Virtual Shop Baires: solo productos con stock, ordenados por más vendidos y recién ingresados. 10% OFF pagando por transferencia o en efectivo." />
+  <meta property="og:title" content="Ofertas: lo que entró, con stock | Virtual Shop Baires" />
+  <meta property="og:description" content="Lo que entró a Virtual Shop Baires: solo productos con stock, ordenados por más vendidos y recién ingresados. 10% OFF pagando por transferencia o en efectivo." />
+  <meta property="og:image" content="https://virtualshopbaires.com.ar/logo.png" />
+  <meta property="og:url" content="https://virtualshopbaires.com.ar/ofertas.html" />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://virtualshopbaires.com.ar/ofertas.html" />
+  <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
+  <meta name="theme-color" content="#CC1212" />
+  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://docs.google.com" />
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
+<style>
+  /* ===== Ofertas (lo que entró) ===== */
+  .of-hero { padding: 34px 0 22px; text-align: center; }
+  .of-hero h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); font-weight: 900; letter-spacing: -.02em; line-height: 1.12; text-wrap: balance; }
+  .of-hero h1 span { color: var(--red); }
+  .of-hero p { color: var(--gray); font-size: .98rem; margin: 10px auto 0; max-width: 60ch; text-wrap: pretty; }
+  .of-pago { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 8px 16px; border-radius: var(--radius-pill);
+    background: var(--accent-light); color: var(--accent); font-weight: 700; font-size: .9rem; }
+  .of-pago strong { color: var(--red); }
+  .of-ir-aviso { display: inline-block; margin-top: 12px; color: var(--accent); font-weight: 700; font-size: .9rem; text-decoration: underline; text-underline-offset: 3px; }
+
+  .of-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  .of-orden { display: inline-flex; padding: 4px; border-radius: var(--radius-pill); background: var(--black-3); border: 1px solid var(--black-4); }
+  .of-orden button { border: 0; background: none; padding: 9px 18px; border-radius: var(--radius-pill); font: inherit; font-weight: 700; font-size: .9rem;
+    color: var(--gray); cursor: pointer; transition: background-color .2s ease, color .2s ease; min-height: 40px; }
+  .of-orden button[aria-pressed="true"] { background: var(--red); color: #fff; }
+  .of-orden button:focus-visible, .of-cat:focus-visible, .of-form button:focus-visible { outline: 3px solid rgba(27,43,75,.35); outline-offset: 2px; }
+  .of-cuenta { color: var(--gray); font-size: .88rem; font-variant-numeric: tabular-nums; }
+  .of-cats { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .of-cat { border: 1px solid var(--black-4); background: var(--black-3); color: var(--white); border-radius: var(--radius-pill);
+    padding: 0 14px; min-height: 38px; font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; transition: border-color .2s ease, background-color .2s ease; }
+  .of-cat:hover { border-color: #c5cbd8; }
+  .of-cat[aria-pressed="true"] { background: var(--red-light); color: var(--red); border-color: rgba(204,18,18,.45); }
+  .of-vacio { grid-column: 1 / -1; text-align: center; padding: 40px 16px; color: var(--gray); }
+
+  /* Avisame cuando entra */
+  .of-aviso { margin: 40px 0 56px; background: var(--accent); color: #fff; border-radius: 20px; padding: clamp(22px, 4vw, 40px);
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: clamp(20px, 4vw, 48px); align-items: start; scroll-margin-top: 90px; }
+  .of-aviso h2 { font-size: clamp(1.4rem, 3vw, 1.9rem); font-weight: 900; letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; }
+  .of-aviso > div > p { color: rgba(255,255,255,.78); margin-top: 10px; line-height: 1.55; max-width: 48ch; }
+  .of-aviso ul { margin: 16px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; color: rgba(255,255,255,.9); font-size: .92rem; }
+  .of-aviso li i { color: #ff8a8a; width: 18px; }
+  .of-form { background: #fff; color: var(--white); border-radius: 16px; padding: clamp(16px, 3vw, 24px); display: grid; gap: 14px; }
+  .of-form[hidden] { display: none; }
+  .of-form label { font-size: .85rem; font-weight: 700; display: grid; gap: 6px; }
+  .of-form input[type=text], .of-form input[type=tel] { font: inherit; font-size: 1rem; padding: 12px 14px; border: 1.5px solid var(--black-4); border-radius: 12px;
+    background: #fff; color: var(--white); min-height: 48px; transition: border-color .2s ease; }
+  .of-form input:focus { outline: none; border-color: var(--accent); }
+  .of-form small { color: var(--gray); font-weight: 500; }
+  .of-form fieldset { border: 0; padding: 0; margin: 0; }
+  .of-form legend { font-size: .85rem; font-weight: 700; margin-bottom: 8px; }
+  .of-form .of-cats { margin: 0; }
+  .of-form .of-cat { min-height: 36px; font-size: .84rem; }
+  .of-trampa { position: absolute !important; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .of-error { color: var(--red); font-size: .86rem; font-weight: 600; min-height: 1.2em; }
+  .of-enviar { border: 0; background: var(--red); color: #fff; font: inherit; font-weight: 800; font-size: 1rem; border-radius: 12px; min-height: 50px;
+    cursor: pointer; transition: background-color .2s ease, transform .15s ease; }
+  .of-enviar:hover { background: var(--red-dark); }
+  .of-enviar:active { transform: scale(.98); }
+  .of-enviar[disabled] { opacity: .6; cursor: wait; }
+  .of-listo { text-align: center; display: grid; gap: 12px; justify-items: center; padding: 8px 0; }
+  .of-listo i.fa-circle-check { font-size: 2.2rem; color: var(--accent); }
+  .of-listo h3 { font-size: 1.15rem; font-weight: 800; }
+  .of-listo p { color: var(--gray); font-size: .92rem; max-width: 40ch; }
+  .of-wa { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: var(--accent); color: #fff; text-decoration: none;
+    font-weight: 800; border-radius: 12px; min-height: 50px; padding: 0 22px; transition: background-color .2s ease; }
+  .of-wa:hover { background: var(--accent-dark); }
+  @media (max-width: 760px) {
+    .of-aviso { grid-template-columns: 1fr; border-radius: 16px; }
+    .of-barra { flex-direction: column; align-items: stretch; }
+    .of-orden { justify-content: stretch; }
+    .of-orden button { flex: 1; }
+  }
+  @media (prefers-reduced-motion: reduce) { .of-enviar, .of-cat, .of-orden button { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  
+  <div class="container">
+    <span>🚚 Envíos a todo el país</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
+          <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+        </form>
+      </div>
+      <a href="index.html" class="logo"><img src="logo.png?v=2" alt="Virtual Shop Baires" /></a>
+      <div class="header-actions">
+        <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="social-icon-btn si-wa" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-ig" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-fb" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+        <a href="mi-cuenta.html" class="user-action-btn" id="header-user-btn" style="display:none" aria-label="Mi cuenta"><i class="fa-solid fa-circle-user" aria-hidden="true"></i></a>
+        <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
+      </div>
+    </div>
+  </div>
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
+    <div class="container">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html" >Productos</a>
+      <a href="favoritos.html">Favoritos</a>
+      <a href="mis-compras.html">Mis compras</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </nav>
+</header>
+
+<main id="ofertas">
+  <section class="of-hero">
+    <div class="container">
+      <h1>Lo que <span>entró</span>, con stock para entregar</h1>
+      <p>Solo productos disponibles ahora. Arriba lo que más se vende; si buscás lo último que llegó, tocá «Recién ingresados».</p>
+      <div class="of-pago"><i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i> <span><strong>10% OFF</strong> pagando por transferencia o en efectivo</span></div>
+      <br><a class="of-ir-aviso" href="#avisame">¿No está lo que buscás? Te avisamos cuando entra</a>
+    </div>
+  </section>
+
+  <div class="shop-page" style="padding-top:0">
+    <div class="container">
+      <div class="of-barra">
+        <div class="of-orden" role="group" aria-label="Ordenar">
+          <button type="button" data-orden="vendidos" aria-pressed="true">Más vendidos</button>
+          <button type="button" data-orden="nuevos" aria-pressed="false">Recién ingresados</button>
+        </div>
+        <span class="of-cuenta" id="of-cuenta" aria-live="polite"></span>
+      </div>
+      <div class="of-cats" id="of-cats" role="group" aria-label="Categorías"></div>
+      <div class="products-grid" id="products-container" aria-live="polite">
+        <p class="of-vacio">Cargando lo que entró…</p>
+      </div>
+      <div class="ver-mas" id="ver-mas" hidden>
+        <p class="ver-mas-txt" id="ver-mas-txt"></p>
+        <button type="button" class="ver-mas-btn" id="ver-mas-btn" onclick="ofMostrarMas()">Ver más productos</button>
+      </div>
+
+      <section class="of-aviso" id="avisame" aria-labelledby="of-aviso-titulo">
+        <div>
+          <h2 id="of-aviso-titulo">Avisame cuando entra</h2>
+          <p>Dejanos tu WhatsApp y las categorías que te interesan. Cuando llega mercadería nueva te escribimos con el precio y el stock.</p>
+          <ul>
+            <li><i class="fa-solid fa-bolt" aria-hidden="true"></i> Te enterás antes de que se agote</li>
+            <li><i class="fa-solid fa-tag" aria-hidden="true"></i> 10% OFF por transferencia o efectivo</li>
+            <li><i class="fa-solid fa-bell-slash" aria-hidden="true"></i> Sin spam: solo cuando entra lo tuyo</li>
+          </ul>
+        </div>
+        <div>
+          <form class="of-form" id="of-form" novalidate>
+            <label>Tu nombre
+              <input type="text" id="of-nombre" name="nombre" autocomplete="given-name" maxlength="80" required>
+            </label>
+            <label>WhatsApp <small>código de área + número, sin 0 ni 15</small>
+              <input type="tel" id="of-wa" name="whatsapp" autocomplete="tel" inputmode="tel" placeholder="11 2345 6789" maxlength="24" required>
+            </label>
+            <fieldset>
+              <legend>¿Qué te interesa? <small>(podés elegir varias)</small></legend>
+              <div class="of-cats" id="of-form-cats"></div>
+            </fieldset>
+            <div class="of-trampa" aria-hidden="true">
+              <label>No completar <input type="text" id="of-website" name="website" tabindex="-1" autocomplete="off"></label>
+            </div>
+            <p class="of-error" id="of-error" role="alert"></p>
+            <button type="submit" class="of-enviar" id="of-enviar">Quiero que me avisen</button>
+          </form>
+          <div class="of-form of-listo" id="of-listo" hidden>
+            <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+            <h3>¡Listo! Ya estás en la lista</h3>
+            <p>Para no perderte nada, mandanos el mensaje por WhatsApp: así te agendamos y te llegan los avisos.</p>
+            <a class="of-wa" id="of-wa-link" href="https://wa.me/5491149457266" target="_blank" rel="noopener noreferrer">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar por WhatsApp
+            </a>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="logo.png?v=2" alt="Virtual Shop Baires" class="logo-footer" />
+        <p>Importadores de productos para el hogar, mascotas, fitness, jardín y tiempo libre. Envíos a todo el país.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="productos.html">Productos</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="faq.html">Preguntas frecuentes</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Categorías</h4>
+        <ul>
+          <li><a href="autos-a-escala/">Autos a escala</a></li>
+          <li><a href="inflables/">Inflables para pileta</a></li>
+          <li><a href="juguetes/">Juguetes</a></li>
+          <li><a href="fitness/">Fitness</a></li>
+          <li><a href="camping/">Camping</a></li>
+          <li><a href="playa/">Playa</a></li>
+          <li><a href="mascotas/">Mascotas</a></li>
+          <li><a href="productos.html">Ver todas →</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <div class="footer-contact-inner">
+          <ul>
+            <li><i class="fa-solid fa-location-dot"></i> <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" style="color:inherit;">Marcelo Gamboa 6306, Versalles, Buenos Aires</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+5491149457266">+54 9 11 4945-7266</a></li>
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:virtualshopbuenosaires@gmail.com">virtualshopbuenosaires@gmail.com</a></li>
+            <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
+          </ul>
+          <div class="social-links-vertical">
+            <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span class="copyright-year">2026</span> Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" rel="noopener noreferrer" aria-label="Consultar por WhatsApp">
+  <span class="wa-float-pulse" aria-hidden="true"></span><i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+</a>
+
+<div id="product-modal" onclick="closeProductModal()"></div>
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 Tu carrito</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+  </div>
+</div>
+
+<script src="js/sheets.js?v=20"></script>
+<script src="js/productos.js?v=14"></script>
+<script src="js/cart.js?v=5"></script>
+<script src="js/main.js?v=6"></script>
+<script src="js/mejoras-ui.js"></script>
+<script>
+  // ===== Ofertas: solo lo que tiene stock, por más vendidos o recién ingresados =====
+  // Los precios son los mismos de toda la tienda; el total real lo calcula el servidor al comprar.
+  const OF_POR_TANDA = 24;
+  const OF_DIAS_NUEVO = 10;           // "NUEVO" si entró hace menos de esto
+  let ofOrden = "vendidos", ofCat = "Todas", ofLista = [], ofMostrados = 0;
+  let ofIngreso = {};                 // "categoria|nombre" → fecha (ms) en que entró al stock
+
+  const ofClave = (cat, nombre) => (CATEGORY_ALIASES[cat] || cat) + "|" + String(nombre).trim();
+
+  // Fecha de ingreso: la de la variante que volvió a tener stock más recientemente
+  // (columna stock_desde). Si todavía no existe, se usa la fecha de alta del producto.
+  async function ofCargarIngresos() {
+    const h = { apikey: SUPABASE_PUB };
+    const leer = (sel) => fetch(`${SUPABASE_URL}/rest/v1/productos?select=${sel}`, { headers: h })
+      .then(r => r.ok ? r.json() : Promise.reject(r.status));
+    let filas;
+    try { filas = await leer("categoria,nombre,creado,variantes(stock_desde)"); }
+    catch (e) { filas = await leer("categoria,nombre,creado").catch(() => []); }
+    (Array.isArray(filas) ? filas : []).forEach(p => {
+      const fechas = (p.variantes || []).map(v => Date.parse(v.stock_desde)).filter(n => n > 0);
+      ofIngreso[ofClave(p.categoria, p.nombre)] = fechas.length ? Math.max(...fechas) : (Date.parse(p.creado) || 0);
+    });
+  }
+  const ofFecha = (p) => ofIngreso[ofClave(p.categoria, p.nombre)] || 0;
+
+  function ofConStock() { return PRODUCTOS.filter(p => !p.agotado && hayStock(p)); }
+
+  function ofPintarCats() {
+    const cats = [...new Set(ofConStock().map(p => p.categoria))]
+      .sort((a, b) => CATEGORIAS.indexOf(a) - CATEGORIAS.indexOf(b));
+    document.getElementById("of-cats").innerHTML = ["Todas", ...cats].map(c =>
+      `<button type="button" class="of-cat" data-cat="${_escAttr(c)}" aria-pressed="${c === ofCat}">${_escHTML(c)}</button>`).join("");
+  }
+
+  function ofAplicar() {
+    let lista = ofConStock();
+    if (ofCat !== "Todas") lista = lista.filter(p => p.categoria === ofCat);
+    if (ofOrden === "nuevos") lista.sort((a, b) => ofFecha(b) - ofFecha(a) || a.id - b.id);
+    else lista.sort((a, b) => (typeof a.orden === "number" ? a.orden : 1e9) - (typeof b.orden === "number" ? b.orden : 1e9) || a.id - b.id);
+    const limite = Date.now() - OF_DIAS_NUEVO * 864e5;
+    lista.forEach(p => { if (ofFecha(p) > limite && !p.badge) p.badge = "nuevo"; });
+    ofLista = lista; ofMostrados = 0;
+    const cont = document.getElementById("products-container");
+    cont.innerHTML = lista.length ? "" : `<p class="of-vacio">Ahora no hay productos con stock${ofCat !== "Todas" ? " en " + _escHTML(ofCat) : ""}. Dejanos tu WhatsApp abajo y te avisamos apenas entre.</p>`;
+    document.getElementById("of-cuenta").textContent = `${lista.length} producto${lista.length !== 1 ? "s" : ""} con stock`;
+    ofMostrarMas();
+  }
+
+  function ofMostrarMas() {
+    const cont = document.getElementById("products-container");
+    const tanda = ofLista.slice(ofMostrados, ofMostrados + OF_POR_TANDA);
+    cont.insertAdjacentHTML("beforeend", tanda.map(renderProductCard).join(""));
+    ofMostrados += tanda.length;
+    const quedan = ofLista.length - ofMostrados;
+    document.getElementById("ver-mas").hidden = quedan <= 0;
+    document.getElementById("ver-mas-txt").textContent = `Mostrando ${ofMostrados} de ${ofLista.length} productos`;
+    document.getElementById("ver-mas-btn").textContent = `Ver ${Math.min(quedan, OF_POR_TANDA)} productos más`;
+  }
+
+  document.querySelector(".of-orden").addEventListener("click", e => {
+    const b = e.target.closest("button[data-orden]");
+    if (!b || b.dataset.orden === ofOrden) return;
+    ofOrden = b.dataset.orden;
+    document.querySelectorAll(".of-orden button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    ofAplicar();
+  });
+  document.getElementById("of-cats").addEventListener("click", e => {
+    const b = e.target.closest(".of-cat");
+    if (!b) return;
+    ofCat = b.dataset.cat;
+    document.querySelectorAll("#of-cats .of-cat").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    ofAplicar();
+  });
+
+  // ===== Avisame cuando entra (lead) =====
+  // Se guarda en Supabase (tabla leads: la tienda solo puede cargar, nadie puede leer salvo el CRM).
+  const OF_WA = "5491149457266";
+  let ofElegidas = new Set();
+
+  function ofPintarCatsForm() {
+    const cats = CATEGORIAS.filter(c => c !== "Todos" && !CATS_EXTERNAS[c.toLowerCase().trim()]);
+    document.getElementById("of-form-cats").innerHTML = cats.map(c =>
+      `<button type="button" class="of-cat" data-cat="${_escAttr(c)}" aria-pressed="${ofElegidas.has(c)}">${_escHTML(c)}</button>`).join("");
+  }
+  document.getElementById("of-form-cats").addEventListener("click", e => {
+    const b = e.target.closest(".of-cat");
+    if (!b) return;
+    const c = b.dataset.cat;
+    ofElegidas.has(c) ? ofElegidas.delete(c) : ofElegidas.add(c);
+    b.setAttribute("aria-pressed", String(ofElegidas.has(c)));
+  });
+
+  // WhatsApp argentino → 549 + área + número (acepta +54, 0, 15, espacios y guiones)
+  function ofNormalizarWa(txt) {
+    let d = String(txt || "").replace(/\D/g, "");
+    if (d.startsWith("00")) d = d.slice(2);
+    if (d.startsWith("54")) d = d.slice(2);
+    if (d.length === 11 && d.startsWith("9")) d = d.slice(1);
+    if (d.startsWith("0")) d = d.slice(1);
+    if (d.length === 12) {   // con 15 después del código de área (2, 3 o 4 dígitos)
+      for (const i of [2, 3, 4]) if (d.slice(i, i + 2) === "15") { d = d.slice(0, i) + d.slice(i + 2); break; }
+    }
+    return d.length === 10 ? "549" + d : "";
+  }
+
+  function ofLinkWa(nombre, cats) {
+    const txt = `Hola! Soy ${nombre}. Quiero que me avisen cuando entre mercadería` +
+      (cats.length ? ` de: ${cats.join(", ")}` : "") + ". (Lo pedí desde la página de ofertas)";
+    return `https://wa.me/${OF_WA}?text=${encodeURIComponent(txt)}`;
+  }
+
+  document.getElementById("of-form").addEventListener("submit", async e => {
+    e.preventDefault();
+    const err = document.getElementById("of-error"), btn = document.getElementById("of-enviar");
+    const nombre = document.getElementById("of-nombre").value.trim();
+    const wa = ofNormalizarWa(document.getElementById("of-wa").value);
+    const cats = [...ofElegidas];
+    err.textContent = "";
+    if (nombre.length < 2) { err.textContent = "Escribí tu nombre."; document.getElementById("of-nombre").focus(); return; }
+    if (!wa) { err.textContent = "Revisá el WhatsApp: código de área + número (por ejemplo 11 2345 6789)."; document.getElementById("of-wa").focus(); return; }
+
+    const listo = () => {
+      document.getElementById("of-wa-link").href = ofLinkWa(nombre, cats);
+      document.getElementById("of-form").hidden = true;
+      document.getElementById("of-listo").hidden = false;
+      document.getElementById("of-wa-link").focus();
+    };
+    // Campo trampa: lo completan los bots. Se muestra "listo" pero no se guarda nada.
+    if (document.getElementById("of-website").value.trim()) { listo(); return; }
+
+    btn.disabled = true; btn.textContent = "Guardando…";
+    const u = typeof vsbUtm === "function" ? vsbUtm("obj") : {};
+    try {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/leads`, {
+        method: "POST",
+        headers: { apikey: SUPABASE_PUB, "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({
+          nombre, whatsapp: wa, categorias: cats, origen: "ofertas.html",
+          utm_source: u.utm_source || null, utm_medium: u.utm_medium || null, utm_campaign: u.utm_campaign || null,
+          utm_content: u.utm_content || null, utm_term: u.utm_term || null,
+        }),
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      listo();
+    } catch (ex) {
+      // No se pudo guardar: igual se ofrece el WhatsApp para no perder el contacto
+      err.innerHTML = `No pudimos guardar tus datos. <a href="${ofLinkWa(nombre, cats)}" target="_blank" rel="noopener noreferrer">Escribinos por WhatsApp</a> y te agendamos.`;
+    } finally {
+      btn.disabled = false; btn.textContent = "Quiero que me avisen";
+    }
+  });
+
+  Promise.all([cargarProductos(), ofCargarIngresos().catch(() => {})]).then(() => {
+    ofPintarCatsForm();
+    if (CATALOGO_ERROR) return;   // queda el aviso de error con Reintentar
+    ofPintarCats();
+    ofAplicar();
+  });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

@@ -697,6 +697,7 @@ function renderPedidos(list) {
       ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}
       ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
       ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${hx(p.observaciones)}</div>` : ''}
+      ${p.utm ? `<div><span class="ped-label">Vino de:</span> ${hx(decodeURIComponent(String(p.utm).replace(/utm_/g, '').replace(/&/g, ' · ').replace(/=/g, ': ')))}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>

@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="panel.css?v=45">
+  <link rel="stylesheet" href="panel.css?v=46">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -47,6 +47,7 @@
       <a class="nav-link" data-sec="productos"     onclick="goTo('productos')">    <i class="fa-solid fa-box"></i>           Productos</a>
       <a class="nav-link" data-sec="pedidos"       onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i>  Pedidos</a>
       <a class="nav-link" data-sec="comprobantes"  onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i>    Comprobantes</a>
+      <a class="nav-link" data-sec="leads"         onclick="goTo('leads')">        <i class="fa-solid fa-user-plus"></i>     Leads</a>
     </div>
     <div class="sidebar-footer">
       <a href="/crm/panel-ops.html" onclick="localStorage.setItem('vsb_nav_from_crm','1')" class="btn-logout" style="display:flex;align-items:center;gap:8px;text-decoration:none;margin-bottom:8px;"><i class="fa-solid fa-truck"></i> Ir a Operaciones</a>
@@ -65,6 +66,7 @@
       <button class="mnav-btn" data-sec="productos"    onclick="goTo('productos')">    <i class="fa-solid fa-box"></i><span class="mnav-label">Productos</span></button>
       <button class="mnav-btn" data-sec="pedidos"      onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i><span class="mnav-label">Pedidos</span></button>
       <button class="mnav-btn" data-sec="comprobantes" onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i><span class="mnav-label">Pagos</span></button>
+      <button class="mnav-btn" data-sec="leads"        onclick="goTo('leads')">        <i class="fa-solid fa-user-plus"></i><span class="mnav-label">Leads</span></button>
     </div>
   </div>
 
@@ -170,6 +172,29 @@
       <h1 class="sec-title">Comprobantes de pago</h1>
       <p class="text-muted">Pedidos que tienen foto de comprobante subida por el cliente.</p>
       <div class="card table-wrap"><div id="comp-table"></div></div>
+    </section>
+
+    <!-- LEADS (Avisame cuando entra · ofertas.html) -->
+    <section id="sec-leads" class="sec">
+      <div class="sec-header">
+        <h1 class="sec-title">Leads</h1>
+        <button class="btn-refresh" onclick="loadLeads(true)" title="Actualizar leads"><i class="fa-solid fa-rotate-right"></i></button>
+      </div>
+      <p class="text-muted">Personas que dejaron su WhatsApp en «Avisame cuando entra» de la página de ofertas.</p>
+      <div class="leads-resumen" id="leads-resumen"></div>
+      <div class="toolbar leads-filtros">
+        <input type="search" id="leads-buscar" placeholder="Buscar nombre o número…" oninput="pintarLeads()">
+        <label>Desde <input type="date" id="leads-desde" onchange="pintarLeads()"></label>
+        <label>Hasta <input type="date" id="leads-hasta" onchange="pintarLeads()"></label>
+        <select id="leads-cat" onchange="pintarLeads()" aria-label="Categoría"><option value="">Todas las categorías</option></select>
+        <select id="leads-camp" onchange="pintarLeads()" aria-label="Campaña (utm_campaign)"><option value="">Todas las campañas</option></select>
+      </div>
+      <div class="leads-acciones">
+        <button class="btn-primary" id="leads-exportar" onclick="exportarLeads()" disabled><i class="fa-solid fa-file-arrow-down"></i> Exportar para WhatsApp (CSV)</button>
+        <button class="btn-secondary" id="leads-copiar" onclick="copiarNumerosLeads()" disabled><i class="fa-regular fa-copy"></i> Copiar números</button>
+        <span class="text-muted leads-ayuda">El CSV se importa en Google Contactos (etiqueta «VSB Leads»); con los números agendados armás la lista de difusión en WhatsApp Business.</span>
+      </div>
+      <div class="card table-wrap"><div id="leads-tabla"></div></div>
     </section>
 
   </main>
@@ -483,8 +508,9 @@
 <div id="toast" class="toast"></div>
 
 <script src="estados.js?v=1"></script>
-<script src="panel.js?v=22"></script>
+<script src="panel.js?v=23"></script>
 <script src="productos-crm.js?v=32"></script>
+<script src="leads-crm.js?v=1"></script>
 <script src="nav-movil.js?v=1"></script>
 <script src="login-glass.js?v=3"></script>
 <script src="confianza.js?v=2"></script>

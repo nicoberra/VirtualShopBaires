@@ -1700,11 +1700,25 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .leads-dato span { color: var(--text2); font-size: .85rem; }
 .leads-filtros { flex-wrap: wrap; gap: 10px; }
 .leads-filtros label { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--text2); }
-.leads-filtros select, .leads-filtros input[type=date] { min-height: 40px; }
+/* Fechas y desplegables con el mismo aspecto que la caja de búsqueda */
+.leads-filtros select, .leads-filtros input[type=date] {
+  background-color: var(--bg3); border: 1px solid var(--border); color: var(--text);
+  border-radius: 8px; padding: 10px 12px; min-height: 42px; outline: none;
+  transition: border-color var(--trans); cursor: pointer;
+}
+.leads-filtros select {
+  -webkit-appearance: none; appearance: none; padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+.leads-filtros select:hover, .leads-filtros input[type=date]:hover { border-color: var(--text2); }
+.leads-filtros select:focus, .leads-filtros input[type=date]:focus { border-color: var(--red); }
+#sec-leads .btn-secondary { gap: 6px; }
 .leads-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 4px 0 14px; }
 .leads-ayuda { font-size: .8rem; flex-basis: 100%; }
 .leads-cat { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--bg3, rgba(27,42,74,.07)); font-size: .78rem; margin: 2px 2px 2px 0; white-space: nowrap; }
 @media (max-width: 768px) {
   .leads-filtros label { justify-content: space-between; }
+  .leads-filtros label input[type=date] { flex: 0 0 72%; }
   .leads-acciones > button { flex: 1; }
 }

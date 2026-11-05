@@ -56,7 +56,8 @@
   .iv-gal { position: relative; background: #fff; }
   .iv-fotos { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; aspect-ratio: 1 / 1; }
   .iv-fotos::-webkit-scrollbar { display: none; }
-  .iv-fotos img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: contain; scroll-snap-align: center; background: #fff; }
+  /* La foto llena todo el recuadro: sin franjas blancas arriba, abajo ni a los costados */
+  .iv-fotos img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; object-position: center; scroll-snap-align: center; }
   .iv-cuenta { position: absolute; right: 10px; bottom: 10px; background: rgba(27,42,75,.82); color: #fff; font-size: .75rem; font-weight: 700;
     padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; pointer-events: none; }
   .iv-flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92);

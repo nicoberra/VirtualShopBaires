@@ -39,6 +39,7 @@
     border: 1.5px solid var(--black-4); background: #fff; color: var(--white); }
   .iv-buscar input:focus { outline: none; border-color: var(--accent); }
   .iv-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+  .iv-chip { cursor: pointer; font-family: inherit; }
   .iv-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--black-4); background: #fff; color: var(--white);
     border-radius: var(--radius-pill); padding: 0 14px; min-height: 38px; font-size: .86rem; font-weight: 700; text-decoration: none; transition: border-color .2s ease, background-color .2s ease; }
   .iv-chip:hover { border-color: #c5cbd8; }
@@ -101,11 +102,42 @@
   .iv-ayuda p { color: rgba(255,255,255,.8); margin-top: 4px; }
   .iv-ayuda a { background: #fff; color: var(--accent); }
   .iv-ayuda a:hover { background: #eef1f6; }
+  .iv-entrega-hero { margin-top: 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--accent-light); color: var(--accent);
+    padding: 9px 16px; border-radius: var(--radius-pill); font-size: .92rem; }
+  .iv-entrega-hero i, .iv-entrega i { color: var(--red); }
+  .iv-entrega { font-size: .86rem; color: var(--accent); font-weight: 600; display: flex; gap: 8px; align-items: center; }
+
+  /* Vista grande (celular): panel a pantalla completa que se agranda desde la foto */
+  .iv-ov[hidden] { display: none; }
+  .iv-ov { position: fixed; inset: 0; z-index: 200; }
+  .iv-ov-fondo { position: absolute; inset: 0; background: rgba(15,23,42,.55); }
+  .iv-ov-panel { position: absolute; inset: 0; background: #fff; overflow-y: auto; overscroll-behavior: contain; transform-origin: 0 0; will-change: transform, clip-path; }
+  .iv-ov-cerrar { position: fixed; top: calc(12px + env(safe-area-inset-top)); right: 12px; z-index: 3; width: 42px; height: 42px; border-radius: 50%; border: 0;
+    background: rgba(255,255,255,.92); box-shadow: 0 2px 12px rgba(0,0,0,.18); color: var(--accent); font-size: 1.15rem; display: grid; place-items: center; cursor: pointer; }
+  .iv-ov .iv-card { border-radius: 0; box-shadow: none; border: 0; min-height: 100%; }
+  .iv-ov .iv-info { padding: 16px 18px calc(24px + env(safe-area-inset-bottom)); gap: 12px; }
+  .iv-ov .iv-nombre { font-size: 1.15rem; }
+  .iv-ov .iv-precio b { font-size: 1.7rem; }
+  .iv-ov .iv-cuenta { bottom: 12px; right: 12px; }
+  html.iv-fijo, html.iv-fijo body { overflow: hidden; }
+
   @media (max-width: 640px) {
-    .iv-grid { grid-template-columns: 1fr; gap: 14px; }
-    .iv-grupo { padding-top: 22px; }
+    .iv-grupo { padding-top: 20px; }
+    .iv-grupo > .container > p { display: none; }
+    .iv-grupo h2 { margin-bottom: 10px; }
+    /* Grilla de fotos, 3 por fila, como en Instagram */
+    .iv-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; }
+    .iv-grid .iv-card { border-radius: 4px; box-shadow: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease; }
+    .iv-grid .iv-card:active { transform: scale(.97); }
+    .iv-grid .iv-info, .iv-grid .iv-cuenta, .iv-grid .iv-flecha { display: none; }
+    .iv-grid .iv-fotos { overflow: hidden; pointer-events: none; }
+    .iv-grid .iv-fotos img:not(:first-child) { display: none; }
+    .iv-grid .iv-card.agotado::after { content: "Sin stock"; position: absolute; left: 4px; bottom: 4px; background: rgba(27,43,75,.85); color: #fff;
+      font-size: .62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+    .iv-grid .iv-card { position: relative; }
+    .iv-card:target { outline: none; }
   }
-  @media (prefers-reduced-motion: reduce) { .iv-fotos { scroll-behavior: auto; } .iv-comprar, .iv-desc summary i, .iv-flecha { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .iv-fotos { scroll-behavior: auto; } .iv-comprar, .iv-desc summary i, .iv-flecha, .iv-grid .iv-card { transition: none; } }
 </style>
 </head>
 <body>
@@ -113,7 +145,9 @@
   <section class="iv-hero">
     <div class="container">
       <h1>Inflables para este <span>verano</span></h1>
-      <p>Todos los modelos con fotos, medidas y precio, separados por tipo. Tocá «Comprar» y nos escribís por WhatsApp con el pedido ya armado.</p>    </div>
+      <p>Todos los modelos con fotos, medidas y precio. Elegí un tipo arriba para ver solo esos, y tocá «Comprar» para escribirnos por WhatsApp con el pedido ya armado.</p>
+      <p class="iv-entrega-hero"><i class="fa-solid fa-house" aria-hidden="true"></i> <strong>Retirás por el lote 707 o te lo llevamos a tu lote</strong></p>
+    </div>
   </section>
 
   <nav class="iv-nav" aria-label="Tipos de inflables">
@@ -220,7 +254,7 @@
       ? [`Hola! Quería saber cuándo vuelve a entrar este inflable:`, `• ${ivNombre(p.nombre)}`]
       : pr.valido
         ? [`Hola! Quiero comprar este inflable:`, `• ${ivNombre(p.nombre)}`, ...det,
-           `• Precio: ${ivPrecioFinal(pr.precio)}`, `¿Está disponible?`]
+           `• Precio: ${ivPrecioFinal(pr.precio)}`, `• Entrega: retiro por el lote 707 / me lo traen a mi lote (N° ___)`, `¿Está disponible?`]
         : [`Hola! Quiero comprar este inflable y saber el precio:`, `• ${ivNombre(p.nombre)}`, ...det];
     lineas.push(`${IV_PAGINA}#${ivSlug(p.nombre)}`);
     return `https://wa.me/${IV_WA}?text=${encodeURIComponent(lineas.join("\n"))}`;
@@ -236,11 +270,11 @@
     return `<div class="iv-precio"><b>${ivPrecioFinal(pr.precio)}</b></div>`;
   }
 
-  function ivTarjeta(p) {
+  function ivTarjeta(p, enGrande) {
     const fotos = ivFotos(p), id = ivSlug(p.nombre), sin = p.agotado || !hayStock(p);
     const colores = (p.variantes || []).filter(v => v.stock !== false && v.color && v.color.toLowerCase() !== "único" && v.color.toLowerCase() !== "unico");
     const nombre = ivNombre(p.nombre);
-    return `<article class="iv-card${sin ? " agotado" : ""}" id="${_escAttr(id)}" data-pid="${p.id}">
+    return `<article class="iv-card${sin ? " agotado" : ""}"${enGrande ? "" : ` id="${_escAttr(id)}" tabindex="0" aria-label="Ver ${_escAttr(nombre)}"`} data-pid="${p.id}">
       <div class="iv-gal">
         <div class="iv-fotos" tabindex="0" aria-label="Fotos de ${_escAttr(nombre)}">
           ${fotos.map((u, i) => `<img src="${_escAttr(fotoSrc(u))}" alt="${_escAttr(nombre)}${fotos.length > 1 ? " · foto " + (i + 1) : ""}" ${i ? 'loading="lazy"' : ""} decoding="async" onerror="fotoRespaldo(this)">`).join("") ||
@@ -257,13 +291,20 @@
           `<button type="button" data-color="${_escAttr(v.color)}" aria-pressed="${i === 0}">${_escHTML(v.color)}</button>`).join("")}</div>` : ""}
         ${p.descripcion ? `<details class="iv-desc"><summary>Ver descripción <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><div>${descripcionHTML(p.descripcion)}</div></details>` : ""}
         <div class="iv-precio-caja">${ivPrecioHTML(p)}</div>
+        ${sin ? "" : `<p class="iv-entrega"><i class="fa-solid fa-house" aria-hidden="true"></i> Retirás por el lote 707 o te lo llevamos a tu lote</p>`}
         <a class="iv-comprar" href="${_escAttr(ivLinkWa(p))}" target="_blank" rel="noopener noreferrer">
           <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${sin ? "Avisame cuando entra" : "Comprar por WhatsApp"}</a>
       </div>
     </article>`;
   }
 
+  // Los que van primero en "Todos" (los más vendidos que elija el dueño): parte del nombre, en este orden.
+  // Si la lista está vacía, el orden es el ranking de más vendidos de la tienda (ya viene mezclado).
+  const IV_PRIMEROS = [];
+  const ivPrimero = (p) => { const n = ivNombre(p.nombre).toLowerCase(); const i = IV_PRIMEROS.findIndex(x => n.includes(String(x).toLowerCase())); return i < 0 ? 1e6 : i; };
+
   let ivLista = [];
+  let ivCat = "todos";   // "todos" o el id de un grupo
   function ivPintar() {
     const q = document.getElementById("iv-buscar").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     const coincide = (p) => !q || (p.nombre + " " + (p.descripcion || "")).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q);
@@ -272,28 +313,47 @@
     const grupos = IV_GRUPOS.filter(g => g.titulo).sort((a, b) => a.orden - b.orden)
       .map(g => ({ ...g, items: conStock.filter(p => ivGrupoDe(p) === g.id) })).filter(g => g.items.length);
     if (sinStock.length) grupos.push({ id: "sin-stock", titulo: "Sin stock por ahora", texto: "Tocá el botón y te avisamos cuando vuelvan a entrar.", items: sinStock });
+    if (ivCat !== "todos" && !grupos.some(g => g.id === ivCat)) ivCat = "todos";
 
-    document.getElementById("iv-chips").innerHTML = grupos.map(g =>
-      `<a class="iv-chip" href="#g-${g.id}">${_escHTML(g.titulo)} <span>${g.items.length}</span></a>`).join("");
-    document.getElementById("iv-grupos").innerHTML = grupos.length ? grupos.map(g => `
+    // Botones de tipo: "Todos" (todo mezclado) y cada grupo; filtran, no saltan
+    document.getElementById("iv-chips").innerHTML =
+      `<button type="button" class="iv-chip${ivCat === "todos" ? " activo" : ""}" data-cat="todos" aria-pressed="${ivCat === "todos"}">Todos <span>${conStock.length}</span></button>` +
+      grupos.map(g => `<button type="button" class="iv-chip${ivCat === g.id ? " activo" : ""}" data-cat="${g.id}" aria-pressed="${ivCat === g.id}">${_escHTML(g.titulo)} <span>${g.items.length}</span></button>`).join("");
+
+    // "Todos": una sola grilla con todo mezclado (primero los elegidos, después por más vendidos); sin stock al final
+    const vista = ivCat === "todos"
+      ? [{ id: "todos", titulo: "Todos los inflables", texto: "", items: [...conStock].sort((a, b) => ivPrimero(a) - ivPrimero(b) || (a.orden ?? 1e9) - (b.orden ?? 1e9) || a.id - b.id) },
+         ...(sinStock.length ? [grupos[grupos.length - 1]] : [])]
+      : grupos.filter(g => g.id === ivCat);
+    document.getElementById("iv-grupos").innerHTML = vista.length && vista[0].items.length + (vista[1] ? vista[1].items.length : 0) ? vista.map(g => `
       <section class="iv-grupo" id="g-${g.id}" aria-labelledby="t-${g.id}">
         <div class="container">
           <h2 id="t-${g.id}">${_escHTML(g.titulo)} <small>${g.items.length} modelo${g.items.length !== 1 ? "s" : ""}</small></h2>
-          <p>${_escHTML(g.texto)}</p>
+          ${g.texto ? `<p>${_escHTML(g.texto)}</p>` : ""}
           <div class="iv-grid">${g.items.map(ivTarjeta).join("")}</div>
         </div>
       </section>`).join("") : `<p class="iv-vacio">No encontramos inflables con «${_escHTML(q)}». Probá con otra palabra o escribinos por WhatsApp.</p>`;
-    ivObservarGrupos();
   }
+  // Tocar un tipo: filtra y vuelve arriba de la lista
+  document.getElementById("iv-chips").addEventListener("click", e => {
+    const b = e.target.closest(".iv-chip");
+    if (!b || b.dataset.cat === ivCat) return;
+    ivCat = b.dataset.cat;
+    ivPintar();
+    b.scrollIntoView({ block: "nearest", inline: "center", behavior: ivSinMov.matches ? "auto" : "smooth" });
+    const g = document.getElementById("iv-grupos"), y = g.getBoundingClientRect().top + scrollY - document.querySelector(".iv-nav").offsetHeight - 8;
+    if (scrollY > y) window.scrollTo({ top: y, behavior: "auto" });
+  });
 
   // Galería: contador al deslizar y flechas en compu
-  document.getElementById("iv-grupos").addEventListener("scroll", e => {
+  document.addEventListener("scroll", e => {
     const f = e.target.closest && e.target.closest(".iv-fotos");
     if (!f) return;
     const n = Math.round(f.scrollLeft / f.clientWidth) + 1, c = f.parentElement.querySelector(".iv-cuenta");
     if (c) c.textContent = `${n}/${f.children.length}`;
   }, true);
-  document.getElementById("iv-grupos").addEventListener("click", e => {
+  document.addEventListener("click", e => {
+    if (!e.target.closest) return;
     const fl = e.target.closest(".iv-flecha");
     if (fl) { const f = fl.parentElement.querySelector(".iv-fotos"); f.scrollBy({ left: f.clientWidth * Number(fl.dataset.dir), behavior: "smooth" }); return; }
     const b = e.target.closest(".iv-colores button");
@@ -311,21 +371,78 @@
     }
   });
 
-  // Chip del grupo que se está viendo
-  let ivObs = null;
-  function ivObservarGrupos() {
-    if (ivObs) ivObs.disconnect();
-    if (!("IntersectionObserver" in window)) return;
-    ivObs = new IntersectionObserver(ents => ents.forEach(en => {
-      if (!en.isIntersecting) return;
-      document.querySelectorAll(".iv-chip").forEach(c => {
-        const act = c.getAttribute("href") === "#" + en.target.id;
-        c.classList.toggle("activo", act);
-        if (act) c.scrollIntoView({ block: "nearest", inline: "nearest" });
-      });
-    }), { rootMargin: "-45% 0px -50% 0px" });
-    document.querySelectorAll(".iv-grupo").forEach(s => ivObs.observe(s));
+  // ===== Celular: grilla de fotos (3 por fila); al tocar una, se agranda con animación =====
+  const ivCelu = window.matchMedia("(max-width: 640px)");
+  const ivEsCelu = () => ivCelu.matches;
+  const ivSinMov = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const ivOv = document.createElement("div");
+  ivOv.className = "iv-ov"; ivOv.hidden = true;
+  ivOv.innerHTML = `<div class="iv-ov-fondo"></div>
+    <div class="iv-ov-panel" role="dialog" aria-modal="true" aria-label="Detalle del inflable">
+      <button type="button" class="iv-ov-cerrar" aria-label="Cerrar"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+      <div class="iv-ov-cont"></div>
+    </div>`;
+  document.body.appendChild(ivOv);
+  const ivPanel = ivOv.querySelector(".iv-ov-panel"), ivFondo = ivOv.querySelector(".iv-ov-fondo");
+  let ivOrigen = null, ivAnim = null;
+  const IV_CURVA = "cubic-bezier(.2,.8,.2,1)";
+
+  // Desde dónde y hasta dónde: el panel arranca encogido y recortado justo sobre la foto tocada
+  function ivDesde(tile) {
+    const r = tile.getBoundingClientRect(), f = ivPanel.getBoundingClientRect(), k = r.width / f.width;
+    return { transform: `translate(${r.left - f.left}px, ${r.top - f.top}px) scale(${k})`,
+             clipPath: `inset(0px 0px ${Math.max(0, f.height - f.width)}px 0px round ${8 / k}px)` };
   }
+  function ivAbrir(tile) {
+    const p = PRODUCTOS.find(x => x.id === Number(tile.dataset.pid));
+    if (!p) return;
+    ivOrigen = tile;
+    ivOv.querySelector(".iv-ov-cont").innerHTML = ivTarjeta(p, true);
+    ivPanel.scrollTop = 0;
+    ivOv.hidden = false;
+    document.documentElement.classList.add("iv-fijo");
+    if (history.state === null || !history.state.ivGrande) history.pushState({ ivGrande: 1 }, "");
+    if (ivAnim) ivAnim.cancel();
+    if (ivSinMov.matches) { ivFondo.animate([{ opacity: 0 }, { opacity: 1 }], 160); ivPanel.animate([{ opacity: 0 }, { opacity: 1 }], 200); }
+    else {
+      const d = ivDesde(tile);
+      ivFondo.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 360, easing: "ease-out" });
+      ivAnim = ivPanel.animate([d, { transform: "none", clipPath: "inset(0px 0px 0px 0px round 0px)" }], { duration: 440, easing: IV_CURVA });
+    }
+    ivOv.querySelector(".iv-ov-cerrar").focus({ preventScroll: true });
+  }
+  function ivCerrar() {
+    if (ivOv.hidden) return;
+    const fin = () => { ivOv.hidden = true; document.documentElement.classList.remove("iv-fijo"); ivOv.querySelector(".iv-ov-cont").innerHTML = ""; if (ivOrigen) ivOrigen.focus({ preventScroll: true }); };
+    const r = ivOrigen && ivOrigen.getBoundingClientRect();
+    const visible = r && r.bottom > 0 && r.top < innerHeight;
+    if (ivAnim) ivAnim.cancel();
+    if (ivSinMov.matches || !visible) {
+      ivFondo.animate([{ opacity: 1 }, { opacity: 0 }], 200);
+      ivPanel.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(24px)" }], { duration: 220, easing: "ease-in" }).onfinish = fin;
+      return;
+    }
+    ivPanel.scrollTop = 0;
+    ivFondo.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 320, easing: "ease-in" });
+    ivAnim = ivPanel.animate([{ transform: "none", clipPath: "inset(0px 0px 0px 0px round 0px)" }, ivDesde(ivOrigen)], { duration: 360, easing: IV_CURVA, fill: "forwards" });
+    ivAnim.onfinish = () => { ivAnim.cancel(); ivAnim = null; fin(); };
+  }
+  // Cerrar: botón, fondo, tecla Escape o el "atrás" del celular
+  ivOv.querySelector(".iv-ov-cerrar").addEventListener("click", () => history.back());
+  ivFondo.addEventListener("click", () => history.back());
+  window.addEventListener("popstate", () => ivCerrar());
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !ivOv.hidden) history.back(); });
+  // Tocar una foto de la grilla (solo en el celular)
+  document.getElementById("iv-grupos").addEventListener("click", e => {
+    if (!ivEsCelu()) return;
+    const tile = e.target.closest(".iv-grid .iv-card");
+    if (tile) { e.preventDefault(); ivAbrir(tile); }
+  });
+  document.getElementById("iv-grupos").addEventListener("keydown", e => {
+    if (!ivEsCelu() || (e.key !== "Enter" && e.key !== " ")) return;
+    const tile = e.target.closest(".iv-grid .iv-card");
+    if (tile && e.target === tile) { e.preventDefault(); ivAbrir(tile); }
+  });
 
   // La barra de grupos queda justo debajo del encabezado fijo de la tienda
   (function () {
@@ -349,7 +466,10 @@
     ivLista = PRODUCTOS.filter(p => p.categoria === "Inflables")
       .sort((a, b) => (typeof a.orden === "number" ? a.orden : 1e9) - (typeof b.orden === "number" ? b.orden : 1e9) || a.id - b.id);
     ivPintar();
-    if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) setTimeout(() => el.scrollIntoView({ block: "start" }), 50); }
+    if (location.hash) {
+      const el = document.getElementById(location.hash.slice(1));
+      if (el) setTimeout(() => { el.scrollIntoView({ block: "center" }); if (el.classList.contains("iv-card") && ivEsCelu()) ivAbrir(el); }, 80);
+    }
   });
 </script>
 </body>

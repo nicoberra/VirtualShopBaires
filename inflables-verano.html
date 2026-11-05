@@ -86,6 +86,7 @@
   .iv-precio s { color: var(--gray); font-size: .85rem; margin-left: 6px; font-weight: 500; }
   .iv-precio small { font-size: .84rem; color: var(--accent); font-weight: 600; }
   .iv-precio small strong { color: var(--red); }
+  .iv-off { display: inline-block; margin-left: 8px; background: var(--red); color: #fff; font-size: .72rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; vertical-align: 3px; }
   .iv-desc summary { cursor: pointer; font-size: .86rem; font-weight: 700; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
   .iv-desc summary::-webkit-details-marker { display: none; }
   .iv-desc summary i { transition: transform .2s ease; font-size: .75rem; }
@@ -356,7 +357,7 @@
       ? [`Hola! Quería saber cuándo vuelve a entrar este inflable:`, `• ${ivNombre(p.nombre)}`]
       : pr.valido
         ? [`Hola! Quiero comprar este inflable:`, `• ${ivNombre(p.nombre)}`, ...det,
-           `• Precio: ${formatPrecio(pr.precio)} (${formatPrecioExacto(precioTransferencia(pr.precio))} con transferencia o efectivo)`, `¿Está disponible?`]
+           `• Precio: ${formatPrecioExacto(precioTransferencia(pr.precio))} (con 10% OFF por transferencia o efectivo)`, `¿Está disponible?`]
         : [`Hola! Quiero comprar este inflable y saber el precio:`, `• ${ivNombre(p.nombre)}`, ...det];
     lineas.push(`${IV_PAGINA}#${ivSlug(p.nombre)}`);
     return `https://wa.me/${IV_WA}?text=${encodeURIComponent(lineas.join("\n"))}`;
@@ -366,8 +367,9 @@
     if (p.agotado || !hayStock(p)) return `<div class="iv-precio"><span class="iv-sin">Sin stock por ahora</span></div>`;
     const pr = ivPrecio(p);
     if (!pr.valido) return `<div class="iv-precio"><b>Consultar precio</b></div>`;
-    return `<div class="iv-precio"><div><b>${formatPrecio(pr.precio)}</b>${pr.original ? `<s>${formatPrecio(pr.original)}</s>` : ""}</div>
-      <small><strong>${formatPrecioExacto(precioTransferencia(pr.precio))}</strong> con transferencia o efectivo (10% OFF)</small></div>`;
+    // Precio principal: el final con 10% OFF (transferencia o efectivo); el de lista queda tachado al lado
+    return `<div class="iv-precio"><div><b>${formatPrecioExacto(precioTransferencia(pr.precio))}</b><s>${formatPrecio(pr.original || pr.precio)}</s><span class="iv-off">10% OFF</span></div>
+      <small>pagando por transferencia o en efectivo</small></div>`;
   }
 
   function ivTarjeta(p) {

@@ -819,8 +819,11 @@ a:focus-visible {
 .prod-tabla .pill-var { max-width: 100%; box-sizing: border-box; }
 .prod-group-row .td-stock-grupo, .prod-group-row:hover .td-stock-grupo { cursor: pointer; }
 .td-stock-grupo .stock-ctl { flex-direction: column; align-items: flex-start; gap: 4px; }
+.td-stock-grupo .stock-fila { display: inline-flex; align-items: center; gap: 10px; }
 .td-stock-grupo .stock-resumen { font-size: .72rem; color: var(--text2); line-height: 1.2; white-space: nowrap; }
 .pcard-todas { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg3); text-align: left; cursor: pointer; font: inherit; color: var(--text); }
+.pcard-todas { cursor: default; }
+.pcard-todas-sw { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; border: 0; background: none; padding: 0; text-align: left; cursor: pointer; font: inherit; color: inherit; }
 .pcard-todas b { display: block; font-size: .85rem; }
 .pcard-todas small { color: var(--text2); font-size: .75rem; }
 .mprod-var-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
@@ -1435,7 +1438,7 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .prod-tabla { min-width: 0; width: 100%; table-layout: fixed; }
   .prod-tabla th:nth-child(2) { width: 100px; }   /* SKU */
   .prod-tabla th:nth-child(3) { width: 132px; }   /* Variante */
-  .prod-tabla th:nth-child(4) { width: 120px; }   /* Precio */
+  .prod-tabla th:nth-child(4) { width: 144px; }   /* Precio (entra "desde $100.000" + lápiz) */
   .prod-tabla th:nth-child(5) { width: 184px; }   /* Stock: interruptor + casillero con el número entero */
   .prod-tabla th:nth-child(6) { width: 184px; }   /* Acciones */
   .prod-tabla td { overflow: hidden; text-overflow: ellipsis; }
@@ -1452,7 +1455,7 @@ body { font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', san
   .prod-tabla .btn-editar-txt { display: none; }
   .prod-tabla th:nth-child(2) { width: 84px; }
   .prod-tabla th:nth-child(3) { width: 112px; }
-  .prod-tabla th:nth-child(4) { width: 108px; }
+  .prod-tabla th:nth-child(4) { width: 128px; }
   .prod-tabla th:nth-child(5) { width: 164px; }
   .prod-tabla .stock-ctl { gap: 8px; }
   .prod-tabla th:nth-child(6) { width: 122px; }
@@ -1654,7 +1657,7 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .stock-cant-ficha { width: 100%; max-width: 180px; height: 44px; margin-bottom: 8px; font-size: 1.05rem; }
 .pvar .stock-cant { width: 58px; height: 32px; flex-shrink: 0; }
 /* Que se lea el número entero (10, 100, 1250): la regla general de input[type=number] le ponía 12 px de relleno y la columna lo achicaba */
-.stock-ctl .stock-cant, .pvar .stock-cant { width: 84px; min-width: 84px; height: 38px; padding: 0 6px; font-size: 1.05rem; flex-shrink: 0; }
+.stock-ctl .stock-cant, .pvar .stock-cant, .pcard-todas .stock-cant { width: 84px; min-width: 84px; height: 38px; padding: 0 6px; font-size: 1.05rem; flex-shrink: 0; }
 
 /* Botones "Con stock" / "Sin stock" arriba de la lista de productos: cada uno muestra u oculta su grupo */
 .stock-ver { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }

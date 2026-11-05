@@ -162,7 +162,7 @@ function _cambiarStockTodas(g, cont) {
 // El interruptor también se usa con el teclado (Espacio o Enter)
 document.addEventListener('keydown', e => {
   const sw = e.target && e.target.closest && e.target.closest('.sw-stock');
-  if (sw && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); (sw.closest('.td-stock, .td-stock-grupo, .pvar-stock, .pcard-todas') || sw).click(); }
+  if (sw && (e.key === ' ' || e.key === 'Enter')) { e.preventDefault(); (sw.closest('.td-stock, .td-stock-grupo, .pvar-stock, .pcard-todas-sw') || sw).click(); }
 });
 
 // Mientras la lista viene de la copia guardada en el navegador, las fotos pueden ser viejas:
@@ -538,7 +538,7 @@ function buildGrupoRow(g, hijos) {
     <td class="td-sku">${skus.length ? escHtml(skus.join(', ')) : '<span class="text-muted">—</span>'}</td>
     <td><span class="pill-var pill-grupo"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> ${g.length} variantes</span></td>
     <td class="td-editable td-precio td-precio-grupo" title="Cambiá el precio de todas las variantes"><strong>${min === max ? fmtPrecioSheet(min) : 'desde ' + fmtPrecioSheet(min)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
-    <td class="td-toggle td-stock-grupo" title="Prende o apaga el stock de todas las variantes"><div class="stock-ctl">${_switchStock(g.every(v => v.stock))}<span class="stock-resumen">${_resumenStock(g)}</span></div></td>
+    <td class="td-toggle td-stock-grupo" title="Prende o apaga el stock de todas las variantes; las unidades se copian a todas"><div class="stock-ctl"><span class="stock-fila">${_switchStock(g.every(v => v.stock))}${_inputCantidad(g[0])}</span><span class="stock-resumen">${_resumenStock(g)}</span></div></td>
     ${celdaAcciones()}`;
 
   const clave = grupoClave(g[0]);
@@ -565,6 +565,8 @@ function buildGrupoRow(g, hijos) {
   });
   const tdTodas = tr.querySelector('.td-stock-grupo');
   tdTodas.addEventListener('click', () => _cambiarStockTodas(g, tdTodas.querySelector('.stock-ctl')));
+  // Unidades en la fila del producto = las de la variante principal, que se copian a todas
+  _activarCantidad(tdTodas.querySelector('.stock-cant'), g[0], () => _ponerSwitch(tdTodas.querySelector('.stock-ctl'), !!g[0].stock));
   tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(g[0], 'producto'));
   const mas = tr.querySelector('.btn-mas');
   mas.addEventListener('click', () => abrirMenuAcciones(mas, [
@@ -1801,7 +1803,7 @@ function buildProdCard(g) {
       ${varios ? '<button type="button" class="pact" data-a="variantes"><i class="fa-solid fa-chevron-down"></i><span>Ver variantes</span></button>' : '<button type="button" class="pact" data-a="stock"><i class="fa-solid fa-box"></i><span>Stock</span></button>'}
       <button type="button" class="pact pact-del" data-a="eliminar"><i class="fa-solid fa-trash"></i><span>Eliminar</span></button>
     </div>
-    ${varios ? `<button type="button" class="pcard-todas" title="Prende o apaga el stock de todas las variantes"><span class="stock-ctl">${_switchStock(g.every(v => v.stock))}</span><span><b>Stock de todas las variantes</b><small>${_resumenStock(g)}</small></span></button>` : ''}
+    ${varios ? `<div class="pcard-todas"><button type="button" class="pcard-todas-sw" title="Prende o apaga el stock de todas las variantes"><span class="stock-ctl">${_switchStock(g.every(v => v.stock))}</span><span><b>Stock de todas las variantes</b><small>${_resumenStock(g)}</small></span></button>${_inputCantidad(p0)}</div>` : ''}
     ${varios ? '<div class="pcard-vars" hidden></div>' : ''}`;
 
   const vars = card.querySelector('.pcard-vars');
@@ -1840,8 +1842,12 @@ function buildProdCard(g) {
     card.classList.toggle('abierta', abrir);
     if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
   });
-  const bTodas = card.querySelector('.pcard-todas');
-  if (bTodas) bTodas.addEventListener('click', () => _cambiarStockTodas(g, bTodas.querySelector('.stock-ctl')));
+  const bTodas = card.querySelector('.pcard-todas-sw');
+  if (bTodas) {
+    bTodas.addEventListener('click', () => _cambiarStockTodas(g, bTodas.querySelector('.stock-ctl')));
+    // Unidades de la principal, que se copian a todas las variantes
+    _activarCantidad(card.querySelector('.pcard-todas .stock-cant'), p0, () => _ponerSwitch(bTodas.querySelector('.stock-ctl'), !!p0.stock));
+  }
   const bStock = card.querySelector('[data-a="stock"]');
   if (bStock) bStock.addEventListener('click', () => cambiarStockTarjeta(p0, null));
   return card;

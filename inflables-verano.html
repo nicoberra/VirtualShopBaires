@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Inflables · Temporada de verano</title>
-  <meta name="description" content="Todos los inflables por tipo: para bebés, chicos, colchonetas, islas, botes y piletas. Fotos, medidas y precio con 10% OFF por transferencia o efectivo." />
+  <meta name="description" content="Todos los inflables por tipo: para bebés, chicos, colchonetas, islas, botes y piletas. Fotos, medidas y precio." />
   <meta name="robots" content="noindex, nofollow" />
   <meta property="og:title" content="Inflables · Temporada de verano" />
-  <meta property="og:description" content="Todos los inflables por tipo: para bebés, chicos, colchonetas, islas, botes y piletas. Fotos, medidas y precio con 10% OFF por transferencia o efectivo." />
+  <meta property="og:description" content="Todos los inflables por tipo: para bebés, chicos, colchonetas, islas, botes y piletas. Fotos, medidas y precio." />
   <meta property="og:type" content="website" />
   <meta name="theme-color" content="#1B2B4B" />
   <link rel="icon" href="img/icono-vs.png" type="image/png" />
@@ -113,9 +113,7 @@
   <section class="iv-hero">
     <div class="container">
       <h1>Inflables para este <span>verano</span></h1>
-      <p>Todos los modelos con fotos, medidas y precio, separados por tipo. Tocá «Comprar» y nos escribís por WhatsApp con el pedido ya armado.</p>
-      <div class="iv-pago"><i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i> <span><strong>10% OFF</strong> pagando por transferencia o en efectivo</span></div>
-    </div>
+      <p>Todos los modelos con fotos, medidas y precio, separados por tipo. Tocá «Comprar» y nos escribís por WhatsApp con el pedido ya armado.</p>    </div>
   </section>
 
   <nav class="iv-nav" aria-label="Tipos de inflables">
@@ -222,19 +220,20 @@
       ? [`Hola! Quería saber cuándo vuelve a entrar este inflable:`, `• ${ivNombre(p.nombre)}`]
       : pr.valido
         ? [`Hola! Quiero comprar este inflable:`, `• ${ivNombre(p.nombre)}`, ...det,
-           `• Precio: ${formatPrecioExacto(precioTransferencia(pr.precio))} (con 10% OFF por transferencia o efectivo)`, `¿Está disponible?`]
+           `• Precio: ${ivPrecioFinal(pr.precio)}`, `¿Está disponible?`]
         : [`Hola! Quiero comprar este inflable y saber el precio:`, `• ${ivNombre(p.nombre)}`, ...det];
     lineas.push(`${IV_PAGINA}#${ivSlug(p.nombre)}`);
     return `https://wa.me/${IV_WA}?text=${encodeURIComponent(lineas.join("\n"))}`;
   }
 
+  const ivPrecioFinal = (precio) => formatPrecio(Math.round(precioTransferencia(precio)));
+
   function ivPrecioHTML(p) {
     if (p.agotado || !hayStock(p)) return `<div class="iv-precio"><span class="iv-sin">Sin stock por ahora</span></div>`;
     const pr = ivPrecio(p);
     if (!pr.valido) return `<div class="iv-precio"><b>Consultar precio</b></div>`;
-    // Precio principal: el final con 10% OFF (transferencia o efectivo); el de lista queda tachado al lado
-    return `<div class="iv-precio"><div><b>${formatPrecioExacto(precioTransferencia(pr.precio))}</b><s>${formatPrecio(pr.original || pr.precio)}</s><span class="iv-off">10% OFF</span></div>
-      <small>pagando por transferencia o en efectivo</small></div>`;
+    // Solo el precio final (el de la tienda con el 10% ya descontado, redondeado al peso), sin aclaraciones
+    return `<div class="iv-precio"><b>${ivPrecioFinal(pr.precio)}</b></div>`;
   }
 
   function ivTarjeta(p) {

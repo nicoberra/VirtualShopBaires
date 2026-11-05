@@ -481,6 +481,7 @@ def main():
 
     # sitemap
     urls = [("", "1.0", "daily"), ("productos.html", "0.9", "daily")]
+    urls += [("ofertas.html", "0.8", "daily"), ("inflables-verano.html", "0.8", "daily")]   # páginas de campaña (Instagram)
     urls += [(c["slug"] + "/", "0.8", "daily") for c in CATEGORIAS if por_cat.get(c["tab"])]
     urls += [("nosotros.html", "0.5", "monthly"), ("faq.html", "0.5", "monthly"), ("contacto.html", "0.5", "monthly")]
     urls += [(f"producto/{p['slug']}/", "0.6", "weekly") for p in productos]

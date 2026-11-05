@@ -1,0 +1,498 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Inflables para el verano: todos los modelos | Virtual Shop Baires</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icon-vsb.webp" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
+  <meta name="description" content="Todos los inflables de Virtual Shop Baires por tipo: para bebés, chicos, colchonetas, islas, botes y piletas. Fotos, medidas y precio. 10% OFF por transferencia o efectivo." />
+  <meta property="og:title" content="Inflables para el verano: todos los modelos | Virtual Shop Baires" />
+  <meta property="og:description" content="Todos los inflables de Virtual Shop Baires por tipo: para bebés, chicos, colchonetas, islas, botes y piletas. Fotos, medidas y precio. 10% OFF por transferencia o efectivo." />
+  <meta property="og:image" content="https://virtualshopbaires.com.ar/logo.png" />
+  <meta property="og:url" content="https://virtualshopbaires.com.ar/inflables-verano.html" />
+  <meta property="og:type" content="website" />
+  <link rel="canonical" href="https://virtualshopbaires.com.ar/inflables-verano.html" />
+  <link rel="icon" href="/icon-vsb.webp" type="image/webp" />
+  <meta name="theme-color" content="#CC1212" />
+  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+  <link rel="preconnect" href="https://docs.google.com" />
+  <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
+<style>
+  /* ===== Inflables de verano ===== */
+  .iv-hero { padding: 34px 0 18px; text-align: center; }
+  .iv-hero h1 { font-size: clamp(1.7rem, 4.4vw, 2.5rem); font-weight: 900; letter-spacing: -.02em; line-height: 1.1; text-wrap: balance; }
+  .iv-hero h1 span { color: var(--red); }
+  .iv-hero p { color: var(--gray); font-size: 1rem; margin: 10px auto 0; max-width: 62ch; text-wrap: pretty; }
+  .iv-pago { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 8px 16px; border-radius: var(--radius-pill);
+    background: var(--accent-light); color: var(--accent); font-weight: 700; font-size: .9rem; }
+  .iv-pago strong { color: var(--red); }
+
+  .iv-nav { position: sticky; top: var(--iv-top, 0px); z-index: 30; background: rgba(245,247,250,.94); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--black-4); padding: 10px 0; }
+  /* Cuando el encabezado de la tienda se esconde al bajar, la barra sube con él (misma animación) */
+  .iv-nav { transition: transform .35s ease; }
+  html.iv-sin-header .iv-nav { transform: translateY(calc(-1 * var(--iv-top, 0px))); }
+  @media (prefers-reduced-motion: reduce) { .iv-nav { transition: none; } }
+  .iv-nav .container { display: flex; flex-direction: column; gap: 10px; }
+  .iv-buscar { position: relative; }
+  .iv-buscar i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray); }
+  .iv-buscar input { width: 100%; font: inherit; font-size: 1rem; min-height: 44px; padding: 10px 14px 10px 40px; border-radius: 12px;
+    border: 1.5px solid var(--black-4); background: #fff; color: var(--white); }
+  .iv-buscar input:focus { outline: none; border-color: var(--accent); }
+  .iv-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
+  .iv-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--black-4); background: #fff; color: var(--white);
+    border-radius: var(--radius-pill); padding: 0 14px; min-height: 38px; font-size: .86rem; font-weight: 700; text-decoration: none; transition: border-color .2s ease, background-color .2s ease; }
+  .iv-chip:hover { border-color: #c5cbd8; }
+  .iv-chip span { color: var(--gray); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .iv-chip.activo { background: var(--red-light); color: var(--red); border-color: rgba(204,18,18,.45); }
+
+  .iv-grupo { padding: 30px 0 8px; scroll-margin-top: calc(var(--iv-top, 0px) + 120px); }
+  .iv-grupo h2 { font-size: clamp(1.35rem, 3vw, 1.75rem); font-weight: 900; letter-spacing: -.015em; display: flex; align-items: baseline; gap: 10px; }
+  .iv-grupo h2 small { font-size: .9rem; color: var(--gray); font-weight: 600; }
+  .iv-grupo > .container > p { color: var(--gray); margin: 4px 0 16px; }
+  .iv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 18px; }
+
+  .iv-card { background: #fff; border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow-card);
+    border: 1px solid var(--border-default); scroll-margin-top: calc(var(--iv-top, 0px) + 130px); }
+  .iv-card:target { outline: 3px solid rgba(204,18,18,.45); }
+  .iv-gal { position: relative; background: #fff; }
+  .iv-fotos { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; aspect-ratio: 1 / 1; }
+  .iv-fotos::-webkit-scrollbar { display: none; }
+  .iv-fotos img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: contain; scroll-snap-align: center; background: #fff; }
+  .iv-cuenta { position: absolute; right: 10px; bottom: 10px; background: rgba(27,42,75,.82); color: #fff; font-size: .75rem; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; pointer-events: none; }
+  .iv-flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92);
+    box-shadow: 0 2px 10px rgba(0,0,0,.15); color: var(--accent); cursor: pointer; display: grid; place-items: center; opacity: 0; transition: opacity .2s ease; }
+  .iv-flecha.izq { left: 8px; } .iv-flecha.der { right: 8px; }
+  .iv-gal:hover .iv-flecha, .iv-flecha:focus-visible { opacity: 1; }
+  @media (hover: none) { .iv-flecha { display: none; } }
+  .iv-info { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .iv-nombre { font-size: 1rem; font-weight: 800; line-height: 1.3; color: var(--white); text-wrap: pretty; }
+  .iv-medidas { display: flex; flex-wrap: wrap; gap: 6px; }
+  .iv-medidas span { font-size: .78rem; background: var(--accent-light); color: var(--accent); padding: 4px 9px; border-radius: 8px; font-weight: 600; }
+  .iv-colores { display: flex; flex-wrap: wrap; gap: 6px; }
+  .iv-colores button { font: inherit; font-size: .8rem; font-weight: 700; border: 1.5px solid var(--black-4); background: #fff; color: var(--white);
+    border-radius: 999px; padding: 5px 12px; cursor: pointer; min-height: 32px; }
+  .iv-colores button[aria-pressed="true"] { border-color: var(--red); color: var(--red); background: var(--red-light); }
+  .iv-precio { margin-top: auto; display: flex; flex-direction: column; gap: 2px; }
+  .iv-precio b { font-size: 1.45rem; font-weight: 900; color: var(--white); font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .iv-precio s { color: var(--gray); font-size: .85rem; margin-left: 6px; font-weight: 500; }
+  .iv-precio small { font-size: .84rem; color: var(--accent); font-weight: 600; }
+  .iv-precio small strong { color: var(--red); }
+  .iv-desc summary { cursor: pointer; font-size: .86rem; font-weight: 700; color: var(--accent); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+  .iv-desc summary::-webkit-details-marker { display: none; }
+  .iv-desc summary i { transition: transform .2s ease; font-size: .75rem; }
+  .iv-desc[open] summary i { transform: rotate(180deg); }
+  .iv-desc > div { margin-top: 8px; font-size: .86rem; color: #374151; line-height: 1.5; }
+  .iv-desc ul { padding-left: 18px; margin: 4px 0 8px; }
+  .iv-desc p { margin: 4px 0 8px; }
+  .iv-comprar { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; border-radius: 12px; background: var(--accent);
+    color: #fff; font-weight: 800; font-size: .98rem; text-decoration: none; transition: background-color .2s ease, transform .15s ease; }
+  .iv-comprar:hover { background: var(--accent-dark); }
+  .iv-comprar:active { transform: scale(.98); }
+  .iv-comprar i { font-size: 1.2rem; }
+  .iv-card.agotado .iv-fotos img { opacity: .55; }
+  .iv-sin { color: var(--gray); font-weight: 700; }
+  .iv-vacio { text-align: center; padding: 50px 16px; color: var(--gray); }
+  .iv-ayuda { margin: 36px 0 56px; background: var(--accent); color: #fff; border-radius: 18px; padding: clamp(20px, 4vw, 32px); display: flex; flex-wrap: wrap;
+    align-items: center; justify-content: space-between; gap: 16px; }
+  .iv-ayuda h2 { font-size: 1.3rem; font-weight: 900; }
+  .iv-ayuda p { color: rgba(255,255,255,.8); margin-top: 4px; }
+  .iv-ayuda a { background: #fff; color: var(--accent); }
+  .iv-ayuda a:hover { background: #eef1f6; }
+  @media (max-width: 640px) {
+    .iv-grid { grid-template-columns: 1fr; gap: 14px; }
+    .iv-grupo { padding-top: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .iv-fotos { scroll-behavior: auto; } .iv-comprar, .iv-desc summary i, .iv-flecha { transition: none; } }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  
+  <div class="container">
+    <span>🚚 Envíos a todo el país</span>
+    <span>|</span>
+    <span>📦 Importador directo</span>
+    <span>|</span>
+    <span>⚡ Respuesta rápida</span>
+  </div>
+</div>
+
+<header>
+  <div class="container">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="hamburger" id="hamburger" aria-label="Menú" aria-expanded="false" aria-controls="header-dropdown-nav"><span></span><span></span><span></span></button>
+        <form class="header-search-form" id="search-form" role="search">
+          <label for="search-input" class="sr-only">Buscar productos</label>
+          <input type="text" id="search-input" placeholder="Buscar productos..." autocomplete="off" />
+          <button type="submit" aria-label="Buscar"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+        </form>
+      </div>
+      <a href="index.html" class="logo"><img src="logo.png?v=2" alt="Virtual Shop Baires" /></a>
+      <div class="header-actions">
+        <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" class="social-icon-btn si-wa" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+        <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-ig" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+        <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" class="social-icon-btn si-fb" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+        <a href="mi-cuenta.html" class="user-action-btn" id="header-user-btn" style="display:none" aria-label="Mi cuenta"><i class="fa-solid fa-circle-user" aria-hidden="true"></i></a>
+        <button class="cart-action-btn" onclick="openCart()" aria-label="Carrito de compras"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span id="cart-label" aria-live="polite">0</span></button>
+      </div>
+    </div>
+  </div>
+  <nav class="header-dropdown-nav" id="header-dropdown-nav" aria-label="Menú principal" aria-hidden="true">
+    <div class="container">
+      <a href="index.html">Inicio</a>
+      <a href="productos.html" >Productos</a>
+      <a href="favoritos.html">Favoritos</a>
+      <a href="mis-compras.html">Mis compras</a>
+      <a href="nosotros.html">Nosotros</a>
+      <a href="contacto.html">Contacto</a>
+    </div>
+  </nav>
+</header>
+
+<main id="inflables">
+  <section class="iv-hero">
+    <div class="container">
+      <h1>Inflables para este <span>verano</span></h1>
+      <p>Todos los modelos con fotos, medidas y precio, separados por tipo. Tocá «Comprar» y nos escribís por WhatsApp con el pedido ya armado.</p>
+      <div class="iv-pago"><i class="fa-solid fa-money-bill-transfer" aria-hidden="true"></i> <span><strong>10% OFF</strong> pagando por transferencia o en efectivo</span></div>
+    </div>
+  </section>
+
+  <nav class="iv-nav" aria-label="Tipos de inflables">
+    <div class="container">
+      <label class="iv-buscar">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input type="search" id="iv-buscar" placeholder="Buscar: flamenco, isla, kayak, 1,83 m…" aria-label="Buscar inflable" autocomplete="off">
+      </label>
+      <div class="iv-chips" id="iv-chips"></div>
+    </div>
+  </nav>
+
+  <div id="iv-grupos" aria-live="polite">
+    <p class="iv-vacio">Cargando inflables…</p>
+  </div>
+
+  <div class="container">
+    <section class="iv-ayuda">
+      <div>
+        <h2>¿Dudas con algún modelo?</h2>
+        <p>Escribinos y te asesoramos: medidas, para qué edad, cuántas personas.</p>
+      </div>
+      <a class="iv-comprar" id="iv-consulta" href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
+    </section>
+  </div>
+</main>
+
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <img src="logo.png?v=2" alt="Virtual Shop Baires" class="logo-footer" />
+        <p>Importadores de productos para el hogar, mascotas, fitness, jardín y tiempo libre. Envíos a todo el país.</p>
+        <div class="social-links">
+          <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+          <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+          <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+          <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Navegación</h4>
+        <ul>
+          <li><a href="index.html">Inicio</a></li>
+          <li><a href="productos.html">Productos</a></li>
+          <li><a href="nosotros.html">Nosotros</a></li>
+          <li><a href="faq.html">Preguntas frecuentes</a></li>
+          <li><a href="contacto.html">Contacto</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Categorías</h4>
+        <ul>
+          <li><a href="autos-a-escala/">Autos a escala</a></li>
+          <li><a href="inflables/">Inflables para pileta</a></li>
+          <li><a href="juguetes/">Juguetes</a></li>
+          <li><a href="fitness/">Fitness</a></li>
+          <li><a href="camping/">Camping</a></li>
+          <li><a href="playa/">Playa</a></li>
+          <li><a href="mascotas/">Mascotas</a></li>
+          <li><a href="productos.html">Ver todas →</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <div class="footer-contact-inner">
+          <ul>
+            <li><i class="fa-solid fa-location-dot"></i> <a href="https://maps.google.com/?q=Marcelo+Gamboa+6306,+Versalles,+Buenos+Aires" target="_blank" style="color:inherit;">Marcelo Gamboa 6306, Versalles, Buenos Aires</a></li>
+            <li><i class="fa-solid fa-phone"></i> <a href="tel:+5491149457266">+54 9 11 4945-7266</a></li>
+            <li><i class="fa-solid fa-envelope"></i> <a href="mailto:virtualshopbuenosaires@gmail.com">virtualshopbuenosaires@gmail.com</a></li>
+            <li><i class="fa-solid fa-clock"></i> Lun–Vie 9:00 a 17:00</li>
+          </ul>
+          <div class="social-links-vertical">
+            <a href="https://wa.me/5491149457266" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i></a>
+            <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>
+            <a href="https://www.facebook.com/Virtualshopbaires" target="_blank" rel="noopener" aria-label="Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>
+            <a href="https://www.tiktok.com/@virtualshopbaires" target="_blank" rel="noopener" aria-label="TikTok"><i class="fa-brands fa-tiktok" aria-hidden="true"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span class="copyright-year">2026</span> Virtual Shop Baires. Todos los derechos reservados.</span>
+    </div>
+  </div>
+</footer>
+
+<button class="back-to-top" id="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Volver arriba"><i class="fa-solid fa-chevron-up" aria-hidden="true"></i></button>
+<a href="https://wa.me/5491149457266" class="wa-float" target="_blank" rel="noopener noreferrer" aria-label="Consultar por WhatsApp">
+  <span class="wa-float-pulse" aria-hidden="true"></span><i class="fa-brands fa-whatsapp" aria-hidden="true"></i>
+</a>
+
+<div id="product-modal" onclick="closeProductModal()"></div>
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cart-panel">
+  <div class="cart-header">
+    <h2>🛒 Tu carrito</h2>
+    <button class="cart-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
+    <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
+    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+  </div>
+</div>
+
+<script src="js/sheets.js?v=20"></script>
+<script src="js/productos.js?v=14"></script>
+<script src="js/cart.js?v=5"></script>
+<script src="js/main.js?v=6"></script>
+<script src="js/mejoras-ui.js"></script>
+<script>
+  // ===== Inflables de verano: todos los modelos por tipo; "Comprar" abre WhatsApp con el pedido armado =====
+  const IV_WA = "5491131751517";          // WhatsApp personal del dueño para estas ventas
+  const IV_PRECIO_MINIMO = 5000;          // menos que esto = precio mal cargado: se muestra "Consultar precio"
+  const IV_PAGINA = "https://virtualshopbaires.com.ar/inflables-verano.html";
+
+  // Orden de evaluación: el primero que coincide gana. "orden" = en qué orden se muestran en la página.
+  const IV_GRUPOS = [
+    { id: "bebes", orden: 1, titulo: "Para bebés", texto: "Flotadores con asiento y protección solar, y piletas con techo.",
+      re: /beb[eé]|uv ?50|uvcare|swim safe|3 anillos/i },
+    { id: "accesorios", orden: 9, titulo: "Infladores, hieleras y colchones", texto: "Para inflar todo rápido y para llevar a la pileta o al camping.",
+      re: /^inflador|inflador manual|hielera|colch[oó]n (cama|inflable una)/i },
+    { id: "juegos", orden: 8, titulo: "Juegos para la pileta", texto: "Aros de básquet, redes de vóley, arcos y deslizadores.",
+      re: /b[aá]squet|v[oó]ley|water polo|arco y pelota|deslizador|punch/i },
+    { id: "piletas", orden: 7, titulo: "Piletas", texto: "Inflables, rígidas y estructurales, y centros de juego con tobogán.",
+      re: /^(pileta|alberca|piscina|centro de juegos|pelotero|isla inflable mini)/i },
+    { id: "chicos", orden: 2, titulo: "Para chicos", texto: "Montables, botecitos y salvavidas infantiles.",
+      re: /infantil|niñ[oa]|polic[ií]a|nave espacial|narval|unicornio chico/i },
+    { id: "botes", orden: 6, titulo: "Botes, kayaks y balsas", texto: "Para lagos, ríos y el mar, con remos.",
+      re: /\b(bote|kayak|balsa|raft|voyager)\b/i },
+    { id: "grandes", orden: 5, titulo: "Islas y flotadores para varios", texto: "Los más grandes: para 2 o más personas.",
+      re: /isla|[2-9] personas|doble|summer oasis|frutas/i },
+    { id: "colchonetas", orden: 4, titulo: "Colchonetas, camastros y sillones", texto: "Para tirarse al sol en la pileta.",
+      re: /camastro|^colchoneta(?!.*dona)/i },
+    { id: "flotadores", orden: 3, titulo: "Flotadores y salvavidas", texto: "Para adolescentes y adultos: donas, montables y salvavidas grandes.",
+      re: /salvavidas|montable|para montar|cobra|drag[oó]n|dodo|unic[oó]rnio|flamingo|lancha|paleta de hielo|dona/i },
+    { id: "colchonetas", re: /./ },   // el resto: colchonetas
+  ];
+  const ivGrupoDe = (p) => IV_GRUPOS.find(g => g.re.test(p.nombre)).id;
+  const ivInfoGrupo = (id) => IV_GRUPOS.find(g => g.id === id && g.titulo);
+
+  const ivSlug = (t) => String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70);
+  const ivNombre = (n) => String(n).replace(/\s*\[[^\]]*\]/g, "").replace(/\s{2,}/g, " ").replace(/\b(\w+) \1$/i, "$1").trim();
+
+  // Medidas: las líneas de la descripción con diámetro, tamaño, capacidad, edad…; si no hay, las del nombre
+  function ivMedidas(p) {
+    const lineas = String(p.descripcion || "").split("\n").map(l => l.replace(/^[-•]\s*/, "").trim());
+    const re = /^(di[aá]metro|tama[ñn]o|medidas?|dimensiones|largo|ancho|alto|altura|capacidad|edad|peso|soporta|carga)[^:]{0,30}:\s*(.+)$/i;
+    const out = [];
+    lineas.forEach(l => { const m = re.exec(l); if (m && out.length < 4) out.push(l.replace(/\s+/g, " ").slice(0, 60)); });
+    if (!out.length) {
+      const m = String(p.nombre).match(/\d+(?:[.,]\d+)?\s*x\s*\d+(?:[.,]\d+)?(?:\s*x\s*\d+(?:[.,]\d+)?)?\s*(?:cm|m)\b|\d+(?:[.,]\d+)?\s*(?:m|mts)\b|\d+\s*(?:l|lt|lts)\b/gi);
+      (m || []).slice(0, 2).forEach(x => out.push("Medida: " + x));
+    }
+    return out;
+  }
+
+  // Todas las fotos del producto y de sus colores, sin repetir
+  function ivFotos(p) {
+    const fotos = [...(p.imagenes || []), ...(p.imagen ? [p.imagen] : [])];
+    (p.variantes || []).forEach(v => { fotos.push(...(v.imagenes || [])); if (v.imagen) fotos.push(v.imagen); });
+    return [...new Set(fotos.map(u => String(u).split("#")[0]).filter(Boolean))];
+  }
+
+  const ivEstado = {};   // id → { color }
+  function ivVariante(p) {
+    const vs = (p.variantes || []).filter(v => v.stock !== false);
+    if (!vs.length) return null;
+    const c = (ivEstado[p.id] || {}).color;
+    return vs.find(v => v.color === c) || vs[0];
+  }
+  function ivPrecio(p) {
+    const v = ivVariante(p);
+    const precio = Number(v ? v.precio : p.precio) || 0;
+    const original = Number(v ? v.precioOriginal : p.precioOriginal) || 0;
+    return { precio, original: original > precio ? original : 0, valido: precio >= IV_PRECIO_MINIMO || ivGrupoDe(p) === "accesorios" && precio > 0 };
+  }
+
+  function ivLinkWa(p) {
+    const v = ivVariante(p), pr = ivPrecio(p), colores = (p.variantes || []).filter(x => x.stock !== false && x.color).length;
+    const det = [];
+    if (v && colores > 1 && v.color) det.push(`• Color: ${v.color}`);
+    const lineas = p.agotado || !hayStock(p)
+      ? [`Hola! Quería saber cuándo vuelve a entrar este inflable:`, `• ${ivNombre(p.nombre)}`]
+      : pr.valido
+        ? [`Hola! Quiero comprar este inflable:`, `• ${ivNombre(p.nombre)}`, ...det,
+           `• Precio: ${formatPrecio(pr.precio)} (${formatPrecioExacto(precioTransferencia(pr.precio))} con transferencia o efectivo)`, `¿Está disponible?`]
+        : [`Hola! Quiero comprar este inflable y saber el precio:`, `• ${ivNombre(p.nombre)}`, ...det];
+    lineas.push(`${IV_PAGINA}#${ivSlug(p.nombre)}`);
+    return `https://wa.me/${IV_WA}?text=${encodeURIComponent(lineas.join("\n"))}`;
+  }
+
+  function ivPrecioHTML(p) {
+    if (p.agotado || !hayStock(p)) return `<div class="iv-precio"><span class="iv-sin">Sin stock por ahora</span></div>`;
+    const pr = ivPrecio(p);
+    if (!pr.valido) return `<div class="iv-precio"><b>Consultar precio</b></div>`;
+    return `<div class="iv-precio"><div><b>${formatPrecio(pr.precio)}</b>${pr.original ? `<s>${formatPrecio(pr.original)}</s>` : ""}</div>
+      <small><strong>${formatPrecioExacto(precioTransferencia(pr.precio))}</strong> con transferencia o efectivo (10% OFF)</small></div>`;
+  }
+
+  function ivTarjeta(p) {
+    const fotos = ivFotos(p), id = ivSlug(p.nombre), sin = p.agotado || !hayStock(p);
+    const colores = (p.variantes || []).filter(v => v.stock !== false && v.color && v.color.toLowerCase() !== "único" && v.color.toLowerCase() !== "unico");
+    const nombre = ivNombre(p.nombre);
+    return `<article class="iv-card${sin ? " agotado" : ""}" id="${_escAttr(id)}" data-pid="${p.id}">
+      <div class="iv-gal">
+        <div class="iv-fotos" tabindex="0" aria-label="Fotos de ${_escAttr(nombre)}">
+          ${fotos.map((u, i) => `<img src="${_escAttr(fotoSrc(u))}" alt="${_escAttr(nombre)}${fotos.length > 1 ? " · foto " + (i + 1) : ""}" ${i ? 'loading="lazy"' : ""} decoding="async" onerror="fotoRespaldo(this)">`).join("") ||
+            `<img src="/icon-vsb.webp" alt="">`}
+        </div>
+        ${fotos.length > 1 ? `<span class="iv-cuenta">1/${fotos.length}</span>
+          <button type="button" class="iv-flecha izq" aria-label="Foto anterior" data-dir="-1"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+          <button type="button" class="iv-flecha der" aria-label="Foto siguiente" data-dir="1"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>` : ""}
+      </div>
+      <div class="iv-info">
+        <h3 class="iv-nombre">${_escHTML(nombre)}</h3>
+        ${(() => { const m = ivMedidas(p); return m.length ? `<div class="iv-medidas">${m.map(x => `<span>${_escHTML(x)}</span>`).join("")}</div>` : ""; })()}
+        ${colores.length > 1 ? `<div class="iv-colores" role="group" aria-label="Color">${colores.map((v, i) =>
+          `<button type="button" data-color="${_escAttr(v.color)}" aria-pressed="${i === 0}">${_escHTML(v.color)}</button>`).join("")}</div>` : ""}
+        ${p.descripcion ? `<details class="iv-desc"><summary>Ver descripción <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><div>${descripcionHTML(p.descripcion)}</div></details>` : ""}
+        <div class="iv-precio-caja">${ivPrecioHTML(p)}</div>
+        <a class="iv-comprar" href="${_escAttr(ivLinkWa(p))}" target="_blank" rel="noopener noreferrer">
+          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${sin ? "Avisame cuando entra" : "Comprar por WhatsApp"}</a>
+      </div>
+    </article>`;
+  }
+
+  let ivLista = [];
+  function ivPintar() {
+    const q = document.getElementById("iv-buscar").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const coincide = (p) => !q || (p.nombre + " " + (p.descripcion || "")).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q);
+    const visibles = ivLista.filter(coincide);
+    const conStock = visibles.filter(p => !p.agotado && hayStock(p)), sinStock = visibles.filter(p => p.agotado || !hayStock(p));
+    const grupos = IV_GRUPOS.filter(g => g.titulo).sort((a, b) => a.orden - b.orden)
+      .map(g => ({ ...g, items: conStock.filter(p => ivGrupoDe(p) === g.id) })).filter(g => g.items.length);
+    if (sinStock.length) grupos.push({ id: "sin-stock", titulo: "Sin stock por ahora", texto: "Tocá el botón y te avisamos cuando vuelvan a entrar.", items: sinStock });
+
+    document.getElementById("iv-chips").innerHTML = grupos.map(g =>
+      `<a class="iv-chip" href="#g-${g.id}">${_escHTML(g.titulo)} <span>${g.items.length}</span></a>`).join("");
+    document.getElementById("iv-grupos").innerHTML = grupos.length ? grupos.map(g => `
+      <section class="iv-grupo" id="g-${g.id}" aria-labelledby="t-${g.id}">
+        <div class="container">
+          <h2 id="t-${g.id}">${_escHTML(g.titulo)} <small>${g.items.length} modelo${g.items.length !== 1 ? "s" : ""}</small></h2>
+          <p>${_escHTML(g.texto)}</p>
+          <div class="iv-grid">${g.items.map(ivTarjeta).join("")}</div>
+        </div>
+      </section>`).join("") : `<p class="iv-vacio">No encontramos inflables con «${_escHTML(q)}». Probá con otra palabra o escribinos por WhatsApp.</p>`;
+    ivObservarGrupos();
+  }
+
+  // Galería: contador al deslizar y flechas en compu
+  document.getElementById("iv-grupos").addEventListener("scroll", e => {
+    const f = e.target.closest && e.target.closest(".iv-fotos");
+    if (!f) return;
+    const n = Math.round(f.scrollLeft / f.clientWidth) + 1, c = f.parentElement.querySelector(".iv-cuenta");
+    if (c) c.textContent = `${n}/${f.children.length}`;
+  }, true);
+  document.getElementById("iv-grupos").addEventListener("click", e => {
+    const fl = e.target.closest(".iv-flecha");
+    if (fl) { const f = fl.parentElement.querySelector(".iv-fotos"); f.scrollBy({ left: f.clientWidth * Number(fl.dataset.dir), behavior: "smooth" }); return; }
+    const b = e.target.closest(".iv-colores button");
+    if (!b) return;
+    const card = b.closest(".iv-card"), p = PRODUCTOS.find(x => x.id === Number(card.dataset.pid));
+    ivEstado[p.id] = { color: b.dataset.color };
+    card.querySelectorAll(".iv-colores button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    card.querySelector(".iv-precio-caja").innerHTML = ivPrecioHTML(p);
+    card.querySelector(".iv-comprar").href = ivLinkWa(p);
+    // Si el color tiene foto propia, se muestra
+    const v = ivVariante(p), foto = v && ((v.imagenes || [])[0] || v.imagen);
+    if (foto) {
+      const imgs = [...card.querySelectorAll(".iv-fotos img")], i = imgs.findIndex(im => im.getAttribute("src") === fotoSrc(String(foto).split("#")[0]));
+      if (i >= 0) { const f = card.querySelector(".iv-fotos"); f.scrollTo({ left: f.clientWidth * i, behavior: "smooth" }); }
+    }
+  });
+
+  // Chip del grupo que se está viendo
+  let ivObs = null;
+  function ivObservarGrupos() {
+    if (ivObs) ivObs.disconnect();
+    if (!("IntersectionObserver" in window)) return;
+    ivObs = new IntersectionObserver(ents => ents.forEach(en => {
+      if (!en.isIntersecting) return;
+      document.querySelectorAll(".iv-chip").forEach(c => {
+        const act = c.getAttribute("href") === "#" + en.target.id;
+        c.classList.toggle("activo", act);
+        if (act) c.scrollIntoView({ block: "nearest", inline: "nearest" });
+      });
+    }), { rootMargin: "-45% 0px -50% 0px" });
+    document.querySelectorAll(".iv-grupo").forEach(s => ivObs.observe(s));
+  }
+
+  // La barra de grupos queda justo debajo del encabezado fijo de la tienda
+  (function () {
+    const h = document.querySelector("header");
+    const poner = () => document.documentElement.style.setProperty("--iv-top", (h ? h.offsetHeight : 0) + "px");
+    poner();
+    if (h && "ResizeObserver" in window) new ResizeObserver(poner).observe(h);
+    if (h) new MutationObserver(() => document.documentElement.classList.toggle("iv-sin-header", h.classList.contains("header--hidden")))
+      .observe(h, { attributes: true, attributeFilter: ["class"] });
+  })();
+
+  let ivT = null;
+  document.getElementById("iv-buscar").addEventListener("input", () => { clearTimeout(ivT); ivT = setTimeout(ivPintar, 180); });
+  document.getElementById("iv-consulta").href = `https://wa.me/${IV_WA}?text=${encodeURIComponent("Hola! Tengo una consulta sobre los inflables: ")}`;
+
+  cargarProductos().then(() => {
+    if (CATALOGO_ERROR) {
+      document.getElementById("iv-grupos").innerHTML = `<p class="iv-vacio">No pudimos cargar los inflables. <a href="javascript:location.reload()">Reintentar</a> o escribinos por WhatsApp.</p>`;
+      return;
+    }
+    ivLista = PRODUCTOS.filter(p => p.categoria === "Inflables")
+      .sort((a, b) => (typeof a.orden === "number" ? a.orden : 1e9) - (typeof b.orden === "number" ? b.orden : 1e9) || a.id - b.id);
+    ivPintar();
+    if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) setTimeout(() => el.scrollIntoView({ block: "start" }), 50); }
+  });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

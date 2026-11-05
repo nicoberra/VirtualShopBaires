@@ -114,6 +114,7 @@ function _activarCantidad(inp, p, pintar) {
       lsGuardar('productos', _productos);
       toast(n === '' ? 'Cantidad borrada ✓' : `Stock: ${n} ${n === 1 ? 'unidad' : 'unidades'} ✓`);
       filtrarProductos(true);   // los resúmenes ("· 7 u.") y el filtro de stock quedan al día
+      _stockATodas(p);          // si es la variante principal, las demás quedan igual
     } catch (e) {
       Object.assign(p, antes); pintar();
       if (e.message !== 'auth') toast('No se guardó la cantidad: ' + e.message, 'err');
@@ -183,23 +184,33 @@ function hermanos(p) {
 // La variante principal es la primera del producto: su precio se copia a todas las demás
 function _esPrincipal(p) { const vs = hermanos(p); return vs.length > 1 && vs[0] === p; }
 
-// Copia precio (y precio tachado) a las otras variantes: se ve al instante y se guarda en paralelo.
+// Copia campos de la principal (precio/descuento o stock/cantidad) a las otras variantes:
+// se ve al instante y se guarda en paralelo, un pedido por variante.
 // Si falla alguna, se trae la lista real del servidor para no mostrar algo distinto de lo guardado.
-async function _precioATodas(p, precio, descuento) {
+async function _copiarATodas(p, campos) {
   const otras = hermanos(p).filter(v => v !== p);
   if (!otras.length) return 0;
-  const antes = otras.map(v => ({ v, precio: v.precio, descuento: v.descuento }));
-  otras.forEach(v => Object.assign(v, { precio, descuento }));
+  const antes = otras.map(v => ({ v, ...Object.fromEntries(Object.keys(campos).map(k => [k, v[k]])) }));
+  otras.forEach(v => Object.assign(v, campos));
   filtrarProductos(true);
   try {
-    await Promise.all(otras.map(v => _guardarCambiosProducto(v, hermanos(p), { precio, descuento }, {})));
+    await Promise.all(otras.map(v => _guardarCambiosProducto(v, hermanos(p), campos, {})));
     lsGuardar('productos', _productos);
     return otras.length;
   } catch (e) {
-    antes.forEach(a => Object.assign(a.v, { precio: a.precio, descuento: a.descuento }));
+    antes.forEach(({ v, ...a }) => Object.assign(v, a));
     if (e.message !== 'auth') { delete _cache['ext_productos_list']; _productos = []; loadProductos(true); }
     throw e;
   }
+}
+function _precioATodas(p, precio, descuento) { return _copiarATodas(p, { precio, descuento }); }
+// Stock de la principal → todas: con o sin stock y la misma cantidad de unidades
+function _stockATodas(p) {
+  if (!_esPrincipal(p)) return;
+  const n = hermanos(p).length;
+  _copiarATodas(p, { stock: !!p.stock, cantidad: _valCantidad(p) })
+    .then(() => toast(p.stock ? `Stock copiado a las ${n} variantes ✓` : `Las ${n} variantes quedaron sin stock ✓`))
+    .catch(e => { if (e.message !== 'auth') toast('No se pudo copiar el stock a las otras variantes', 'err'); });
 }
 
 function categoriasProductos() {
@@ -764,7 +775,7 @@ function buildProdRow(p, esVariante) {
     // El resumen del producto ("1 de 2 con stock · 7 u.") se recalcula después de que la bolita se desliza
     setTimeout(() => filtrarProductos(true), 260);
     actualizarCampo(p, 'stock', p.stock)
-      .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); })
+      .then(r => { if (r.ok === false) throw new Error(r.error); toast('Stock actualizado ✓'); lsGuardar('productos', _productos); _stockATodas(p); })
       .catch(() => { Object.assign(p, antes); filtrarProductos(true); toast('Error al guardar stock', 'err'); });
   });
   _activarCantidad(inpCant, p, pintarStock);
@@ -949,7 +960,7 @@ function _aplicarModoFicha(p, vars) {
       nota = document.createElement('small'); nota.id = 'mprod-precio-nota'; nota.className = 'mprod-ayuda';
       $('mprod-precio').closest('.input-pesos').insertAdjacentElement('afterend', nota);
     }
-    nota.textContent = `Es la variante principal: si cambiás el precio, se aplica a las ${vars.length} variantes.`;
+    nota.textContent = `Es la variante principal: si cambiás el precio o el stock, se aplica a las ${vars.length} variantes.`;
     ver(nota, true);
   }
   ver(grupo('mprod-stock-num'), varia); ver(grupo('mprod-sku'), varia);
@@ -1008,10 +1019,13 @@ async function guardarProducto() {
   if (f.talle !== ini.talle) variante['talle/medida'] = f.talle;
   if (f.sku !== ini.sku) variante.sku_costo = f.sku;
   if (cambioPrecio) { variante.precio = precio; variante.descuento = descuento; }
-  // También desde la variante principal: su precio se copia a todas
-  const otras = (aTodas || (_modoFicha === 'variante' && _esPrincipal(p))) && cambioPrecio ? vars.filter(v => v !== p) : [];
   if (f.stock !== ini.stock) variante.stock = f.stock;
   if (f.cantidad !== ini.cantidad) variante.cantidad = f.cantidad;
+  // Lo que se copia a las otras variantes: el precio desde el producto o la principal; el stock desde la principal
+  const principal = _modoFicha === 'variante' && _esPrincipal(p), copiar = {};
+  if (cambioPrecio && (aTodas || principal)) Object.assign(copiar, { precio, descuento });
+  if (principal && (f.stock !== ini.stock || f.cantidad !== ini.cantidad)) Object.assign(copiar, { stock: f.stock, cantidad: f.cantidad });
+  const otras = Object.keys(copiar).length ? vars.filter(v => v !== p) : [];
   if (f.nombre && f.nombre !== ini.nombre) producto.producto = f.nombre;
   if (f.descripcion !== ini.descripcion) producto.descripcion = f.descripcion;
   if (f.destacado !== ini.destacado) producto.destacado = f.destacado;
@@ -1026,10 +1040,10 @@ async function guardarProducto() {
 
   // Se ve el cambio enseguida en la lista
   const antesP = { color: p.color, talle: p.talle, sku: p.sku, precio: p.precio, descuento: p.descuento, stock: p.stock, cantidad: p.cantidad };
-  const antesV = vars.map(v => ({ v, nombre: v.nombre, descripcion: v.descripcion, destacado: v.destacado, precio: v.precio, descuento: v.descuento }));
+  const antesV = vars.map(v => ({ v, nombre: v.nombre, descripcion: v.descripcion, destacado: v.destacado, precio: v.precio, descuento: v.descuento, stock: v.stock, cantidad: v.cantidad }));
   Object.assign(p, { color: f.color, talle: f.talle, sku: f.sku, stock: f.stock, cantidad: f.cantidad });
   if (cambioPrecio) Object.assign(p, { precio, descuento });
-  otras.forEach(v => Object.assign(v, { precio, descuento }));
+  otras.forEach(v => Object.assign(v, copiar));
   vars.forEach(v => Object.assign(v, { nombre: f.nombre || v.nombre, descripcion: f.descripcion, destacado: f.destacado }));
   filtrarProductos(true);
   toast(fotosEnCurso ? 'Guardando… (las fotos se terminan de subir solas)' : 'Guardando…');
@@ -1037,15 +1051,16 @@ async function guardarProducto() {
   try {
     // Si cambia el nombre, se espera a que terminen las fotos (se suben con el nombre de antes)
     const guardar = () => Promise.all([_guardarCambiosProducto(p, vars, variante, producto)]
-      .concat(otras.map(v => _guardarCambiosProducto(v, vars, { precio, descuento }, {}))));
+      .concat(otras.map(v => _guardarCambiosProducto(v, vars, copiar, {}))));
     if (producto.producto && fotosEnCurso) await _enColaFotos(guardar);
     else await guardar();
     lsGuardar('productos', _productos);
-    toast(otras.length ? `Producto guardado ✓ (precio en las ${vars.length} variantes)` : 'Producto guardado ✓');
+    const que = [copiar.precio !== undefined && 'precio', copiar.stock !== undefined && 'stock'].filter(Boolean).join(' y ');
+    toast(otras.length ? `Producto guardado ✓ (${que} en las ${vars.length} variantes)` : 'Producto guardado ✓');
   } catch (e) {
     Object.assign(p, antesP);
     antesV.forEach(a => Object.assign(a.v, { nombre: a.nombre, descripcion: a.descripcion, destacado: a.destacado }));
-    otras.forEach(v => { const a = antesV.find(x => x.v === v); Object.assign(v, { precio: a.precio, descuento: a.descuento }); });
+    otras.forEach(v => { const a = antesV.find(x => x.v === v); Object.assign(v, Object.fromEntries(Object.keys(copiar).map(k => [k, a[k]]))); });
     filtrarProductos(true);
     // Algunas variantes pudieron guardarse y otras no: se trae la lista real del servidor
     if (otras.length && e.message !== 'auth') { delete _cache['ext_productos_list']; _productos = []; loadProductos(true); }
@@ -1843,6 +1858,7 @@ function cambiarStockTarjeta(p, boton, inputCant) {
       toast(nuevo ? 'Con stock ✓' : 'Sin stock ✓');
       lsGuardar('productos', _productos);
       if (!boton) filtrarProductos();
+      _stockATodas(p);
     })
     .catch(() => {
       p.stock = !nuevo; p.cantidad = cantAntes;

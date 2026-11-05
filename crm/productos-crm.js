@@ -180,6 +180,27 @@ function hermanos(p) {
   const nom = String(p.nombre || '').trim();
   return _productos.filter(x => x._sheet === p._sheet && String(x.nombre || '').trim() === nom);
 }
+// La variante principal es la primera del producto: su precio se copia a todas las demás
+function _esPrincipal(p) { const vs = hermanos(p); return vs.length > 1 && vs[0] === p; }
+
+// Copia precio (y precio tachado) a las otras variantes: se ve al instante y se guarda en paralelo.
+// Si falla alguna, se trae la lista real del servidor para no mostrar algo distinto de lo guardado.
+async function _precioATodas(p, precio, descuento) {
+  const otras = hermanos(p).filter(v => v !== p);
+  if (!otras.length) return 0;
+  const antes = otras.map(v => ({ v, precio: v.precio, descuento: v.descuento }));
+  otras.forEach(v => Object.assign(v, { precio, descuento }));
+  filtrarProductos(true);
+  try {
+    await Promise.all(otras.map(v => _guardarCambiosProducto(v, hermanos(p), { precio, descuento }, {})));
+    lsGuardar('productos', _productos);
+    return otras.length;
+  } catch (e) {
+    antes.forEach(a => Object.assign(a.v, { precio: a.precio, descuento: a.descuento }));
+    if (e.message !== 'auth') { delete _cache['ext_productos_list']; _productos = []; loadProductos(true); }
+    throw e;
+  }
+}
 
 function categoriasProductos() {
   return [...new Set(_productos
@@ -505,7 +526,7 @@ function buildGrupoRow(g, hijos) {
     </td>
     <td class="td-sku">${skus.length ? escHtml(skus.join(', ')) : '<span class="text-muted">—</span>'}</td>
     <td><span class="pill-var pill-grupo"><i class="fa-solid fa-layer-group" aria-hidden="true"></i> ${g.length} variantes</span></td>
-    <td><strong>${min === max ? fmtPrecioSheet(min) : 'desde ' + fmtPrecioSheet(min)}</strong></td>
+    <td class="td-editable td-precio td-precio-grupo" title="Cambiá el precio de todas las variantes"><strong>${min === max ? fmtPrecioSheet(min) : 'desde ' + fmtPrecioSheet(min)}</strong><i class="fa-solid fa-pen edit-hint"></i></td>
     <td class="td-toggle td-stock-grupo" title="Prende o apaga el stock de todas las variantes"><div class="stock-ctl">${_switchStock(g.every(v => v.stock))}<span class="stock-resumen">${_resumenStock(g)}</span></div></td>
     ${celdaAcciones()}`;
 
@@ -517,7 +538,20 @@ function buildGrupoRow(g, hijos) {
     if (abrir) _gruposAbiertos.add(clave); else _gruposAbiertos.delete(clave);
   };
   fijar(_gruposAbiertos.has(clave));
-  tr.addEventListener('click', e => { if (!e.target.closest('.td-acc, .td-stock-grupo')) fijar(hijos[0].hidden); });
+  tr.addEventListener('click', e => { if (!e.target.closest('.td-acc, .td-stock-grupo, .td-precio-grupo')) fijar(hijos[0].hidden); });
+  // Precio en la fila del producto: se guarda en la principal y se copia a todas
+  const tdPrecio = tr.querySelector('.td-precio-grupo');
+  tdPrecio.addEventListener('click', function() {
+    const p0 = g[0], valor = min === max ? min : 0;
+    editarCeldaNum(this, p0, 'precio', valor, v => {
+      // Si la principal tenía precio tachado, se quita (el precio nuevo es el que se cobra)
+      if (p0.descuento) actualizarCampo(p0, 'descuento', '').catch(() => {});
+      Object.assign(p0, { precio: v, descuento: '' });
+      _precioATodas(p0, v, '')
+        .then(n => toast(`Precio guardado en las ${n + 1} variantes ✓`))
+        .catch(e => { if (e.message !== 'auth') toast('No se pudo copiar el precio a todas las variantes', 'err'); });
+    }, '$');
+  });
   const tdTodas = tr.querySelector('.td-stock-grupo');
   tdTodas.addEventListener('click', () => _cambiarStockTodas(g, tdTodas.querySelector('.stock-ctl')));
   tr.querySelector('.btn-editar').addEventListener('click', () => editarProducto(g[0], 'producto'));
@@ -712,7 +746,13 @@ function buildProdRow(p, esVariante) {
 
   tr.querySelector('.td-nombre').addEventListener('click', () => editarProducto(p, esVariante ? 'variante' : 'completo'));
   tr.querySelector('.td-precio').addEventListener('click', function() {
-    editarCeldaNum(this, p, 'precio', pVal, v => { pVal = v; p.precio = v; }, '$');
+    editarCeldaNum(this, p, 'precio', pVal, v => {
+      pVal = v; p.precio = v;
+      // Variante principal: el precio nuevo va a todas
+      if (_esPrincipal(p)) _precioATodas(p, p.precio, p.descuento || '')
+        .then(n => toast(`Precio guardado en las ${n + 1} variantes ✓`))
+        .catch(e => { if (e.message !== 'auth') toast('No se pudo copiar el precio a las otras variantes', 'err'); });
+    }, '$');
   });
   tr.querySelector('.td-sku').addEventListener('click', function() { editarCeldaSku(this, p); });
   const tdStock = tr.querySelector('.td-stock'), inpCant = tdStock.querySelector('.stock-cant');
@@ -859,7 +899,7 @@ function editarProducto(p, modo) {
   if (_modoFicha === 'producto') {
     info.innerHTML = `<label>Variantes (${vars.length})</label>
        <div class="mprod-var-list mprod-var-edit">${vars.map((v, j) => `
-         <div class="mprod-var">${prodThumb(v.imagen, 36)}<span class="mv-txt"><b>${escHtml(v.color || v.talle || '—')}</b> · ${fmtPrecioSheet(v.precio)} · ${v.stock ? 'Con stock' : 'Sin stock'}${_unidadesTxt(v)}</span>
+         <div class="mprod-var">${prodThumb(v.imagen, 36)}<span class="mv-txt"><b>${escHtml(v.color || v.talle || '—')}</b>${j === 0 ? ' <small class="text-muted">(principal)</small>' : ''} ·${fmtPrecioSheet(v.precio)} · ${v.stock ? 'Con stock' : 'Sin stock'}${_unidadesTxt(v)}</span>
            <button type="button" class="fv-btn" data-j="${j}"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar variante</button></div>`).join('')}
        </div>
        <p class="text-muted" style="font-size:.75rem;margin-top:6px">El precio de "Precio y visibilidad" se aplica a todas. Stock, SKU, foto o un precio distinto se cambian en cada variante.</p>`;
@@ -902,6 +942,16 @@ function _aplicarModoFicha(p, vars) {
   const precioTodas = m === 'producto' && vars.length > 1;   // en el producto, el precio vale para todas las variantes
   ver(grupo('mprod-precio'), varia || precioTodas); ver(grupo('mprod-descuento'), varia || precioTodas);
   ver($('mprod-precio-nota'), precioTodas); if (!precioTodas) $('mprod-precio').placeholder = '';
+  // Variante principal: avisar que su precio se aplica a todas
+  if (m === 'variante' && _esPrincipal(p)) {
+    let nota = $('mprod-precio-nota');
+    if (!nota) {
+      nota = document.createElement('small'); nota.id = 'mprod-precio-nota'; nota.className = 'mprod-ayuda';
+      $('mprod-precio').closest('.input-pesos').insertAdjacentElement('afterend', nota);
+    }
+    nota.textContent = `Es la variante principal: si cambiás el precio, se aplica a las ${vars.length} variantes.`;
+    ver(nota, true);
+  }
   ver(grupo('mprod-stock-num'), varia); ver(grupo('mprod-sku'), varia);
   ver(grupo('mprod-destacado'), prod); ver(grupo('mprod-descripcion'), prod);
   const secs = document.querySelectorAll('#modal-producto .mprod-sec');
@@ -958,7 +1008,8 @@ async function guardarProducto() {
   if (f.talle !== ini.talle) variante['talle/medida'] = f.talle;
   if (f.sku !== ini.sku) variante.sku_costo = f.sku;
   if (cambioPrecio) { variante.precio = precio; variante.descuento = descuento; }
-  const otras = aTodas && cambioPrecio ? vars.filter(v => v !== p) : [];
+  // También desde la variante principal: su precio se copia a todas
+  const otras = (aTodas || (_modoFicha === 'variante' && _esPrincipal(p))) && cambioPrecio ? vars.filter(v => v !== p) : [];
   if (f.stock !== ini.stock) variante.stock = f.stock;
   if (f.cantidad !== ini.cantidad) variante.cantidad = f.cantidad;
   if (f.nombre && f.nombre !== ini.nombre) producto.producto = f.nombre;

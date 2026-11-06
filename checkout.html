@@ -879,7 +879,8 @@ async function crearCuentaCheckout(nombre, email, pass) {
   try {
     const hash = await _hashCuenta(pass, email);
     const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
-    const res = await fetch(`${CRM_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: "follow", signal: ctrl.signal });
+    // Por POST (no en la URL): el servidor vuelve a cifrar con sal e iteraciones (_hashClave)
+    const res = await fetch(CRM_URL, { method: "POST", body: JSON.stringify({ action: "registerUser", nombre, email, hash }), redirect: "follow", signal: ctrl.signal });
     clearTimeout(t);
     const data = await res.json();
     if (data.ok || data.error === "email_taken") {

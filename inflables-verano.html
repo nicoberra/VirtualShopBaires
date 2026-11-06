@@ -126,13 +126,15 @@
     .iv-grupo > .container > p { display: none; }
     .iv-grupo h2 { margin-bottom: 10px; }
     /* Grilla de fotos, 3 por fila, como en Instagram */
-    .iv-grid { grid-template-columns: repeat(3, 1fr); gap: 3px; }
-    .iv-grid .iv-card { border-radius: 4px; box-shadow: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: transform .15s ease; }
-    .iv-grid .iv-card:active { transform: scale(.97); }
+    /* Casi de borde a borde (6 px a cada lado) y cada foto como un botón: puntas redondeadas y sombra suave */
+    .iv-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; margin: 0 -10px; }
+    .iv-grid .iv-card { border-radius: 14px; overflow: hidden; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, .10), 0 6px 16px rgba(15, 23, 42, .08); transition: transform .15s ease, box-shadow .15s ease; }
+    .iv-grid .iv-card:active { transform: scale(.95); box-shadow: 0 1px 3px rgba(15, 23, 42, .14); }
     .iv-grid .iv-info, .iv-grid .iv-cuenta, .iv-grid .iv-flecha { display: none; }
     .iv-grid .iv-fotos { overflow: hidden; pointer-events: none; }
     .iv-grid .iv-fotos img:not(:first-child) { display: none; }
-    .iv-grid .iv-card.agotado::after { content: "Sin stock"; position: absolute; left: 4px; bottom: 4px; background: rgba(27,43,75,.85); color: #fff;
+    .iv-grid .iv-card.agotado::after { content: "Sin stock"; position: absolute; left: 6px; bottom: 6px; background: rgba(27,43,75,.85); color: #fff;
       font-size: .62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
     .iv-grid .iv-card { position: relative; }
     .iv-card:target { outline: none; }
@@ -145,7 +147,6 @@
   <section class="iv-hero">
     <div class="container">
       <h1>Inflables para este <span>verano</span></h1>
-      <p>Todos los modelos con fotos, medidas y precio. Elegí un tipo arriba para ver solo esos, y tocá «Comprar» para escribirnos por WhatsApp con el pedido ya armado.</p>
       <p class="iv-entrega-hero"><i class="fa-solid fa-house" aria-hidden="true"></i> <strong>Retirás por el lote 707 o te lo llevamos a tu lote</strong></p>
     </div>
   </section>

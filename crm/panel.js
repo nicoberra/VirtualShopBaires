@@ -151,11 +151,14 @@ function shakeLoginBox() {
   box.addEventListener('animationend', () => box.classList.remove('crm-shake'), { once: true });
 }
 
+// Pedidos eliminados desde el CRM (quedan guardados en la planilla con estado "Eliminado", pero no se muestran)
+function _sinEliminados(arr) { return arr.filter(p => String(p.estado || '').trim() !== 'Eliminado'); }
+
 function prefetchAll() {
   // Carga todo en paralelo al entrar — navegación instantánea después
   getData('list', 'Clientes').catch(() => {});
   crm({ action: 'ext_pedidos_listar' }).then(raw => {
-    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+    _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
   }).catch(() => {});
   crm({ action: 'ext_productos_list' }).then(r => {
     _productos = r.rows || [];
@@ -258,7 +261,7 @@ async function loadPanel() {
     let pedidos = _pedidos.length ? _pedidos : [];
     if (!pedidos.length) {
       const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
-      pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+      pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
       _pedidos = pedidos;
     }
 
@@ -398,7 +401,7 @@ async function loadFacturacion(force=false) {
   el.innerHTML = uiCargando(6);
   try {
     const [pedidos, productoRes] = await Promise.all([
-      crm({ action: 'ext_pedidos_listar', todos: 1 }).then(r => Array.isArray(sinError(r)) ? r : []),
+      crm({ action: 'ext_pedidos_listar', todos: 1 }).then(r => Array.isArray(sinError(r)) ? _sinEliminados(r) : []),
       crm({ action: 'productos_list' })
     ]);
     const productos = productoRes.rows || [];
@@ -765,7 +768,7 @@ async function loadPedidos(force=false, silent=false) {
   }
   try {
     const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
-    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+    _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
     lsGuardar('pedidos', _pedidos);
     filtrarPedidos();
   } catch(e) {
@@ -872,6 +875,9 @@ function renderPedidos(list) {
             `<option${e===estado?' selected':''}>${e}</option>`).join('')}
         </select>
       </div>
+      <div style="margin-top:6px;flex-basis:100%">
+        <button type="button" class="btn-danger btn-sm" onclick="event.stopPropagation();eliminarPedido('${hx(p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0))}')"><i class="fa-solid fa-trash"></i> Eliminar pedido</button>
+      </div>
     </div>`;
 
     tr.addEventListener('click', () => {
@@ -884,6 +890,30 @@ function renderPedidos(list) {
 
   el.innerHTML = '';
   el.appendChild(t);
+}
+
+// Eliminar pedido (pruebas, duplicados): pide confirmación y lo marca "Eliminado" para que no aparezca más en el CRM
+function eliminarPedido(clave) {
+  const m = String(clave).match(/^(mp|row):(.*)$/);
+  const tipo = m ? m[1] : 'row', ref = m ? m[2] : String(clave);
+  const p = _pedidos.find(x => tipo === 'mp' ? String(x._mpId) === ref : String(x._row) === ref);
+  if (!p) { toast('No se encontró el pedido. Tocá actualizar y probá de nuevo.', 'err'); return; }
+  const nombre = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || 'sin nombre';
+  const total = p.total || p.monto ? ' por $' + Number(p.total || p.monto).toLocaleString('es-AR') : '';
+  confirmar(`¿Seguro que querés eliminar el pedido de ${nombre}${total}? Va a dejar de aparecer en el CRM.`, () => unaVez('eliminar-ped-' + clave, async () => {
+    try {
+      if (tipo === 'mp') {
+        const r = await crmOk({ action: 'update', tab: 'Pedidos', id: ref, estado: 'Eliminado' });
+        if (r.updated === false) throw new Error('No se encontró el pedido');
+      } else {
+        await crmOk({ action: 'ext_pedido_update', row: ref, campo: 'estado', valor: 'Eliminado', orderNumber: p.orderNumber || '' });
+      }
+      _pedidos = _pedidos.filter(x => x !== p);
+      lsGuardar('pedidos', _pedidos);
+      filtrarPedidos();
+      toast('Pedido eliminado');
+    } catch(e) { toast('Error al eliminar: ' + e.message, 'err'); }
+  }));
 }
 
 async function cambiarEstadoPedido(sel, clave) {

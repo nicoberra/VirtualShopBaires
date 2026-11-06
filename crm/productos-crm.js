@@ -240,13 +240,14 @@ function abrirModalEditarCats() {
   const lista = $('editar-cats-lista');
   lista.innerHTML = cats.length
     ? cats.map(c => `
-        <div class="editar-cat-row">
-          <span><strong>${escHtml(c)}</strong> <span class="text-muted" style="font-size:.78rem">· ${contar(c)} productos</span></span>
-          <span style="display:flex;gap:6px;align-items:center">
-            <label class="cat-foto" title="Foto en el carrusel de la portada" data-cat="${escHtml(c)}">
-              <img alt="" hidden><i class="fa-solid fa-image"></i>
-              <input type="file" accept="image/*" hidden>
-            </label>
+        <div class="editar-cat-row cat-tarjeta">
+          <label class="cat-foto" title="Arrastrá una foto acá o tocá para elegirla" data-cat="${escHtml(c)}">
+            <img alt="" onerror="this.hidden=true" ${_fotoCatTienda(c) ? `src="${escHtml(_fotoCatTienda(c))}"` : 'hidden'}><i class="fa-solid fa-image"></i>
+            <span class="cat-foto-ayuda"><i class="fa-solid fa-cloud-arrow-up"></i> Arrastrá o tocá para cambiar</span>
+            <input type="file" accept="image/*" hidden>
+          </label>
+          <span class="cat-tarjeta-txt"><strong>${escHtml(c)}</strong> <span class="text-muted">${contar(c)} productos</span></span>
+          <span class="cat-tarjeta-acc">
             <button class="btn-secondary btn-sm btn-ver-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-eye"></i> Ver</button>
             <button class="btn-danger btn-sm btn-del-cat" data-cat="${escHtml(c)}"><i class="fa-solid fa-trash"></i> Eliminar</button>
           </span>
@@ -261,9 +262,42 @@ function abrirModalEditarCats() {
   lista.querySelectorAll('.cat-foto input').forEach(inp => {
     inp.addEventListener('change', () => subirFotoCategoria(inp));
   });
+  // Arrastrar y soltar una foto sobre la categoría para cambiarla o agregarla
+  lista.querySelectorAll('.cat-foto').forEach(lbl => {
+    ['dragenter', 'dragover'].forEach(ev => lbl.addEventListener(ev, e => { e.preventDefault(); lbl.classList.add('soltando'); }));
+    ['dragleave', 'dragend'].forEach(ev => lbl.addEventListener(ev, () => lbl.classList.remove('soltando')));
+    lbl.addEventListener('drop', e => {
+      e.preventDefault(); lbl.classList.remove('soltando');
+      const file = [...(e.dataTransfer.files || [])].find(x => /^image\//.test(x.type));
+      if (file) subirFotoCategoria(lbl.querySelector('input'), file);
+      else toast('Soltá un archivo de imagen (JPG, PNG o WebP)', 'err');
+    });
+  });
   $('nueva-cat-nombre').value = '';
   show('modal-editar-cats', 'flex');
   cargarFotosCategorias();
+}
+
+// Foto que hoy muestra la tienda para cada categoría (la misma que usa la portada si no se subió otra)
+const _CAT_IMG_TIENDA = {
+  "Bazar, baño y cocina": "/Productos/Bazar,%20ba%C3%B1o%20y%20cocina/categoria-web.webp",
+  "Camping": "/Productos/Camping/categoria-web.webp",
+  "Fitness y musculacion": "/Productos/Fitness%20y%20musculacion/categoria-web.webp",
+  "Herramientas": "/Productos/Herramientas/categoria-web.webp",
+  "Inflables": "/Productos/Inflables/Categoria.jpg",
+  "Jardin y aire libre": "/Productos/Jardin,%20Caza%20y%20Pesca/categoria-web.webp",
+  "Juguetes": "/Productos/Juguetes/Categoria.webp",
+  "Mascotas": "/Productos/Mascotas/categoria-web.webp",
+  "Muebles para el hogar": "/Productos/Muebles%20para%20el%20hogar/categoria-web.webp",
+  "Pilates y Yoga": "/Productos/Pilates%20y%20Yoga/categoria-web.webp",
+  "Playa": "/Productos/Playa/categoria-web.webp",
+};
+function _fotoCatTienda(c) {
+  if (_CAT_IMG_TIENDA[c]) return _CAT_IMG_TIENDA[c];
+  const p = _productos.find(x => x.categoria === c && x.imagen);
+  if (!p) return '';
+  const u = String(p.imagen).split('#')[0];
+  return /^(https?:|data:|\/)/.test(u) ? u : '/' + u;
 }
 
 // Fotos de las categorías: las que giran en el carrusel de la portada de la tienda
@@ -278,6 +312,7 @@ function pintarFotoCategoria(cat, url) {
   const lbl = [...document.querySelectorAll('#editar-cats-lista .cat-foto')].find(l => l.dataset.cat === cat);
   if (!lbl) return;
   const img = lbl.querySelector('img');
+  url = url || _fotoCatTienda(cat);
   img.hidden = !url;
   if (url) img.src = url; else img.removeAttribute('src');
   lbl.title = url ? 'Cambiar la foto del carrusel de la portada' : 'Subir foto para el carrusel de la portada';
@@ -303,8 +338,8 @@ function _prepararFotoCuadrada(file) {
   });
 }
 
-async function subirFotoCategoria(input) {
-  const lbl = input.closest('.cat-foto'), cat = lbl.dataset.cat, file = input.files[0];
+async function subirFotoCategoria(input, archivo) {
+  const lbl = input.closest('.cat-foto'), cat = lbl.dataset.cat, file = archivo || input.files[0];
   input.value = '';
   if (!file) return;
   lbl.classList.add('subiendo');
@@ -322,6 +357,7 @@ async function subirFotoCategoria(input) {
 // ── Filtros, páginas y menú "⋯" de la tabla de productos ─────────────
 const PROD_POR_PAG = 25;
 let _prodPag = 1, _prodLista = [];
+let _prodTodos = false;   // "Ver todos": toda la lista en una sola página, sin botones de páginas
 // verCon / verSin: los dos botones de arriba de la lista (se prenden y apagan por separado)
 const _prodFiltros = { verCon: true, verSin: true, destacados: false, sinSku: false, sinFoto: false };
 
@@ -490,10 +526,10 @@ function renderProductos(list) {
     if (!porClave[k]) { porClave[k] = []; grupos.push(porClave[k]); }
     porClave[k].push(p);
   });
-  const paginas = Math.max(1, Math.ceil(grupos.length / PROD_POR_PAG));
+  const paginas = _prodTodos ? 1 : Math.max(1, Math.ceil(grupos.length / PROD_POR_PAG));
   _prodPag = Math.min(Math.max(1, _prodPag), paginas);
   const desde = (_prodPag - 1) * PROD_POR_PAG;
-  const vista = grupos.slice(desde, desde + PROD_POR_PAG);
+  const vista = _prodTodos ? grupos : grupos.slice(desde, desde + PROD_POR_PAG);
 
   el.innerHTML = `
     <table class="prod-tabla">
@@ -602,7 +638,13 @@ function _pintarPaginacionEn(el, total, desde, n, paginas) {
       ${nums.map(x => x === '…' ? '<span class="pag-gap">…</span>'
         : `<button type="button" class="pag-btn${x === _prodPag ? ' on' : ''}" data-p="${x}"${x === _prodPag ? ' aria-current="page"' : ''}>${x}</button>`).join('')}
       <button type="button" class="pag-btn" data-p="${_prodPag + 1}" ${_prodPag === paginas ? 'disabled' : ''} aria-label="Página siguiente"><i class="fa-solid fa-chevron-right"></i></button>
-    </nav>` : ''}`;
+      <button type="button" class="pag-btn pag-todos" data-todos="1">Ver todos</button>
+    </nav>` : ''}
+    ${_prodTodos && total > PROD_POR_PAG ? `<button type="button" class="pag-btn pag-todos" data-todos="0">Ver por páginas</button>` : ''}`;
+  el.querySelectorAll('[data-todos]').forEach(b => b.addEventListener('click', () => {
+    _prodTodos = b.dataset.todos === '1'; _prodPag = 1;
+    renderProductos(_prodLista);
+  }));
   el.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => {
     _prodPag = Number(b.dataset.p);
     renderProductos(_prodLista);

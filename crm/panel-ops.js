@@ -150,10 +150,13 @@ function shakeLoginBox() {
   box.addEventListener('animationend', () => box.classList.remove('crm-shake'), { once: true });
 }
 
+// Pedidos eliminados desde el CRM (quedan guardados en la planilla con estado "Eliminado", pero no se muestran)
+function _sinEliminados(arr) { return arr.filter(p => String(p.estado || '').trim() !== 'Eliminado'); }
+
 function prefetchAll() {
   getData('list', 'Clientes').catch(() => {});
   crm({ action: 'ext_pedidos_listar' }).then(raw => {
-    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+    _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
   }).catch(() => {});
   crm({ action: 'ext_productos_list' }).then(r => {
     _productos = r.rows || [];
@@ -599,7 +602,7 @@ async function loadPedidos(force=false, silent=false) {
   }
   try {
     const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
-    _pedidos = Array.isArray(raw) ? [...raw].reverse() : [];
+    _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
     lsGuardar('pedidos', _pedidos);
     filtrarPedidos();
   } catch(e) {

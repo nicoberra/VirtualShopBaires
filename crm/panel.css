@@ -1725,3 +1725,25 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
   .leads-filtros label input[type=date] { flex: 0 0 72%; }
   .leads-acciones > button { flex: 1; }
 }
+
+/* ── Ventana de categorías: grande, con la foto de cada una y arrastrar y soltar ── */
+.modal.modal-cats { width: min(1180px, calc(100vw - 32px)); max-width: none; max-height: calc(100vh - 32px); }
+#editar-cats-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.editar-cat-row.cat-tarjeta { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface, #fff); }
+.editar-cat-row.cat-tarjeta:last-child { border-bottom: 1px solid var(--border); }
+.cat-tarjeta .cat-foto { width: 100%; height: auto; aspect-ratio: 1; border-radius: 12px; font-size: 2rem; display: grid; place-items: center; cursor: pointer; overflow: hidden; color: var(--text2); }
+.cat-tarjeta .cat-foto img { border-radius: 11px; }
+.cat-foto-ayuda { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 6px 8px; border-radius: 9px; background: rgba(14,30,70,.78); color: #fff;
+  font-size: .74rem; font-weight: 600; text-align: center; opacity: 0; transform: translateY(4px); transition: opacity .18s ease, transform .18s ease; pointer-events: none; }
+.cat-tarjeta .cat-foto:hover .cat-foto-ayuda, .cat-tarjeta .cat-foto:focus-within .cat-foto-ayuda, .cat-tarjeta .cat-foto:has(img[hidden]) .cat-foto-ayuda { opacity: 1; transform: none; }
+.cat-foto.soltando { border: 2.5px dashed var(--red, #e11d2a) !important; box-shadow: 0 0 0 4px rgba(225,29,42,.15); }
+.cat-foto.soltando .cat-foto-ayuda { opacity: 1; transform: none; background: var(--red, #e11d2a); }
+.cat-tarjeta-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cat-tarjeta-txt strong { font-size: 1rem; }
+.cat-tarjeta-txt .text-muted { font-size: .8rem; }
+.cat-tarjeta-acc { display: flex; gap: 8px; }
+.cat-tarjeta-acc .btn-sm { flex: 1; justify-content: center; }
+.pag-btn.pag-todos { width: auto; padding: 0 16px; font-weight: 700; white-space: nowrap; }
+/* Detalle del pedido: los títulos (DNI, Productos, Estado, Descuento...) en negrita; lo que cargó el cliente, normal */
+.ped-label { font-weight: 700 !important; color: var(--text, #1f2937) !important; }
+@media (prefers-reduced-motion: reduce) { .cat-foto-ayuda { transition: none; } }

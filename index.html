@@ -17,6 +17,9 @@
   <link rel="icon" href="/icon-vsb.webp?v=3" type="image/webp" />
   <meta name="theme-color" content="#CC1212" />
   <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,700;1,800;1,900&display=swap" />
   <link rel="apple-touch-icon" href="/icon-vsb.webp?v=3" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -106,7 +109,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <link rel="stylesheet" href="css/styles.css?v=13" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="dns-prefetch" href="https://script.google.com" />
@@ -114,7 +117,7 @@
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" /></noscript>
 </head>
-<body>
+<body class="pg-inicio">
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -178,6 +181,11 @@
 </header>
 
 <!-- CAROUSEL CATEGORÍAS INFINITO -->
+<!-- Badges móvil: arriba de las categorías (solo visible en celular) -->
+<div class="hero-badges hero-badges-top" aria-hidden="true">
+  <span class="hero-badge-off">💳 10% OFF por transferencia</span>
+  <span class="hero-badge-direct">📦 Importador directo</span>
+</div>
 <div class="cat-carousel-outer">
   <button class="cat-arrow cat-arrow-prev" id="cat-prev" aria-label="Anterior"><i class="fa-solid fa-chevron-left"></i></button>
   <div class="cat-carousel-wrap" id="cat-carousel-wrap">
@@ -288,11 +296,6 @@
 <!-- HERO -->
 <section class="hero hero-split hero-video-bg">
 
-  <!-- Badges móvil: arriba del iPhone (solo visible en mobile) -->
-  <div class="hero-badges hero-badges-top" aria-hidden="true">
-    <span class="hero-badge-off">💳 10% OFF por transferencia</span>
-    <span class="hero-badge-direct">📦 Importador directo</span>
-  </div>
 
   <!-- GRILLA DE 4 VIDEOS DE FONDO -->
   <!-- Subí tus 4 videos a Supabase Storage → bucket "videos" y reemplazá los src -->
@@ -341,39 +344,31 @@
   </div>
 </section>
 
-<!-- BENEFICIOS -->
-<section class="features-strip">
+<!-- BENEFICIOS: círculos como las destacadas de Instagram -->
+<section class="destacadas-web" aria-label="Por qué comprar en Virtual Shop Baires">
   <div class="container">
-    <div class="features-strip-inner">
-      <div class="feature-item">
-        <div class="fi-icon-wrap"><i class="fa-solid fa-truck-fast fi-icon"></i></div>
-        <div>
-          <div class="fi-title">Envíos a todo el país</div>
-          <div class="fi-desc">Llegamos a donde estés rápido y seguro</div>
-        </div>
-      </div>
-      <div class="feature-item feature-item--highlight">
-        <div class="fi-icon-wrap fi-icon-wrap--red"><i class="fa-solid fa-percent fi-icon"></i></div>
-        <div>
-          <div class="fi-title">10% OFF por transferencia</div>
-          <div class="fi-desc">Pagá en efectivo o transferencia y ahorrá</div>
-        </div>
-      </div>
-      <div class="feature-item">
-        <div class="fi-icon-wrap"><i class="fa-solid fa-shield-halved fi-icon"></i></div>
-        <div>
-          <div class="fi-title">Compra segura</div>
-          <div class="fi-desc">Garantizamos tu experiencia de compra</div>
-        </div>
-      </div>
-      <div class="feature-item">
-        <div class="fi-icon-wrap"><i class="fa-solid fa-box-open fi-icon"></i></div>
-        <div>
-          <div class="fi-title">Importador directo</div>
-          <div class="fi-desc">Productos originales, con garantía clara en cada uno</div>
-        </div>
-      </div>
-    </div>
+    <ul class="dw-lista">
+      <li><a href="ofertas.html" class="dw-item">
+        <span class="dw-aro"><img src="img/destacadas/novedades.webp?v=1" alt="" width="120" height="120" loading="lazy" decoding="async" /></span>
+        <span class="dw-txt"><b>Novedades</b><small>Lo que entró</small></span>
+      </a></li>
+      <li><a href="faq.html" class="dw-item">
+        <span class="dw-aro"><img src="img/destacadas/como-comprar.webp?v=1" alt="" width="120" height="120" loading="lazy" decoding="async" /></span>
+        <span class="dw-txt"><b>Comprar</b><small>En minutos</small></span>
+      </a></li>
+      <li><a href="faq.html" class="dw-item">
+        <span class="dw-aro"><img src="img/destacadas/envios.webp?v=1" alt="" width="120" height="120" loading="lazy" decoding="async" /></span>
+        <span class="dw-txt"><b>Envíos</b><small>A todo el país</small></span>
+      </a></li>
+      <li><a href="faq.html" class="dw-item">
+        <span class="dw-aro"><img src="img/destacadas/pagos.webp?v=1" alt="" width="120" height="120" loading="lazy" decoding="async" /></span>
+        <span class="dw-txt"><b>Pagos</b><small>10% OFF transferencia</small></span>
+      </a></li>
+      <li><a href="faq.html" class="dw-item">
+        <span class="dw-aro"><img src="img/destacadas/garantia.webp?v=1" alt="" width="120" height="120" loading="lazy" decoding="async" /></span>
+        <span class="dw-txt"><b>Garantía</b><small>Compra segura</small></span>
+      </a></li>
+    </ul>
   </div>
 </section>
 
@@ -404,7 +399,7 @@
     <div class="ml-rep-card">
       <div class="ml-rep-top">
         <div class="ml-store-info">
-          <img src="logo.png?v=3" alt="Virtual Shop Baires" class="ml-store-logo" />
+          <img src="img/marca/logo-vs-circulo.webp?v=3" alt="Virtual Shop Baires" class="ml-store-logo ml-store-logo-vs" width="48" height="48" loading="lazy" />
           <div class="ml-store-meta">
             <div class="ml-store-name">VirtualShopBaires x San Ou <span class="ml-oficial-badge"><i class="fa-solid fa-circle-check"></i> Tienda Oficial</span></div>
             <div class="ml-lider-badge"><i class="fa-solid fa-star"></i> MercadoLíder Platinum</div>
@@ -516,7 +511,7 @@
   <div class="container">
     <div class="footer-grid">
       <div class="footer-col">
-        <img src="logo.png?v=3" alt="Virtual Shop Baires" class="logo-footer" loading="lazy" />
+        <img src="img/marca/logo-footer.webp?v=1" alt="Virtual Shop Baires" class="logo-footer" width="320" height="80" loading="lazy" />
         <p>Importadores directos de productos para mascotas, hogar, jardín, deportes y más. Sin intermediarios, con envío a todo el país.</p>
         <div class="social-links">
           <a href="https://www.instagram.com/virtualshopbaires" target="_blank" rel="noopener" aria-label="Instagram"><i class="fa-brands fa-instagram" aria-hidden="true"></i></a>

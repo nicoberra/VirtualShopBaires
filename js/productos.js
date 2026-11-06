@@ -307,7 +307,62 @@ function precioUltimoHTML(p) {
   return p.ultimoPrecio ? `<span class="precio-ultimo">Último precio: ${formatPrecio(p.ultimoPrecio)}</span>` : "";
 }
 function btnAvisameHTML(p) {
-  return `<a class="btn-avisame" href="${_waAvisame(p)}" target="_blank" rel="noopener" onclick="event.stopPropagation()"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Avisame cuándo entra</a>`;
+  return `<button type="button" class="btn-avisame" onclick="event.stopPropagation();abrirAvisoStock(${p.id})"><i class="fa-regular fa-bell" aria-hidden="true"></i> Avisame cuándo entra</button>`;
+}
+// Formulario "Te avisamos cuando vuelva": se guarda en el sistema; cuando vuelve el stock llega un email
+// (si lo dejó) y en el CRM aparece para avisarle por WhatsApp. Si no se puede guardar, ofrece WhatsApp.
+function abrirAvisoStock(pid) {
+  const p = PRODUCTOS.find(x => x.id === pid);
+  if (!p) return;
+  let dlg = document.getElementById("aviso-stock");
+  if (!dlg) {
+    dlg = document.createElement("dialog");
+    dlg.id = "aviso-stock"; dlg.className = "aviso-stock";
+    document.body.appendChild(dlg);
+    dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+  }
+  let prev = {};
+  try { prev = JSON.parse(localStorage.getItem("vsb_aviso_datos") || "{}"); const u = JSON.parse(localStorage.getItem("vsb_user") || "null"); if (u) { prev.nombre = prev.nombre || u.nombre; prev.email = prev.email || u.email; } } catch (e) {}
+  dlg.innerHTML = `
+    <form method="dialog" class="aviso-form" novalidate>
+      <button type="button" class="aviso-cerrar" aria-label="Cerrar" onclick="this.closest('dialog').close()">&times;</button>
+      <div class="aviso-ico" aria-hidden="true"><i class="fa-regular fa-bell"></i></div>
+      <h3>Te avisamos cuando vuelva</h3>
+      <p class="aviso-prod">${_escAttr(nombreVisible(p))}</p>
+      <label>Nombre<input name="nombre" autocomplete="given-name" required value="${_escAttr(prev.nombre || "")}"></label>
+      <label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="11 2345 6789" required value="${_escAttr(prev.whatsapp || "")}"></label>
+      <label>Email <small>(opcional, te llega un aviso)</small><input name="email" type="email" inputmode="email" autocomplete="email" value="${_escAttr(prev.email || "")}"></label>
+      <input name="website" tabindex="-1" autocomplete="off" class="aviso-trampa" aria-hidden="true">
+      <p class="aviso-error" role="alert" hidden></p>
+      <button type="submit" class="aviso-enviar">Avisame</button>
+    </form>`;
+  const form = dlg.querySelector("form"), err = dlg.querySelector(".aviso-error"), btn = dlg.querySelector(".aviso-enviar");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const d = Object.fromEntries(new FormData(form));
+    let wa = String(d.whatsapp || "").replace(/\D/g, "").replace(/^0/, "");
+    if (wa.length === 10) wa = "549" + wa;                       // 11 2345 6789 → 5491123456789
+    const mal = msg => { err.textContent = msg; err.hidden = false; };
+    if (String(d.nombre || "").trim().length < 2) return mal("Escribí tu nombre.");
+    if (!/^\d{10,15}$/.test(wa)) return mal("Revisá el WhatsApp (con código de área).");
+    if (d.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email)) return mal("Revisá el email.");
+    err.hidden = true; btn.disabled = true; btn.textContent = "Guardando…";
+    try { localStorage.setItem("vsb_aviso_datos", JSON.stringify({ nombre: d.nombre, whatsapp: d.whatsapp, email: d.email })); } catch (ex) {}
+    try {
+      const r = await fetch(CATALOGO_URL.split("?")[0], { method: "POST", redirect: "follow",
+        body: JSON.stringify({ action: "aviso_stock", nombre: String(d.nombre).trim(), whatsapp: wa, email: String(d.email || "").trim(), producto: p.nombre, categoria: p.categoria, website: d.website || "" }) });
+      const j = await r.json();
+      if (!j.ok) throw new Error(j.error || "No se pudo guardar");
+      form.innerHTML = `<div class="aviso-ico ok" aria-hidden="true"><i class="fa-solid fa-check"></i></div><h3>¡Listo!</h3>
+        <p class="aviso-prod">Te avisamos apenas vuelva a entrar${d.email ? " (te llega un email)" : ""}.</p>
+        <button type="button" class="aviso-enviar" onclick="this.closest('dialog').close()">Seguir mirando</button>`;
+    } catch (ex) {
+      btn.disabled = false; btn.textContent = "Avisame";
+      err.innerHTML = `No pudimos guardarlo. <a href="${_waAvisame(p)}" target="_blank" rel="noopener">Pedilo por WhatsApp</a>.`; err.hidden = false;
+    }
+  });
+  dlg.showModal();
+  setTimeout(() => { const i = dlg.querySelector('input[name="' + (prev.nombre ? "whatsapp" : "nombre") + '"]'); if (i && !prev.whatsapp) i.focus(); }, 50);
 }
 function _waConsulta(p) {
   return "https://wa.me/5491149457266?text=" + encodeURIComponent("Hola! Quería consultar por: " + p.nombre);

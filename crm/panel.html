@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="panel.css?v=51">
+  <link rel="stylesheet" href="panel.css?v=52">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -82,6 +82,10 @@
         <div class="stat-card skeleton"></div>
         <div class="stat-card skeleton"></div>
         <div class="stat-card skeleton"></div>
+      </div>
+      <div class="card avisos-card" id="avisos-card" hidden>
+        <h3 class="card-title"><i class="fa-solid fa-bell"></i> Avisar: volvió el stock <span id="avisos-n" class="avisos-n"></span></h3>
+        <div id="avisos-lista"></div>
       </div>
       <div class="two-col">
         <div class="card">
@@ -514,7 +518,7 @@
 <div id="toast" class="toast"></div>
 
 <script src="estados.js?v=1"></script>
-<script src="panel.js?v=25"></script>
+<script src="panel.js?v=26"></script>
 <script src="productos-crm.js?v=37"></script>
 <script src="leads-crm.js?v=1"></script>
 <script src="nav-movil.js?v=1"></script>

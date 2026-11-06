@@ -48,6 +48,19 @@ var BANK_CUIT    = '30-71077182-7';
 
 // Estructura de cada pestaña: k = clave API, h = título en la hoja
 var TABS = {
+  // Pedidos de aviso "Avisame cuándo entra" (uno por persona y producto)
+  'Avisos': [
+    { k:'id',        h:'ID'        },
+    { k:'fecha',     h:'Fecha'     },
+    { k:'nombre',    h:'Nombre'    },
+    { k:'whatsapp',  h:'WhatsApp'  },
+    { k:'email',     h:'Email'     },
+    { k:'producto',  h:'Producto'  },
+    { k:'categoria', h:'Categoría' },
+    { k:'estado',    h:'Estado'    },
+    { k:'mail',      h:'Mail enviado' },
+    { k:'avisado',   h:'Avisado'   }
+  ],
   'Clientes': [
     { k:'id',       h:'ID'        },
     { k:'fecha',    h:'Fecha'     },
@@ -173,7 +186,8 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v22-leads-utm' };
+    else if (accion === 'version')              out = { ok:true, version: 'v23-clientes-avisos' };
+    else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
     else if (accion === 'loginDispositivo')     out = loginDispositivo(p);
@@ -425,7 +439,7 @@ function ss() {
 // Cada fila de una pestaña es una fila de crm_filas (encabezado incluido, con orden 0), así toda la lógica
 // que ya funcionaba con la planilla sigue igual. La primera vez copia sola los datos de la planilla
 // (que queda intacta como respaldo). Volver atrás: propiedad FUENTE_DATOS = planilla.
-var DATOS_HOJAS = { 'clientes':1, 'pedidos':1, 'suscriptores':1, 'pedidos externos':1, 'usuarios':1, 'dispositivos':1, 'push':1, 'errores':1 };
+var DATOS_HOJAS = { 'avisos':1, 'clientes':1, 'pedidos':1, 'suscriptores':1, 'pedidos externos':1, 'usuarios':1, 'dispositivos':1, 'push':1, 'errores':1 };
 var _DATOS_SB = null;
 function _datosEnSupabase() {
   if (_DATOS_SB === null) _DATOS_SB = !!SB_KEY && PropertiesService.getScriptProperties().getProperty('FUENTE_DATOS') !== 'planilla';
@@ -1528,6 +1542,7 @@ function crearPreferencia(p) {
     utm:      _utmLimpio(p.utm)
   });
 
+  _clienteDesdeCompra(p);
   avisarTelegram('💳 Nuevo pedido MP\n👤 ' + (p.nombre||'—') + '\n💰 $' + total + '\nRef: ' + ref + _utmAviso(p.utm));
   var res = { ok:true, url: json.init_point, ref: ref, total: total };
   cacheMP.put(idem, JSON.stringify(res), 600);
@@ -2627,6 +2642,7 @@ function crearPedido(p) {
     COLS.forEach(function(c) { row[mapaP[c]] = valorDe(c); });
 
     sh.appendRow(row);
+    _clienteDesdeCompra(p);
 
     var res = {
       ok:          true,
@@ -2799,6 +2815,7 @@ function tiendaRegistrar(p) {
     var sh = _hojaUsuarios();
     if (_buscarUsuario(sh, email)) return { ok:false, error:'email_taken' };
     sh.appendRow([Utilities.formatDate(new Date(), 'GMT-3', 'dd/MM/yyyy HH:mm'), email, nombre, _hashClave(hash)]);
+    try { agregar('Clientes', { nombre: nombre, email: email, origen: 'web', notas: 'cuenta web' }); } catch (ex) { _registrarError('cliente_cuenta', ex); }
     return { ok:true };
   } finally { lock.releaseLock(); }
 }
@@ -3163,4 +3180,97 @@ function verifyPanel(p) {
   if (!p.token) return { ok:false };
   var val = CacheService.getScriptCache().get('panel_' + p.token);
   return { ok: val === '1' };
+}
+
+
+// ─── CLIENTES AUTOMÁTICOS ────────────────────────────────────
+// Cada compra (transferencia, efectivo o Mercado Pago) suma o completa al cliente en la pestaña Clientes.
+// agregar() ya deduplica por email → teléfono → nombre y solo completa los campos vacíos. Nunca frena la compra.
+function _clienteDesdeCompra(p) {
+  try {
+    var email = String(p.email || '').trim().toLowerCase().slice(0, 120);
+    var tel = String(p.telefono || '').slice(0, 40);
+    var nombre = String(p.nombre || '').trim().slice(0, 80);
+    if (!email && !tel) return;
+    var dir = [p.calle, p.numeroCalle].filter(String).join(' ') + (p.piso ? ', piso ' + p.piso : '');
+    agregar('Clientes', {
+      nombre: nombre, apellido: String(p.apellido || '').trim().slice(0, 80), email: email, telefono: tel,
+      dni: String(p.dni || '').slice(0, 20), ciudad: String(p.localidad || '').slice(0, 80), provincia: String(p.provincia || '').slice(0, 60),
+      direccion: dir.trim().slice(0, 160), cp: String(p.cp || '').slice(0, 12), origen: 'web', notas: 'compra web'
+    });
+  } catch (e) { _registrarError('cliente_compra', e); }
+}
+
+// ─── AVISOS "VOLVIÓ EL STOCK" ────────────────────────────────
+// La tienda guarda el pedido de aviso; cuando el producto vuelve a tener stock se manda un email
+// (si dejó email) y en el CRM aparece para avisarle por WhatsApp con un toque.
+function avisoStockGuardar(p) {
+  if (String(p.website || '').trim()) return { ok:true };                       // trampa para robots
+  var nombre = String(p.nombre || '').trim().slice(0, 80);
+  var wa = String(p.whatsapp || '').replace(/\D/g, '');
+  var email = String(p.email || '').trim().toLowerCase().slice(0, 120);
+  var producto = String(p.producto || '').trim().slice(0, 200);
+  var categoria = String(p.categoria || '').trim().slice(0, 80);
+  if (nombre.length < 2) return { ok:false, error:'Escribí tu nombre.' };
+  if (!/^\d{10,15}$/.test(wa)) return { ok:false, error:'Revisá el WhatsApp: con código de área, sin 0 ni 15.' };
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok:false, error:'Revisá el email.' };
+  if (!producto) return { ok:false, error:'Falta el producto.' };
+  if (!_limite('aviso_' + wa, 8, 3600) || !_limite('aviso_global_' + Math.floor(Date.now() / 600000), 60, 700))
+    return { ok:false, error:'Demasiados pedidos seguidos. Probá en un rato.' };
+  var lock = LockService.getScriptLock(); lock.waitLock(15000);
+  try {
+    var sh = hoja('Avisos'), d = sh.getDataRange().getValues(), cols = TABS['Avisos'].map(function(c) { return c.k; });
+    var iW = cols.indexOf('whatsapp'), iP = cols.indexOf('producto'), iE = cols.indexOf('estado'), iM = cols.indexOf('email');
+    for (var i = 1; i < d.length; i++) {
+      if (String(d[i][iW]).replace(/\D/g, '') === wa && String(d[i][iP]).trim().toLowerCase() === producto.toLowerCase() && String(d[i][iE]) !== 'Avisado') {
+        if (email && !d[i][iM]) sh.getRange(i + 1, iM + 1).setValue(email);
+        return { ok:true, repetido:true };
+      }
+    }
+    agregar('Avisos', { nombre: nombre, whatsapp: wa, email: email, producto: producto, categoria: categoria, estado: 'Esperando' });
+  } finally { lock.releaseLock(); }
+  return { ok:true };
+}
+
+// Se ejecuta sola cada 30 minutos (ver instalarAvisosStock). Manda el email a quien lo dejó.
+function revisarAvisosStock() {
+  var cat = _sbLeerCatalogo(), conStock = {};
+  cat.productos.forEach(function(pr) { if ((pr.variantes || []).length) conStock[_normKey(pr.nombre)] = true; });   // la clave pública solo ve variantes con stock
+  var sh = hoja('Avisos'), d = sh.getDataRange().getValues(), cols = TABS['Avisos'].map(function(c) { return c.k; });
+  var ix = {}; cols.forEach(function(k, i) { ix[k] = i; });
+  var enviados = 0;
+  for (var i = 1; i < d.length; i++) {
+    var fila = d[i];
+    if (String(fila[ix.estado]) === 'Avisado' || fila[ix.mail] || !fila[ix.email]) continue;
+    if (!conStock[_normKey(fila[ix.producto])]) continue;
+    if (MailApp.getRemainingDailyQuota() < 2) break;
+    var nombre = String(fila[ix.nombre] || '').split(' ')[0];
+    var producto = String(fila[ix.producto]);
+    var link = 'https://virtualshopbaires.com.ar/productos.html?buscar=' + encodeURIComponent(producto);
+    try {
+      MailApp.sendEmail({
+        to: String(fila[ix.email]),
+        subject: '¡Volvió a entrar! ' + producto,
+        name: 'Virtual Shop Baires',
+        htmlBody: '<div style="font-family:Arial,sans-serif;font-size:15px;color:#1a1a2e;max-width:520px">' +
+          '<p>Hola ' + _escHtmlGs(nombre) + ',</p>' +
+          '<p>Te avisamos que volvimos a tener <strong>' + _escHtmlGs(producto) + '</strong>.</p>' +
+          '<p><a href="' + link + '" style="display:inline-block;background:#CC1212;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold">Verlo en la tienda</a></p>' +
+          '<p>Si querés reservarlo, respondé este email o escribinos por WhatsApp al <a href="https://wa.me/5491149457266">11 4945-7266</a>.</p>' +
+          '<p>¡Gracias!<br>Virtual Shop Baires</p></div>'
+      });
+      sh.getRange(i + 1, ix.mail + 1).setValue(new Date());
+      enviados++;
+    } catch (e) { _registrarError('aviso_mail', e); }
+  }
+  return enviados;
+}
+function _escHtmlGs(t) { return String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+// Ejecutar UNA vez a mano desde el editor (▶ Ejecutar): activa la revisión automática cada 30 minutos.
+// Google pide permiso para enviar emails desde esta cuenta.
+function instalarAvisosStock() {
+  ScriptApp.getProjectTriggers().forEach(function(t) { if (t.getHandlerFunction() === 'revisarAvisosStock') ScriptApp.deleteTrigger(t); });
+  ScriptApp.newTrigger('revisarAvisosStock').timeBased().everyMinutes(30).create();
+  return 'Avisos de stock activados (cada 30 minutos). Emails disponibles hoy: ' + MailApp.getRemainingDailyQuota();
 }

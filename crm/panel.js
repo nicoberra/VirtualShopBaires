@@ -247,7 +247,53 @@ const CLI_CAMPOS_GUARDADOS = ['nombre','apellido','telefono','email','dni','dire
 
 // ─── PANEL (DASHBOARD) ───────────────────────────────────────
 
+// ─── AVISOS "VOLVIÓ EL STOCK" ───
+// Personas que pidieron aviso de un producto que ya tiene stock: botón de WhatsApp con el mensaje armado.
+let _avisos = [];
+function _saludoHora() { const h = new Date().getHours(); return h < 13 ? 'Buen día' : h < 20 ? 'Buenas tardes' : 'Buenas noches'; }
+async function cargarAvisosStock() {
+  try {
+    const r = await crmOk({ action: 'list', tab: 'Avisos' });
+    _avisos = (r.rows || []).filter(a => a.estado !== 'Avisado');
+    if (!_productos.length) {
+      const rp = await crm({ action: 'ext_productos_list' });
+      _productos = rp.rows || [];
+    }
+    pintarAvisosStock();
+  } catch (e) { /* sin avisos todavía: la tarjeta queda oculta */ }
+}
+function pintarAvisosStock() {
+  const card = $('avisos-card'); if (!card) return;
+  const conStock = new Set(_productos.filter(p => p.stock).map(p => String(p.nombre || '').trim().toLowerCase()));
+  const listos = _avisos.filter(a => conStock.has(String(a.producto || '').trim().toLowerCase()));
+  const esperando = _avisos.length - listos.length;
+  card.hidden = !_avisos.length;
+  $('avisos-n').textContent = listos.length ? listos.length + ' para avisar' : '';
+  $('avisos-lista').innerHTML = (listos.length ? listos.map(a => {
+    const nombre = String(a.nombre || '').split(' ')[0];
+    const msg = `${_saludoHora()} ${nombre}! Te escribimos de Virtual Shop Baires: volvimos a tener *${a.producto}*. ¿Te lo reservamos? Lo ves acá: https://virtualshopbaires.com.ar/productos.html?buscar=${encodeURIComponent(a.producto)}`;
+    return `<div class="aviso-fila">
+      <div class="aviso-info"><strong>${hx(a.nombre)}</strong><span>${hx(a.producto)}</span>
+        <small>Pidió aviso el ${hx(fmtFecha(a.fecha))}${a.email ? ' · ' + hx(a.email) : ''}${a.mail ? ' · email enviado ✓' : ''}</small></div>
+      <div class="aviso-acc">
+        <a class="btn-wa-aviso" href="https://wa.me/${hx(String(a.whatsapp).replace(/\D/g, ''))}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> Avisar</a>
+        <button type="button" class="btn-secondary btn-sm" onclick="marcarAvisado('${hx(a.id)}')">Ya le avisé</button>
+      </div></div>`;
+  }).join('') : '<p class="text-muted" style="margin:4px 0">Nadie para avisar por ahora.</p>') +
+    (esperando ? `<p class="text-muted" style="margin:10px 0 0;font-size:.8rem">${esperando} ${esperando === 1 ? 'persona espera' : 'personas esperan'} productos que todavía no tienen stock.</p>` : '');
+}
+function marcarAvisado(id) {
+  unaVez('avisado-' + id, async () => {
+    try {
+      await crmOk({ action: 'update', tab: 'Avisos', id, estado: 'Avisado', avisado: new Date().toLocaleString('es-AR') });
+      _avisos = _avisos.filter(a => String(a.id) !== String(id));
+      pintarAvisosStock(); toast('Marcado como avisado');
+    } catch (e) { toast('Error: ' + e.message, 'err'); }
+  });
+}
+
 async function loadPanel() {
+  cargarAvisosStock();
   const cards = $('panel-cards');
   cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
   $('panel-pedidos-rec').innerHTML = uiCargando(5);

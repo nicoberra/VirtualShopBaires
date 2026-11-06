@@ -3787,3 +3787,6 @@ body { background: #f4f5f7; }
 /* Botón de WhatsApp del encabezado: verde, como el original */
 .header-actions .si-wa { background: #25D366 !important; color: #fff !important; }
 .header-actions .si-wa:hover { background: #1EBE5A !important; }
+/* Título "Comprá con confianza real" bien grande */
+.pg-inicio .ml-rep-section .section-header h2 { font-size: clamp(2.3rem, 6vw, 4.4rem); line-height: 1.02; letter-spacing: -.02em; text-wrap: balance; margin-bottom: 14px; }
+.pg-inicio .ml-rep-section .section-header p { font-size: clamp(1rem, 1.6vw, 1.25rem); }

@@ -109,7 +109,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="css/styles.css?v=14" />
+  <link rel="stylesheet" href="css/styles.css?v=15" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="dns-prefetch" href="https://script.google.com" />
@@ -639,7 +639,7 @@
 <script>
 </script>
 <script src="js/sheets.js?v=20"></script>
-<script src="js/productos.js?v=14"></script>
+<script src="js/productos.js?v=15"></script>
 <script src="js/cart.js?v=5"></script>
 <script src="js/main.js?v=6"></script>
 <script src="js/mejoras-ui.js"></script>
@@ -851,7 +851,8 @@
   function construirCarruselCategorias(productos, categorias) {
     const track = document.getElementById("cat-track");
     if (!track) return;
-    const conProductos = categorias.filter(c => c !== "Todos" && productos.some(p => p.categoria === c));
+    // Solo categorías con algún producto en stock: si se agota todo desaparece, y vuelve sola cuando entra stock
+    const conProductos = categorias.filter(c => c !== "Todos" && productos.some(p => p.categoria === c && hayStock(p)));
     const externas = Object.keys(CATS_EXTERNAS).map(k => k.charAt(0).toUpperCase() + k.slice(1));
     const lista = [...conProductos, ...externas.filter(c => !conProductos.includes(c))];
     if (!lista.length) return;

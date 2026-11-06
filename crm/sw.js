@@ -1,9 +1,9 @@
 /* Service Worker — VSB CRM / Operaciones */
-const CACHE_NAME = 'vsb-crm-v11';
+const CACHE_NAME = 'vsb-crm-v12';
 
 const PRECACHE_URLS = [
   '/crm/panel.css',
-  '/crm/icon-crm.png?v=2',
+  '/crm/icon-crm.png?v=3',
 ];
 
 // Dominios que NUNCA se cachean
@@ -105,7 +105,7 @@ async function mostrarAvisos() {
   if (!nuevos.length) nuevos = [Object.assign({ silencio: true }, eventos[eventos.length - 1])];
   await ultimoVisto(Math.max(...nuevos.map(e => e.ts)));
   await Promise.all(nuevos.map(e => self.registration.showNotification(e.t, {
-    body: e.b, tag: 'vsb-' + e.id, icon: '/crm/icon-crm.png?v=2', badge: '/crm/icon-crm.png?v=2',
+    body: e.b, tag: 'vsb-' + e.id, icon: '/crm/icon-crm.png?v=3', badge: '/crm/icon-crm.png?v=3',
     vibrate: [180, 80, 180], renotify: !e.silencio, silent: !!e.silencio, data: { s: e.s || 'pedidos' }
   })));
 }

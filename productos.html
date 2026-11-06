@@ -19,7 +19,7 @@
   <link rel="canonical" href="https://virtualshopbaires.com.ar/productos.html" />
   <link rel="icon" href="/icon-vsb.webp?v=3" type="image/webp" />
   <meta name="theme-color" content="#CC1212" />
-  <link rel="stylesheet" href="css/styles.css?v=14" />
+  <link rel="stylesheet" href="css/styles.css?v=15" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
@@ -220,7 +220,7 @@
 </div>
 
 <script src="js/sheets.js?v=20"></script>
-<script src="js/productos.js?v=14"></script>
+<script src="js/productos.js?v=15"></script>
 <script src="js/cart.js?v=5"></script>
 <script src="js/main.js?v=6"></script>
 <script src="js/mejoras-ui.js"></script>
@@ -234,10 +234,15 @@
   if (params.get("cat")) selectedCat = params.get("cat");
   if (params.get("buscar")) document.getElementById("search-input").value = params.get("buscar");
 
+  // Solo las categorías con algún producto en stock (vuelven a aparecer solas cuando entra stock) + las externas
+  function _catsConStock() {
+    return CATEGORIAS.filter(c => c === "Todos" || CATS_EXTERNAS[String(c).toLowerCase().trim()] ||
+      PRODUCTOS.some(p => p.categoria === c && hayStock(p)));
+  }
   function buildMobileChips() {
     const strip = document.getElementById("mobile-cat-strip");
     if (!strip) return;
-    strip.innerHTML = CATEGORIAS.map(cat => {
+    strip.innerHTML = _catsConStock().map(cat => {
       const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
       if (extUrl) {
         return `<button class="mobile-cat-chip" onclick="window.open('${extUrl}','_blank')">${cat} ↗</button>`;
@@ -254,7 +259,7 @@
   }
 
   function buildCatFilters() {
-    document.getElementById("cat-filters").innerHTML = CATEGORIAS.map(cat => {
+    document.getElementById("cat-filters").innerHTML = _catsConStock().map(cat => {
       const extUrl = CATS_EXTERNAS[cat.toLowerCase().trim()];
       if (extUrl) {
         return `<label style="cursor:pointer;" onclick="window.open('${extUrl}','_blank')">

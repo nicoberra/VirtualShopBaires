@@ -26,6 +26,39 @@ function fotoEstilo(url) {
   const x = Math.min(100, +m[1]), y = Math.min(100, +m[2]), z = Math.min(4, Math.max(1, +m[3]));
   return `object-fit:cover;object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%;`;
 }
+// Fotos con fondo (escena, pileta, pasto): llenan todo el cuadrado de la tarjeta. Las de fondo blanco o
+// transparente se ven enteras. Solo se revisan las fotos que no son cuadradas (las cuadradas ya llenan).
+const _fotoLlena = new Map();
+function _evaluarFoto(img) {
+  if (img.style.objectFit) return;                       // encuadre elegido a mano en el CRM
+  const w = img.naturalWidth, h = img.naturalHeight;
+  img.classList.remove("foto-llena");
+  if (!w || !h || Math.abs(w / h - 1) < 0.03) return;
+  const url = img.currentSrc || img.src;
+  if (_fotoLlena.has(url)) { img.classList.toggle("foto-llena", _fotoLlena.get(url)); return; }
+  const t = new Image();
+  t.crossOrigin = "anonymous";
+  t.onload = () => {
+    let llena = false;
+    try {
+      const N = 32, c = document.createElement("canvas"); c.width = c.height = N;
+      const x = c.getContext("2d", { willReadFrequently: true }); x.drawImage(t, 0, 0, N, N);
+      const d = x.getImageData(0, 0, N, N).data; let n = 0, claro = 0;
+      for (let i = 0; i < N; i++) for (const [px, py] of [[i, 0], [i, N - 1], [0, i], [N - 1, i]]) {
+        const k = (py * N + px) * 4; n++;
+        if (d[k + 3] < 20 || (d[k] > 232 && d[k + 1] > 232 && d[k + 2] > 232)) claro++;
+      }
+      llena = claro / n < 0.5;
+    } catch (e) {}
+    _fotoLlena.set(url, llena);
+    if ((img.currentSrc || img.src) === url) img.classList.toggle("foto-llena", llena);
+  };
+  t.src = url;
+}
+document.addEventListener("load", (e) => {
+  const t = e.target;
+  if (t && t.tagName === "IMG" && t.closest && t.closest(".product-img")) _evaluarFoto(t);
+}, true);
 function ponerFoto(imgEl, url) { imgEl.src = fotoSrc(url); imgEl.style.cssText = fotoEstilo(url); }
 
 // Interés de los clientes para ordenar por popularidad: ver la ficha, agregar al carrito,

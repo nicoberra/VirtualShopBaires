@@ -11,13 +11,13 @@
   "lang": "es",
   "icons": [
     {
-      "src": "/icon-vsb.webp?v=2",
+      "src": "/icon-vsb.webp?v=3",
       "sizes": "192x192",
       "type": "image/webp",
       "purpose": "any"
     },
     {
-      "src": "/icon-vsb.webp?v=2",
+      "src": "/icon-vsb.webp?v=3",
       "sizes": "512x512",
       "type": "image/webp",
       "purpose": "any maskable"

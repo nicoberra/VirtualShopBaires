@@ -55,6 +55,20 @@
   .iv-buscar input { width: 100%; font: inherit; font-size: 1rem; min-height: 44px; padding: 10px 14px 10px 40px; border-radius: 12px;
     border: 1.5px solid var(--black-4); background: #fff; color: var(--white); }
   .iv-buscar input:focus { outline: none; border-color: var(--accent); }
+  /* Presupuesto: deslizador que recorre los precios reales (del más barato al más caro) */
+  .iv-presu { background: #fff; border: 1px solid var(--black-4); border-radius: 12px; padding: 10px 14px 8px; }
+  .iv-presu label { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: .9rem; font-weight: 700; color: #0E1E46; }
+  .iv-presu label i { color: var(--red); margin-right: 4px; }
+  .iv-presu b { font-family: 'Kanit', 'Segoe UI', sans-serif; font-size: 1.15rem; font-weight: 800; color: var(--red); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .iv-presu input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; margin: 4px 0 0; background: transparent; cursor: pointer; touch-action: pan-y; }
+  .iv-presu input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 99px; background: linear-gradient(90deg, #FA0202 0 var(--p, 100%), #dfe4ee var(--p, 100%) 100%); }
+  .iv-presu input[type=range]::-moz-range-track { height: 6px; border-radius: 99px; background: linear-gradient(90deg, #FA0202 0 var(--p, 100%), #dfe4ee var(--p, 100%) 100%); }
+  .iv-presu input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; margin-top: -10px; border-radius: 50%; background: #fff;
+    border: 3px solid #FA0202; box-shadow: 0 2px 8px rgba(14,30,70,.25); transition: transform .15s ease; }
+  .iv-presu input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 3px solid #FA0202; box-shadow: 0 2px 8px rgba(14,30,70,.25); }
+  .iv-presu input[type=range]:active::-webkit-slider-thumb { transform: scale(1.15); }
+  .iv-presu input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+  .iv-presu-lim { display: flex; justify-content: space-between; font-size: .75rem; color: var(--gray); font-weight: 600; font-variant-numeric: tabular-nums; }
   .iv-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: thin; padding-bottom: 2px; }
   .iv-chip { cursor: pointer; font-family: inherit; }
   .iv-chip { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--black-4); background: #fff; color: var(--white);
@@ -75,8 +89,10 @@
   .iv-gal { position: relative; background: #fff; }
   .iv-fotos { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; aspect-ratio: 1 / 1; }
   .iv-fotos::-webkit-scrollbar { display: none; }
-  /* La foto llena todo el recuadro: sin franjas blancas arriba, abajo ni a los costados */
-  .iv-fotos img { flex: 0 0 100%; width: 100%; height: 100%; object-fit: cover; object-position: center; scroll-snap-align: center; }
+  /* La foto se ve COMPLETA (sin recortes); el espacio que sobra lo llena la misma foto ampliada y desenfocada (nunca franjas blancas) */
+  .iv-slide { position: relative; flex: 0 0 100%; width: 100%; height: 100%; overflow: hidden; scroll-snap-align: center; background: #e9eef6; }
+  .iv-slide::before { content: ""; position: absolute; inset: -12%; background: var(--bg) center / cover no-repeat; filter: blur(18px) saturate(1.15); opacity: .9; }
+  .iv-slide img { position: relative; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
   .iv-cuenta { position: absolute; right: 10px; bottom: 10px; background: rgba(27,42,75,.82); color: #fff; font-size: .75rem; font-weight: 700;
     padding: 3px 9px; border-radius: 999px; font-variant-numeric: tabular-nums; pointer-events: none; }
   .iv-flecha { position: absolute; top: 50%; transform: translateY(-50%); width: 36px; height: 36px; border-radius: 50%; border: 0; background: rgba(255,255,255,.92);
@@ -166,7 +182,7 @@
     .iv-grid .iv-card:active { transform: scale(.95); box-shadow: 0 1px 3px rgba(15, 23, 42, .14); }
     .iv-grid .iv-info, .iv-grid .iv-cuenta, .iv-grid .iv-flecha { display: none; }
     .iv-grid .iv-fotos { overflow: hidden; pointer-events: none; }
-    .iv-grid .iv-fotos img:not(:first-child) { display: none; }
+    .iv-grid .iv-fotos .iv-slide:not(:first-child) { display: none; }
     .iv-grid .iv-card.agotado::after { content: "Sin stock"; position: absolute; left: 6px; bottom: 6px; background: rgba(27,43,75,.85); color: #fff;
       font-size: .62rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
     .iv-grid .iv-card { position: relative; }
@@ -195,6 +211,11 @@
         <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
         <input type="search" id="iv-buscar" placeholder="Buscar: flamenco, isla, kayak, 1,83 m…" aria-label="Buscar inflable" autocomplete="off">
       </label>
+      <div class="iv-presu" id="iv-presu" hidden>
+        <label for="iv-precio"><span><i class="fa-solid fa-wallet" aria-hidden="true"></i> ¿Hasta cuánto querés gastar?</span> <b id="iv-precio-txt">Todos</b></label>
+        <input type="range" id="iv-precio" min="0" max="0" step="1" value="0">
+        <div class="iv-presu-lim"><span id="iv-pmin"></span><span id="iv-pmax"></span></div>
+      </div>
       <div class="iv-chips" id="iv-chips"></div>
     </div>
   </nav>
@@ -313,7 +334,7 @@
     return `<article class="iv-card${sin ? " agotado" : ""}"${enGrande ? "" : ` id="${_escAttr(id)}" tabindex="0" aria-label="Ver ${_escAttr(nombre)}"`} data-pid="${p.id}">
       <div class="iv-gal">
         <div class="iv-fotos" tabindex="0" aria-label="Fotos de ${_escAttr(nombre)}">
-          ${fotos.map((u, i) => `<img src="${_escAttr(fotoSrc(u))}" alt="${_escAttr(nombre)}${fotos.length > 1 ? " · foto " + (i + 1) : ""}" ${i ? 'loading="lazy"' : ""} decoding="async" onerror="fotoRespaldo(this)">`).join("") ||
+          ${fotos.map((u, i) => `<div class="iv-slide" style="--bg:url('${_escAttr(fotoSrc(u)).replace(/'/g, "%27")}')"><img src="${_escAttr(fotoSrc(u))}" alt="${_escAttr(nombre)}${fotos.length > 1 ? " · foto " + (i + 1) : ""}" ${i ? 'loading="lazy"' : ""} decoding="async" onerror="fotoRespaldo(this)"></div>`).join("") ||
             `<div style="flex:0 0 100%;display:grid;place-items:center;color:#c5cbd8;font-size:3rem"><i class="fa-solid fa-life-ring" aria-hidden="true"></i></div>`}
         </div>
         ${fotos.length > 1 ? `<span class="iv-cuenta">1/${fotos.length}</span>
@@ -336,14 +357,42 @@
 
   // Los que van primero en "Todos" (los más vendidos que elija el dueño): parte del nombre, en este orden.
   // Si la lista está vacía, el orden es el ranking de más vendidos de la tienda (ya viene mezclado).
-  const IV_PRIMEROS = [];
+  const IV_PRIMEROS = ["colchoneta doble con apoya", "43023", "hielera deportiva", "dona bestway", "voley inflable"];
   const ivPrimero = (p) => { const n = ivNombre(p.nombre).toLowerCase(); const i = IV_PRIMEROS.findIndex(x => n.includes(String(x).toLowerCase())); return i < 0 ? 1e6 : i; };
+
+  // Presupuesto: el deslizador recorre los precios finales reales, ordenados (cada paso suma o saca al menos un producto)
+  let ivPrecios = [];
+  const ivFinal = (p) => { const pr = ivPrecio(p); return pr.valido ? Math.round(precioTransferencia(pr.precio)) : null; };
+  function ivTope() {
+    const r = document.getElementById("iv-precio");
+    return !ivPrecios.length || Number(r.value) >= ivPrecios.length - 1 ? null : ivPrecios[Number(r.value)];
+  }
+  function ivPresuTexto() {
+    const r = document.getElementById("iv-precio"), t = ivTope();
+    r.style.setProperty("--p", (ivPrecios.length > 1 ? Number(r.value) / (ivPrecios.length - 1) * 100 : 100) + "%");
+    const txt = t === null ? "Todos" : "Hasta " + formatPrecio(t);
+    document.getElementById("iv-precio-txt").textContent = txt;
+    r.setAttribute("aria-valuetext", txt);
+  }
+  function ivPresuIniciar() {
+    ivPrecios = [...new Set(ivLista.map(ivFinal).filter(x => x > 0))].sort((a, b) => a - b);
+    if (ivPrecios.length < 2) return;
+    const r = document.getElementById("iv-precio");
+    r.max = ivPrecios.length - 1; r.value = ivPrecios.length - 1;
+    document.getElementById("iv-pmin").textContent = formatPrecio(ivPrecios[0]);
+    document.getElementById("iv-pmax").textContent = formatPrecio(ivPrecios[ivPrecios.length - 1]);
+    document.getElementById("iv-presu").hidden = false;
+    ivPresuTexto();
+    r.addEventListener("input", () => { ivPresuTexto(); ivPintar(); });
+  }
 
   let ivLista = [];
   let ivCat = "todos";   // "todos" o el id de un grupo
   function ivPintar() {
     const q = document.getElementById("iv-buscar").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-    const coincide = (p) => !q || (p.nombre + " " + (p.descripcion || "")).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q);
+    const tope = ivTope();
+    const enPresu = (p) => { if (tope === null) return true; const f = ivFinal(p); return f !== null && f <= tope; };
+    const coincide = (p) => enPresu(p) && (!q || (p.nombre + " " + (p.descripcion || "")).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q));
     const visibles = ivLista.filter(coincide);
     const conStock = visibles.filter(p => !p.agotado && hayStock(p)), sinStock = visibles.filter(p => p.agotado || !hayStock(p));
     const grupos = IV_GRUPOS.filter(g => g.titulo).sort((a, b) => a.orden - b.orden)
@@ -368,7 +417,7 @@
           ${g.texto ? `<p>${_escHTML(g.texto)}</p>` : ""}
           <div class="iv-grid">${g.items.map(ivTarjeta).join("")}</div>
         </div>
-      </section>`).join("") : `<p class="iv-vacio">No encontramos inflables con «${_escHTML(q)}». Probá con otra palabra o escribinos por WhatsApp.</p>`;
+      </section>`).join("") : `<p class="iv-vacio">No encontramos inflables${q ? ` con «${_escHTML(q)}»` : ""}${tope !== null ? ` hasta ${formatPrecio(tope)}` : ""}. Probá con otra búsqueda, subí el presupuesto o escribinos por WhatsApp.</p>`;
   }
   // Tocar un tipo: filtra y vuelve arriba de la lista
   document.getElementById("iv-chips").addEventListener("click", e => {
@@ -501,6 +550,7 @@
     }
     ivLista = PRODUCTOS.filter(p => p.categoria === "Inflables")
       .sort((a, b) => (typeof a.orden === "number" ? a.orden : 1e9) - (typeof b.orden === "number" ? b.orden : 1e9) || a.id - b.id);
+    ivPresuIniciar();
     ivPintar();
     if (location.hash) {
       const el = document.getElementById(location.hash.slice(1));

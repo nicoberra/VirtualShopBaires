@@ -1,0 +1,67 @@
+/* ============================================================
+   Virtual Shop Baires · Identidad visual oficial (paleta del logo VS)
+   Colores sacados de los píxeles del logo VS circular (2026-11-05).
+   Rojo a la izquierda, azul a la derecha, separados por una diagonal con brillo,
+   bordes con neón controlado y fondo azul marino sobrio.
+   Uso: <link rel="stylesheet" href="css/identidad-vsb.css"> y después var(--vsb-…)
+   ============================================================ */
+:root {
+  /* ── Rojo (lado izquierdo) ── */
+  --vsb-rojo-luz:       #FC3538;   /* iluminación superior */
+  --vsb-rojo:           #FA0202;   /* rojo principal vibrante */
+  --vsb-rojo-intenso:   #DD0201;   /* rojo intenso (zona media) */
+  --vsb-rojo-profundo:  #A90008;   /* sombra / profundidad */
+  --vsb-rojo-brillo:    #FFE1E1;   /* reflejo blanco del aro rojo */
+
+  /* ── Azul (lado derecho) ── */
+  --vsb-azul-luz:       #2471C2;   /* zona superior iluminada */
+  --vsb-azul-electrico: #016DFF;   /* aro y bordes */
+  --vsb-azul-reflejo:   #009EFF;   /* reflejos azules */
+  --vsb-azul:           #013589;   /* azul principal profundo */
+  --vsb-azul-profundo:  #01245D;   /* interior / zona inferior */
+  --vsb-azul-noche:     #001B46;   /* lo más oscuro del azul */
+  --vsb-cian-brillo:    #A8F6FF;   /* línea de luz de la diagonal */
+
+  /* ── Fondo y neutros ── */
+  --vsb-fondo:          #0E1E46;   /* azul marino del fondo del logo */
+  --vsb-fondo-2:        #14275A;   /* un tono arriba, para tarjetas sobre el fondo */
+  --vsb-blanco:         #FFFFFF;   /* letras */
+  --vsb-blanco-sombra:  #F3F6FB;   /* letras en la zona sombreada */
+
+  /* ── Degradados ── */
+  --vsb-grad-rojo: linear-gradient(180deg, var(--vsb-rojo-luz) 0%, var(--vsb-rojo) 30%, var(--vsb-rojo-intenso) 70%, var(--vsb-rojo-profundo) 100%);
+  --vsb-grad-azul: linear-gradient(180deg, var(--vsb-azul-luz) 0%, var(--vsb-azul) 35%, var(--vsb-azul-profundo) 75%, var(--vsb-azul-noche) 100%);
+  /* El cruce del logo: rojo | línea de luz | azul, en diagonal (como la barra del VS) */
+  --vsb-grad-cruce: linear-gradient(105deg,
+      var(--vsb-rojo-luz) 0%, var(--vsb-rojo) 25%, var(--vsb-rojo-intenso) 45.4%,
+      var(--vsb-rojo-brillo) 45.6%, var(--vsb-cian-brillo) 46%, var(--vsb-azul-electrico) 46.4%,
+      var(--vsb-azul) 52%, var(--vsb-azul-profundo) 80%, var(--vsb-azul-noche) 100%);
+  /* Fondo sobrio con un leve resplandor de cada color */
+  --vsb-grad-fondo:
+      radial-gradient(70% 55% at 0% 0%, rgba(250, 2, 2, .16), transparent 70%),
+      radial-gradient(70% 55% at 100% 100%, rgba(1, 109, 255, .20), transparent 70%),
+      var(--vsb-fondo);
+  /* Acabado glossy: reflejo blanco arriba, para poner encima de un degradado */
+  --vsb-brillo-glossy: linear-gradient(180deg, rgba(255, 255, 255, .38) 0%, rgba(255, 255, 255, .08) 42%, rgba(255, 255, 255, 0) 55%);
+
+  /* ── Bordes con neón controlado ── */
+  --vsb-neon-rojo: 0 0 0 2px rgba(255, 225, 225, .85), 0 0 12px rgba(250, 2, 2, .55), 0 0 28px rgba(250, 2, 2, .25);
+  --vsb-neon-azul: 0 0 0 2px rgba(168, 246, 255, .85), 0 0 12px rgba(1, 109, 255, .60), 0 0 28px rgba(0, 158, 255, .30);
+  /* Profundidad 3D: luz arriba, sombra abajo */
+  --vsb-relieve: inset 0 2px 0 rgba(255, 255, 255, .35), inset 0 -6px 14px rgba(0, 0, 0, .25), 0 10px 26px rgba(0, 10, 40, .35);
+  --vsb-sombra-texto: 0 .04em 0 rgba(0, 0, 0, .22), 0 .12em .3em rgba(0, 0, 0, .18);
+}
+
+/* ── Piezas listas para usar ── */
+.vsb-boton-rojo, .vsb-boton-azul {
+  position: relative; color: var(--vsb-blanco); font-weight: 800; border: 0; border-radius: 12px; cursor: pointer;
+  text-shadow: var(--vsb-sombra-texto); box-shadow: var(--vsb-relieve); transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+.vsb-boton-rojo { background: var(--vsb-brillo-glossy), var(--vsb-grad-rojo); }
+.vsb-boton-azul { background: var(--vsb-brillo-glossy), var(--vsb-grad-azul); }
+.vsb-boton-rojo:hover { box-shadow: var(--vsb-relieve), var(--vsb-neon-rojo); filter: saturate(1.05); }
+.vsb-boton-azul:hover { box-shadow: var(--vsb-relieve), var(--vsb-neon-azul); filter: saturate(1.05); }
+.vsb-boton-rojo:active, .vsb-boton-azul:active { transform: scale(.98); }
+.vsb-cruce { background: var(--vsb-brillo-glossy), var(--vsb-grad-cruce); }
+.vsb-fondo { background: var(--vsb-grad-fondo); color: var(--vsb-blanco); }
+@media (prefers-reduced-motion: reduce) { .vsb-boton-rojo, .vsb-boton-azul { transition: none; } }

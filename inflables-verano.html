@@ -15,12 +15,29 @@
   <link rel="stylesheet" href="css/styles.css?v=12" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@1,800;1,900&display=swap" />
 <style>
   body { background: var(--black); }
   /* ===== Inflables de verano ===== */
   .iv-hero { padding: 34px 0 18px; text-align: center; }
-  .iv-hero h1 { font-size: clamp(1.7rem, 4.4vw, 2.5rem); font-weight: 900; letter-spacing: -.02em; line-height: 1.1; text-wrap: balance; }
-  .iv-hero h1 span { color: var(--red); }
+  /* Título con onda: letra del logo (Kanit), "verano" con colores de verano que van cambiando y letras en ola */
+  .iv-titulo { font-family: 'Kanit', 'Segoe UI', sans-serif; font-style: italic; font-weight: 900; line-height: .95; letter-spacing: -.01em;
+    display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .iv-t1 { font-size: clamp(2.6rem, 11vw, 4.2rem); color: #0E1E46; text-shadow: 0 3px 0 rgba(1,109,255,.18); }
+  .iv-t2 { font-size: clamp(1.1rem, 4.6vw, 1.6rem); color: #013589; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+  .iv-t3 { position: relative; display: inline-flex; align-items: center; gap: .12em; font-size: clamp(3rem, 14vw, 5.2rem); padding-right: .1em; }
+  .iv-t3 > span { display: inline-flex; }
+  .iv-t3 > span > span { display: inline-block; padding: 0 .02em;
+    background: linear-gradient(90deg, #FA0202, #FF7A00, #FFC400, #00C2FF, #016DFF, #FA0202); background-size: 400% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: ivColores 6s linear infinite, ivOla 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * -.25s), calc(var(--i) * .12s);
+    filter: drop-shadow(0 4px 6px rgba(1,53,137,.18)); }
+  .iv-sol { font-size: .5em; color: #FFC400; filter: drop-shadow(0 0 10px rgba(255,196,0,.6)); animation: ivGira 12s linear infinite; }
+  @keyframes ivColores { to { background-position: 400% 0; } }
+  @keyframes ivOla { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-.12em); } }
+  @keyframes ivGira { to { transform: rotate(360deg); } }
   .iv-hero p { color: var(--gray); font-size: 1rem; margin: 10px auto 0; max-width: 62ch; text-wrap: pretty; }
   .iv-pago { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 8px 16px; border-radius: var(--radius-pill);
     background: var(--accent-light); color: var(--accent); font-weight: 700; font-size: .9rem; }
@@ -96,15 +113,31 @@
   .iv-card.agotado .iv-fotos img { opacity: .55; }
   .iv-sin { color: var(--gray); font-weight: 700; }
   .iv-vacio { text-align: center; padding: 50px 16px; color: var(--gray); }
-  .iv-ayuda { margin: 36px 0 56px; background: var(--accent); color: #fff; border-radius: 18px; padding: clamp(20px, 4vw, 32px); display: flex; flex-wrap: wrap;
-    align-items: center; justify-content: space-between; gap: 16px; }
-  .iv-ayuda h2 { font-size: 1.3rem; font-weight: 900; }
-  .iv-ayuda p { color: rgba(255,255,255,.8); margin-top: 4px; }
-  .iv-ayuda a { background: #fff; color: var(--accent); }
-  .iv-ayuda a:hover { background: #eef1f6; }
-  .iv-entrega-hero { margin-top: 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--accent-light); color: var(--accent);
-    padding: 9px 16px; border-radius: var(--radius-pill); font-size: .92rem; }
-  .iv-entrega-hero i, .iv-entrega i { color: var(--red); }
+  /* Bloque de consultas: centrado, título con brillo que pasa y botón verde de WhatsApp */
+  .iv-ayuda { margin: 36px 0 56px; background: radial-gradient(120% 140% at 0% 0%, rgba(250,2,2,.22), transparent 55%),
+      radial-gradient(120% 140% at 100% 100%, rgba(1,109,255,.30), transparent 55%), #0E1E46;
+    color: #fff; border-radius: 22px; padding: clamp(26px, 6vw, 40px) 20px; display: flex; flex-direction: column; align-items: center; gap: 20px; text-align: center; }
+  .iv-ayuda-titulo { font-family: 'Kanit', 'Segoe UI', sans-serif; font-style: italic; font-weight: 900; font-size: clamp(1.6rem, 6.5vw, 2.2rem); line-height: 1.05;
+    background: linear-gradient(100deg, #fff 0%, #fff 40%, #A8F6FF 48%, #FFC400 52%, #fff 60%, #fff 100%); background-size: 250% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: ivBrillo 3.5s ease-in-out infinite; text-wrap: balance; }
+  @keyframes ivBrillo { 0% { background-position: 100% 0; } 60%, 100% { background-position: -50% 0; } }
+  .iv-wa { display: inline-flex; align-items: center; justify-content: center; gap: 12px; min-height: 58px; padding: 0 30px; border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 55%), #25D366; color: #fff; font-weight: 800; font-size: 1.12rem; text-decoration: none;
+    box-shadow: 0 8px 22px rgba(37,211,102,.38), inset 0 -3px 0 rgba(0,0,0,.12); transition: transform .15s ease, box-shadow .2s ease; white-space: nowrap; }
+  .iv-wa i { font-size: 1.6rem; }
+  .iv-wa:hover { box-shadow: 0 10px 28px rgba(37,211,102,.5), inset 0 -3px 0 rgba(0,0,0,.12); }
+  .iv-wa:active { transform: scale(.97); }
+  @media (prefers-reduced-motion: reduce) { .iv-ayuda-titulo { animation: none; } .iv-wa { transition: none; } }
+  /* Retiro / envío: tarjeta con ícono y dos líneas */
+  .iv-entrega-hero { margin: 18px auto 0; display: inline-flex; align-items: center; gap: 14px; text-align: left; padding: 12px 20px 12px 12px;
+    border-radius: 18px; background: #fff; box-shadow: 0 2px 8px rgba(14,30,70,.08), 0 10px 26px rgba(14,30,70,.10); border: 1px solid rgba(1,109,255,.12); }
+  .iv-ent-ico { flex: 0 0 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; color: #fff; font-size: 1.25rem;
+    background: linear-gradient(180deg, rgba(255,255,255,.35), rgba(255,255,255,0) 55%), linear-gradient(135deg, #FC3538, #DD0201 48%, #013589 52%, #01245D);
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+  .iv-ent-txt { display: flex; flex-direction: column; line-height: 1.2; }
+  .iv-ent-txt strong { font-family: 'Kanit', 'Segoe UI', sans-serif; font-weight: 800; font-size: 1.12rem; color: #0E1E46; }
+  .iv-ent-txt small { font-size: .9rem; color: #4B5563; font-weight: 600; }
+  .iv-entrega i { color: var(--red); }
   .iv-entrega { font-size: .86rem; color: var(--accent); font-weight: 600; display: flex; gap: 8px; align-items: center; }
 
   /* Vista grande (celular): panel a pantalla completa que se agranda desde la foto */
@@ -139,6 +172,7 @@
     .iv-grid .iv-card { position: relative; }
     .iv-card:target { outline: none; }
   }
+  @media (prefers-reduced-motion: reduce) { .iv-t3 > span > span, .iv-sol { animation: none; } }
   @media (prefers-reduced-motion: reduce) { .iv-fotos { scroll-behavior: auto; } .iv-comprar, .iv-desc summary i, .iv-flecha, .iv-grid .iv-card { transition: none; } }
 </style>
 </head>
@@ -146,8 +180,12 @@
 <main id="inflables">
   <section class="iv-hero">
     <div class="container">
-      <h1>Inflables para este <span>verano</span></h1>
-      <p class="iv-entrega-hero"><i class="fa-solid fa-house" aria-hidden="true"></i> <strong>Retirás por el lote 707 o te lo llevamos a tu lote</strong></p>
+      <h1 class="iv-titulo"><span class="iv-t1">Inflables</span> <span class="iv-t2">para este</span>
+        <span class="iv-t3" aria-label="verano"><span aria-hidden="true"><span style="--i:0">v</span><span style="--i:1">e</span><span style="--i:2">r</span><span style="--i:3">a</span><span style="--i:4">n</span><span style="--i:5">o</span></span><i class="fa-solid fa-sun iv-sol" aria-hidden="true"></i></span></h1>
+      <div class="iv-entrega-hero">
+        <span class="iv-ent-ico" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
+        <span class="iv-ent-txt"><strong>Retirás por el lote 707</strong><small>o te lo llevamos a tu lote</small></span>
+      </div>
     </div>
   </section>
 
@@ -167,11 +205,8 @@
 
   <div class="container">
     <section class="iv-ayuda">
-      <div>
-        <h2>¿Dudas con algún modelo?</h2>
-        <p>Escribinos y te asesoramos: medidas, para qué edad, cuántas personas.</p>
-      </div>
-      <a class="iv-comprar" id="iv-consulta" href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
+      <h2 class="iv-ayuda-titulo">¿Dudas con algún modelo?</h2>
+      <a class="iv-wa" id="iv-consulta" href="#" target="_blank" rel="noopener noreferrer"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
     </section>
   </div>
 </main>

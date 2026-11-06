@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp?v=3" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css?v=19" />
+  <link rel="stylesheet" href="css/styles.css?v=20" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
@@ -226,6 +226,7 @@
     .co-zona.activa .co-zona-check { opacity: 1; }
     .co-zona-partidos { margin-top: 10px; font-size: 0.78rem; color: #4B5563; line-height: 1.5; background: #fff; border: 1px dashed #E1E5EB; border-radius: 8px; padding: 8px 10px; }
     .co-zona-partidos strong { color: #1A1A2E; }
+    .co-partido-ayuda { margin: 6px 2px 0; font-size: .8rem; color: #4B5563; min-height: 1em; }
     .co-envio-result {
       display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
       padding: 10px 12px; border-radius: 10px; font-size: 0.86rem; background: #fff; border: 1px solid #E1E5EB; color: #4B5563;
@@ -432,8 +433,11 @@
             <div class="co-zona-partidos" id="co-zona-partidos" style="display:none;"></div>
 
             <div class="co-form-row" id="partido-row" style="margin-top:12px;display:none;">
-              <label for="f-partido">¿En qué partido lo recibís?</label>
-              <select class="co-input" id="f-partido" onchange="actualizarEnvio()"></select>
+              <label for="f-partido-buscar">¿En qué partido lo recibís?</label>
+              <input class="co-input" id="f-partido-buscar" list="lista-partidos" autocomplete="off" placeholder="Escribí tu partido (ej: Morón, Lanús, Pilar…)">
+              <datalist id="lista-partidos"></datalist>
+              <p class="co-partido-ayuda" id="partido-ayuda" aria-live="polite"></p>
+              <select class="co-input" id="f-partido" onchange="actualizarEnvio()" hidden aria-hidden="true" tabindex="-1"></select>
             </div>
 
             <div class="co-envio-result" id="co-envio-result" aria-live="polite">
@@ -648,6 +652,38 @@ function renderZonasEnvio() {
   sel.innerHTML = '<option value="">— Elegí tu partido —</option>' + ZONAS_ENVIO.filter(z => z.id !== "capital").map(z =>
     `<optgroup label="${z.nombre} · ${fmt(z.precio)}">${z.partidos.map(p => `<option value="${z.id}|${p}">${p}</option>`).join("")}</optgroup>`
   ).join("") + '<option value="otro|Otro partido">Mi partido no está en la lista</option>';
+
+  // Partido escrito a mano: sugerencias mientras escribe y se elige solo cuando coincide
+  const dl = document.getElementById("lista-partidos"), inp = document.getElementById("f-partido-buscar");
+  const OTRO = "Mi partido no está en la lista";
+  dl.innerHTML = ZONAS_ENVIO.filter(z => z.id !== "capital").flatMap(z =>
+    z.partidos.map(p => `<option value="${p}" label="${z.nombre} · ${fmt(z.precio)}"></option>`)).join("") + `<option value="${OTRO}"></option>`;
+  const norm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+  const opciones = [...sel.options].filter(o => o.value);
+  const ayuda = document.getElementById("partido-ayuda");
+  function elegir() {
+    const q = norm(inp.value);
+    let o = null;
+    if (q) {
+      o = opciones.find(x => norm(x.textContent) === q) ||
+          (q === norm(OTRO) ? opciones.find(x => x.value.startsWith("otro|")) : null);
+      if (!o && q.length >= 3) {
+        const parecidas = opciones.filter(x => !x.value.startsWith("otro|") && norm(x.textContent).includes(q));
+        if (parecidas.length === 1) o = parecidas[0];
+      }
+    }
+    sel.value = o ? o.value : "";
+    if (o && o.value.startsWith("otro|")) ayuda.textContent = "Te contactamos para coordinar el envío.";
+    else if (o) { const z = ZONAS_ENVIO.find(x => x.id === o.value.split("|")[0]); ayuda.textContent = "✓ " + o.textContent + (z ? " · " + z.nombre + " · " + fmt(z.precio) : ""); }
+    else ayuda.textContent = q ? "Seguí escribiendo o elegí de la lista. Si no aparece, elegí «" + OTRO + "»." : "";
+    actualizarEnvio();
+  }
+  inp.addEventListener("input", elegir);
+  inp.addEventListener("change", () => {
+    elegir();
+    const o = sel.selectedOptions[0];
+    if (o && o.value && !o.value.startsWith("otro|")) inp.value = o.textContent;
+  });
 }
 
 function verPartidosZona(id) {

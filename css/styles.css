@@ -3790,3 +3790,14 @@ body { background: #f4f5f7; }
 /* Título "Comprá con confianza real" bien grande */
 .pg-inicio .ml-rep-section .section-header h2 { font-size: clamp(2.3rem, 6vw, 4.4rem); line-height: 1.02; letter-spacing: -.02em; text-wrap: balance; margin-bottom: 14px; }
 .pg-inicio .ml-rep-section .section-header p { font-size: clamp(1rem, 1.6vw, 1.25rem); }
+
+/* Menú "Categorías": cada una con su foto (la misma del carrusel), más grande en la compu */
+.header-dropdown-nav .nav-cat.nav-cat-foto { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 8px; }
+.nav-cat-img { flex: 0 0 auto; width: 56px; height: 56px; border-radius: 12px; overflow: hidden; background: #f1f3f7; display: grid; place-items: center; font-size: 1.5rem;
+  box-shadow: 0 1px 4px rgba(15,23,42,.10); }
+.nav-cat-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .25s ease; }
+.header-dropdown-nav .nav-cat:hover .nav-cat-img img { transform: scale(1.07); }
+.nav-cat-nombre { font-size: 1rem; font-weight: 700; line-height: 1.2; }
+@media (min-width: 981px) { .nav-cats-grid { gap: 10px; } .nav-cat-img { width: 64px; height: 64px; } }
+@media (max-width: 640px) { .nav-cat-img { width: 44px; height: 44px; border-radius: 10px; } .nav-cat-nombre { font-size: .86rem; } }
+@media (prefers-reduced-motion: reduce) { .nav-cat-img img { transition: none; } }

@@ -369,6 +369,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const CORTO = { "Bazar, baño y cocina": "Bazar y cocina", "Muebles para el hogar": "Muebles",
     "Fitness y musculacion": "Fitness", "Jardin y aire libre": "Jardín" };
   const EXTERNAS = { "Herramientas": "https://sanou.com.ar" };
+  // Foto de cada categoría (la misma del carrusel de la portada); la del CRM tiene prioridad
+  const FOTO = {
+    "Bazar, baño y cocina": "/Productos/Bazar,%20ba%C3%B1o%20y%20cocina/categoria-web.webp",
+    "Camping": "/Productos/Camping/categoria-web.webp",
+    "Fitness y musculacion": "/Productos/Fitness%20y%20musculacion/categoria-web.webp",
+    "Herramientas": "/Productos/Herramientas/categoria-web.webp",
+    "Inflables": "/Productos/Inflables/Categoria.jpg",
+    "Jardin y aire libre": "/Productos/Jardin,%20Caza%20y%20Pesca/categoria-web.webp",
+    "Juguetes": "/Productos/Juguetes/Categoria.webp",
+    "Mascotas": "/Productos/Mascotas/categoria-web.webp",
+    "Muebles para el hogar": "/Productos/Muebles%20para%20el%20hogar/categoria-web.webp",
+    "Pilates y Yoga": "/Productos/Pilates%20y%20Yoga/categoria-web.webp",
+    "Playa": "/Productos/Playa/categoria-web.webp",
+  };
+  const fotoDe = c => {
+    if (FOTO[c]) return FOTO[c];
+    if (typeof PRODUCTOS !== "undefined") { const p = PRODUCTOS.find(x => x.categoria === c && x.imagen); if (p && typeof fotoSrc === "function") return fotoSrc(p.imagen); }
+    return "";
+  };
+  // Solo categorías con algo en stock (cuando el catálogo ya cargó); las externas siempre
+  const conStock = c => EXTERNAS[c] || typeof PRODUCTOS === "undefined" || !PRODUCTOS.length || typeof hayStock !== "function" ||
+    PRODUCTOS.some(p => p.categoria === c && hayStock(p));
+  let ultimas = [];
   const BASE = ["Mascotas", "Fitness y musculacion", "Pilates y Yoga", "Muebles para el hogar",
     "Bazar, baño y cocina", "Camping", "Playa"];
 
@@ -390,19 +413,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const esc = s => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
   function pintar(cats) {
-    const lista = [...new Set([...cats, ...Object.keys(EXTERNAS)])];
+    ultimas = cats;
+    const lista = [...new Set([...cats, ...Object.keys(EXTERNAS)])].filter(conStock);
     grid.innerHTML = lista.map(c => {
       const ext = EXTERNAS[c];
       const href = ext || "productos.html?cat=" + encodeURIComponent(c).replace(/%20/g, "+");
-      return `<a href="${esc(href)}" class="nav-cat"${ext ? ' target="_blank" rel="noopener"' : ""} tabindex="-1">` +
-             `<span aria-hidden="true">${ICONO[c] || "🛍️"}</span>${esc(CORTO[c] || c)}</a>`;
+      const foto = fotoDe(c);
+      return `<a href="${esc(href)}" class="nav-cat${foto ? " nav-cat-foto" : ""}"${ext ? ' target="_blank" rel="noopener"' : ""} tabindex="-1">` +
+             (foto ? `<span class="nav-cat-img" aria-hidden="true"><img src="${esc(foto)}" alt="" loading="lazy" decoding="async" onerror="this.parentElement.textContent='${ICONO[c] || "🛍️"}'"></span>`
+                   : `<span aria-hidden="true">${ICONO[c] || "🛍️"}</span>`) +
+             `<span class="nav-cat-nombre">${esc(CORTO[c] || c)}</span></a>`;
     }).join("");
+    grid.querySelectorAll("a").forEach(a => { a.tabIndex = btn.getAttribute("aria-expanded") === "true" ? 0 : -1; });
   }
+  // Cuando termina de cargar el catálogo: se sacan las categorías sin stock y se completan fotos
+  let espera = 0;
+  const revisarCatalogo = setInterval(() => {
+    espera++;
+    if ((typeof PRODUCTOS !== "undefined" && PRODUCTOS.length) || espera > 40) { clearInterval(revisarCatalogo); if (espera <= 40) pintar(ultimas); }
+  }, 500);
   pintar(BASE);
   if (typeof SUPABASE_URL !== "undefined") {
-    fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre&visible=eq.true&order=orden`, { headers: { apikey: SUPABASE_PUB } })
+    fetch(`${SUPABASE_URL}/rest/v1/categorias?select=nombre,imagen_url&visible=eq.true&order=orden`, { headers: { apikey: SUPABASE_PUB } })
       .then(r => r.ok ? r.json() : null)
-      .then(f => { if (Array.isArray(f) && f.length) { pintar(f.map(x => x.nombre)); abrir(btn.getAttribute("aria-expanded") === "true"); } })
+      .then(f => { if (Array.isArray(f) && f.length) { f.forEach(x => { if (x.imagen_url) FOTO[x.nombre] = x.imagen_url; }); pintar(f.map(x => x.nombre)); abrir(btn.getAttribute("aria-expanded") === "true"); } })
       .catch(() => {});
   }
 

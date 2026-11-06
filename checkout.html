@@ -226,6 +226,11 @@
     .co-zona.activa .co-zona-check { opacity: 1; }
     .co-zona-partidos { margin-top: 10px; font-size: 0.78rem; color: #4B5563; line-height: 1.5; background: #fff; border: 1px dashed #E1E5EB; border-radius: 8px; padding: 8px 10px; }
     .co-zona-partidos strong { color: #1A1A2E; }
+    .co-cuenta { margin-top: 14px; padding: 14px; border: 1.5px solid #E1E5EB; border-radius: 12px; background: #F8FAFC; }
+    .co-cuenta-check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: .9rem; line-height: 1.35; color: #1A1A2E; }
+    .co-cuenta-check input { width: 20px; height: 20px; margin-top: 1px; accent-color: #CC1212; flex: 0 0 auto; }
+    .co-cuenta .co-form-row { margin-top: 12px; margin-bottom: 0; }
+    .co-cuenta-ok { margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: #ECFDF3; color: #166534; font-size: .88rem; font-weight: 600; }
     .co-partido-ayuda { margin: 6px 2px 0; font-size: .8rem; color: #4B5563; min-height: 1em; }
     .co-envio-result {
       display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
@@ -407,6 +412,17 @@
             <div class="co-form-row required">
               <label for="f-dni">DNI / CUIT</label>
               <input class="co-input" type="text" id="f-dni" placeholder="12345678" autocomplete="off" inputmode="numeric" />
+            </div>
+          </div>
+          <!-- Cuenta: ya tildada; quien no quiere la destilda y compra igual -->
+          <div class="co-cuenta" id="co-cuenta">
+            <label class="co-cuenta-check">
+              <input type="checkbox" id="f-crear-cuenta" checked>
+              <span><strong>Crear mi cuenta</strong> para ver mis compras y comprar más rápido la próxima vez</span>
+            </label>
+            <div class="co-form-row" id="co-cuenta-pass">
+              <label for="f-pass">Elegí una contraseña</label>
+              <input class="co-input" type="password" id="f-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" minlength="6" />
             </div>
           </div>
         </div>
@@ -854,6 +870,37 @@ function errorCampo(id, msg) {
   el.addEventListener("change", () => { err.remove(); el.removeAttribute("aria-invalid"); }, { once: true });
 }
 
+// Crea la cuenta de la tienda con el email de la compra. Si falla o ya existe, la compra sigue igual.
+async function _hashCuenta(password, email) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(email.toLowerCase().trim() + ":" + password));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+async function crearCuentaCheckout(nombre, email, pass) {
+  try {
+    const hash = await _hashCuenta(pass, email);
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(`${CRM_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: "follow", signal: ctrl.signal });
+    clearTimeout(t);
+    const data = await res.json();
+    if (data.ok || data.error === "email_taken") {
+      if (data.ok) localStorage.setItem("vsb_user", JSON.stringify({ nombre, email }));
+      return data.ok ? "creada" : "existe";
+    }
+  } catch (e) {}
+  return "";
+}
+// Si ya tiene la sesión iniciada: no se le pide crear cuenta y se completa el email
+document.addEventListener("DOMContentLoaded", () => {
+  let u = null; try { u = JSON.parse(localStorage.getItem("vsb_user") || "null"); } catch (e) {}
+  const box = document.getElementById("co-cuenta");
+  if (u && u.email) {
+    box.hidden = true;
+    const em = document.getElementById("f-email"); if (em && !em.value) em.value = u.email;
+  }
+  const chk = document.getElementById("f-crear-cuenta");
+  chk.addEventListener("change", () => { document.getElementById("co-cuenta-pass").hidden = !chk.checked; });
+});
+
 async function submitOrder() {
   const nombre   = v("f-nombre");
   const apellido = v("f-apellido");
@@ -927,8 +974,15 @@ async function submitOrder() {
   if (!payload.numeroCalle) return errorCampo("f-numero-calle", "Ingresá el número de la calle.");
   if (!payload.cp)        return errorCampo("f-cp", "Ingresá el código postal.");
 
+  const crearCuenta = !document.getElementById("co-cuenta").hidden && document.getElementById("f-crear-cuenta").checked;
+  const passCuenta = document.getElementById("f-pass").value;
+  if (crearCuenta && passCuenta.length < 6) return errorCampo("f-pass", "Elegí una contraseña de al menos 6 caracteres (o destildá «Crear mi cuenta»).");
+
   const btn = document.getElementById("btn-submit");
   btn.disabled = true;
+  // Mis compras queda listo en este celular con el email de la compra
+  try { localStorage.setItem("vsb_mc_email", email); } catch (e) {}
+  if (crearCuenta) await crearCuentaCheckout(nombre + " " + apellido, email, passCuenta);
 
   // ── MercadoPago: crear preferencia y redirigir ───────────
   if (metodoPago === "mercadopago") {

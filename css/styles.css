@@ -3820,3 +3820,11 @@ body { background: #f4f5f7; }
       linear-gradient(270deg, #a6a9b0, #5d6066) right 0 top 28% / 4px 14% no-repeat !important;
   }
 }
+
+/* Productos: casillero para escribir el precio máximo */
+.precio-escribir { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 0 12px; min-height: 44px; border: 1.5px solid #e4e4e7;
+  border-radius: 10px; background: #fff; cursor: text; transition: border-color .2s ease; }
+.precio-escribir:focus-within { border-color: var(--red); }
+.precio-escribir span { font-weight: 700; color: var(--ink-3, #4b5563); white-space: nowrap; }
+.precio-escribir input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; font-weight: 700;
+  color: var(--ink, #111); font-variant-numeric: tabular-nums; padding: 8px 0; }

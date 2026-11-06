@@ -1747,3 +1747,7 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 /* Detalle del pedido: los títulos (DNI, Productos, Estado, Descuento...) en negrita; lo que cargó el cliente, normal */
 .ped-label { font-weight: 700 !important; color: var(--text, #1f2937) !important; }
 @media (prefers-reduced-motion: reduce) { .cat-foto-ayuda { transition: none; } }
+
+/* Selector de orden por precio en Productos */
+.prod-orden { min-height: 42px; border-radius: 10px; padding: 0 12px; font-weight: 600; max-width: 260px; }
+@media (max-width: 640px) { .prod-orden { max-width: none; width: 100%; order: 3; } }

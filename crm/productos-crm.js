@@ -357,7 +357,8 @@ async function subirFotoCategoria(input, archivo) {
 // ── Filtros, páginas y menú "⋯" de la tabla de productos ─────────────
 const PROD_POR_PAG = 25;
 let _prodPag = 1, _prodLista = [];
-let _prodTodos = false;   // "Ver todos": toda la lista en una sola página, sin botones de páginas
+let _prodTodos = false;
+let _prodOrden = 'normal';   // 'normal' | 'precio-asc' | 'precio-desc'   // "Ver todos": toda la lista en una sola página, sin botones de páginas
 // verCon / verSin: los dos botones de arriba de la lista (se prenden y apagan por separado)
 const _prodFiltros = { verCon: true, verSin: true, destacados: false, sinSku: false, sinFoto: false };
 
@@ -384,8 +385,22 @@ function filtrarProductos(mantenerPagina) {
   pintarVerStock(grupos.con.size, grupos.sin.size);
   if (!f.verCon || !f.verSin) list = list.filter(p => conStock[grupoClave(p)] ? f.verCon : f.verSin);
   actualizarBotonFiltros();
+  if (_prodOrden !== 'normal') {
+    const num = v => Number(String(v == null ? '' : v).replace(/[^\d.,]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.')) || 0;
+    const precioGrupo = {};
+    list.forEach(p => { const k = grupoClave(p), n = num(p.precio); if (n > 0 && (!(k in precioGrupo) || n < precioGrupo[k])) precioGrupo[k] = n; });
+    const signo = _prodOrden === 'precio-asc' ? 1 : -1;
+    // Sin precio cargado: siempre al final
+    list = [...list].sort((a, b) => {
+      const pa = precioGrupo[grupoClave(a)], pb = precioGrupo[grupoClave(b)];
+      if (pa == null || pb == null) return (pa == null) - (pb == null);
+      return (pa - pb) * signo || grupoClave(a).localeCompare(grupoClave(b));
+    });
+  }
   renderProductos(list);
 }
+// Orden de la lista: como está cargado, o por precio (menor a mayor / mayor a menor)
+function cambiarOrdenProductos(v) { _prodOrden = v; _prodPag = 1; filtrarProductos(); }
 
 function _filtrosActivos() {
   const f = _prodFiltros;

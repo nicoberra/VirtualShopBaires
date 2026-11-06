@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="panel.css?v=49">
+  <link rel="stylesheet" href="panel.css?v=50">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -135,6 +135,11 @@
           <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
           <input type="search" id="prod-search" placeholder="Buscar por nombre o SKU…" aria-label="Buscar producto" oninput="filtrarProductos()">
         </label>
+        <select id="prod-orden" class="sel prod-orden" aria-label="Ordenar productos" onchange="cambiarOrdenProductos(this.value)">
+          <option value="normal">Orden: como está cargado</option>
+          <option value="precio-asc">Precio: menor a mayor</option>
+          <option value="precio-desc">Precio: mayor a menor</option>
+        </select>
         <div class="filtros-wrap">
           <button type="button" class="btn-filtros" id="btn-filtros" onclick="toggleFiltros()" aria-expanded="false" aria-controls="filtros-panel"><i class="fa-solid fa-sliders"></i> Filtros <span id="filtros-n" class="filtros-n" hidden></span></button>
           <div id="filtros-panel" class="filtros-panel" hidden></div>
@@ -510,7 +515,7 @@
 
 <script src="estados.js?v=1"></script>
 <script src="panel.js?v=24"></script>
-<script src="productos-crm.js?v=36"></script>
+<script src="productos-crm.js?v=37"></script>
 <script src="leads-crm.js?v=1"></script>
 <script src="nav-movil.js?v=1"></script>
 <script src="login-glass.js?v=3"></script>

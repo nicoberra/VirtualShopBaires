@@ -368,11 +368,14 @@ function agruparFacturacion(pedidos, productos) {
     const monto = _num(p.total !== undefined && p.total !== '' ? p.total : p.monto);
     let costo = 0, costoCompleto = hayCostos && items.length > 0;
     items.forEach(it => { const c = costos[it.nombre.toLowerCase()]; if (c) costo += c * (it.cantidad || 1); else costoCompleto = false; });
-    return { fecha: parseFecha(p.timestamp || p.fecha), monto, estado, beneficio: costoCompleto ? monto - costo : null, items };
+    const cliente = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
+    return { fecha: parseFecha(p.timestamp || p.fecha), monto, estado, beneficio: costoCompleto ? monto - costo : null, items,
+             cliente, numero: p.orderNumber || p.id || '', detalle: p.productos || p.detalle || '', pago: p.metodoPago || p.metodo || '' };
   }).filter(v => v.fecha && v.estado !== 'Cancelado');
 
   const bucket = (map, key, d, v) => {
-    const b = map[key] || (map[key] = { monto:0, ben:0, benParcial:false, n:0, pendN:0, pendMonto:0, d, prod:{} });
+    const b = map[key] || (map[key] = { monto:0, ben:0, benParcial:false, n:0, pendN:0, pendMonto:0, d, prod:{}, compras:[] });
+    b.compras.push(v);
     if (!ESTADOS_COBRADOS.includes(v.estado)) { b.pendN++; b.pendMonto += v.monto; return; }
     b.monto += v.monto; b.n++;
     if (v.beneficio === null) b.benParcial = true; else b.ben += v.beneficio;
@@ -458,11 +461,20 @@ function toggleFactDetail(rid, b) {
     if (icon) icon.style.transform = 'rotate(90deg)';
     const inner = $(rid+'-inner');
     const prods = Object.entries(b.prod).sort((a,z)=>z[1]-a[1]);
-    inner.innerHTML = prods.length ? `
+    const compras = [...(b.compras || [])].sort((a, z) => z.fecha - a.fecha);
+    inner.innerHTML = `
+      <div class="fact-compras-tit">Compras del período (${compras.length})</div>
+      <div class="fact-compras">${compras.map(v => `
+        <div class="fact-compra">
+          <div class="fc-top"><strong>${hx(v.cliente)}</strong><span class="fc-monto">${fmtMoney(v.monto)}</span></div>
+          <div class="fc-sub">${v.fecha.toLocaleDateString('es-AR')}${v.numero ? ' · ' + hx(v.numero) : ''}${v.pago ? ' · ' + hx(v.pago) : ''} · ${badgeEstado(v.estado)}</div>
+          ${v.detalle ? `<div class="fc-prod"><span class="ped-label">Productos:</span> ${hx(v.detalle)}</div>` : ''}
+        </div>`).join('') || '<p class="text-muted">Sin compras</p>'}</div>
+      ${prods.length ? `<div class="fact-compras-tit">Productos vendidos</div>
       <table style="font-size:0.82rem">
         <thead><tr><th>Producto</th><th>Cantidad vendida</th></tr></thead>
         <tbody>${prods.map(([n,c])=>`<tr><td>${hx(n)}</td><td>${hx(c)}</td></tr>`).join('')}</tbody>
-      </table>` : '<p class="text-muted">Sin detalle de productos</p>';
+      </table>` : ''}`;
   } else {
     row.style.display = 'none';
     if (icon) icon.style.transform = 'rotate(0deg)';

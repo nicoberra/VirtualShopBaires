@@ -3765,3 +3765,10 @@ body { background: #f4f5f7; }
   .footer-col .logo-footer { height: auto; width: min(280px, 80%); margin: 0 auto 14px; }
   .footer-grid > .footer-col:first-child .social-links { justify-content: center; }
 }
+/* Etiquetas de los círculos siempre en un renglón (también "Cómo comprar" en el celular) */
+.dw-txt b, .dw-txt small { white-space: nowrap; }
+@media (max-width: 480px) { .dw-lista { gap: 8px; } .dw-txt b { font-size: min(.78rem, 2.8vw); } .dw-txt small { font-size: min(.64rem, 2.4vw); } }
+/* Portada en compu/tablet: los teléfonos se ajustan al alto del bloque, completos y sin cortarse */
+@media (min-width: 481px) {
+  .hero-video-grid .hero-phone-frame { height: min(calc(100% - 24px), 640px); width: auto; max-width: 100%; aspect-ratio: 9 / 19; justify-self: center; align-self: center; }
+}

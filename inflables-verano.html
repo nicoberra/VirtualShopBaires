@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#1B2B4B" />
   <link rel="icon" href="img/icono-vs.png?v=3" type="image/png" />
   <link rel="apple-touch-icon" href="img/icono-vs.png?v=3" />
-  <link rel="stylesheet" href="css/styles.css?v=13" />
+  <link rel="stylesheet" href="css/styles.css?v=12" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -48,7 +48,33 @@
   /* Cuando el encabezado de la tienda se esconde al bajar, la barra sube con él (misma animación) */
   .iv-nav { transition: transform .35s ease; }
   html.iv-sin-header .iv-nav { transform: translateY(calc(-1 * var(--iv-top, 0px))); }
+  /* Al bajar la barra se esconde para dejar ver más productos; al subir un poco vuelve */
+  html.iv-nav-oculta .iv-nav { transform: translateY(calc(-100% - 2px)); box-shadow: none; }
   @media (prefers-reduced-motion: reduce) { .iv-nav { transition: none; } }
+  /* Compu: barra en una sola franja (buscador + presupuesto) y grilla compacta de 6 a 8 productos por fila */
+  @media (min-width: 900px) {
+    .iv-nav .container, #iv-grupos .container { max-width: min(1760px, calc(100vw - 48px)); }
+    .iv-nav .container { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 14px; align-items: center; }
+    .iv-nav .iv-chips { grid-column: 1 / -1; }
+    .iv-presu { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; padding: 6px 14px; }
+    .iv-presu label { display: contents; }
+    .iv-presu label > span { grid-column: 1; grid-row: 1; white-space: nowrap; }
+    .iv-presu b { grid-column: 3; grid-row: 1; min-width: 7.5em; text-align: right; }
+    .iv-presu input[type=range] { grid-column: 2; grid-row: 1; margin: 0; }
+    .iv-presu-lim { display: none; }
+    #iv-grupos .iv-grid { grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)); gap: 14px; }
+    #iv-grupos .iv-grid .iv-info { padding: 10px 12px 12px; gap: 7px; }
+    #iv-grupos .iv-grid .iv-nombre { font-size: .9rem; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em; }
+    #iv-grupos .iv-grid .iv-medidas span { font-size: .7rem; padding: 3px 7px; }
+    #iv-grupos .iv-grid .iv-medidas span:nth-child(n+2) { display: none; }
+    #iv-grupos .iv-grid .iv-colores button { font-size: .72rem; padding: 3px 8px; }
+    #iv-grupos .iv-grid .iv-desc summary { font-size: .78rem; }
+    #iv-grupos .iv-grid .iv-precio b { font-size: 1.18rem; }
+    #iv-grupos .iv-grid .iv-entrega { display: none; }
+    #iv-grupos .iv-grid .iv-comprar { min-height: 40px; font-size: .86rem; gap: 7px; border-radius: 10px; }
+    #iv-grupos .iv-grid .iv-comprar i { font-size: 1.05rem; }
+    #iv-grupos .iv-grid .iv-flecha { width: 30px; height: 30px; }
+  }
   .iv-nav .container { display: flex; flex-direction: column; gap: 10px; }
   .iv-buscar { position: relative; }
   .iv-buscar i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gray); }
@@ -537,6 +563,23 @@
     if (h && "ResizeObserver" in window) new ResizeObserver(poner).observe(h);
     if (h) new MutationObserver(() => document.documentElement.classList.toggle("iv-sin-header", h.classList.contains("header--hidden")))
       .observe(h, { attributes: true, attributeFilter: ["class"] });
+  })();
+
+  // Barra que se esconde al bajar por la lista y vuelve al subir (sin perder el foco si se está escribiendo)
+  (function () {
+    let ultimo = scrollY, pend = false;
+    const raiz = document.documentElement, nav = document.querySelector(".iv-nav");
+    function revisar() {
+      pend = false;
+      const y = scrollY, g = document.getElementById("iv-grupos");
+      const dentro = g && y > g.offsetTop - 20;
+      const escribiendo = nav.contains(document.activeElement) && document.activeElement.tagName === "INPUT" && document.activeElement.type !== "range";
+      if (!dentro || escribiendo || y < ultimo - 6) raiz.classList.remove("iv-nav-oculta");
+      else if (y > ultimo + 6) raiz.classList.add("iv-nav-oculta");
+      if (Math.abs(y - ultimo) > 6) ultimo = y;
+    }
+    addEventListener("scroll", () => { if (!pend) { pend = true; requestAnimationFrame(revisar); } }, { passive: true });
+    nav.addEventListener("focusin", () => raiz.classList.remove("iv-nav-oculta"));
   })();
 
   let ivT = null;

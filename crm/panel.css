@@ -1824,3 +1824,13 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .btn-wa-aviso { display: inline-flex; align-items: center; gap: 6px; background: #25D366; color: #fff; font-weight: 800; padding: 8px 14px; border-radius: 10px; text-decoration: none; }
 .btn-wa-aviso:hover { background: #1EBE5A; }
 @media (max-width: 640px) { .aviso-fila { flex-direction: column; align-items: stretch; } .aviso-acc > * { flex: 1; justify-content: center; } }
+
+/* Clientes: compras, gastado y ficha con resumen */
+.cli-tag { font-size: .66rem; font-weight: 700; color: #92400e; background: #fef3c7; border-radius: 6px; padding: 1px 6px; vertical-align: middle; }
+.cli-gastado { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cli-resumen { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.cli-kpi { background: var(--bg3, #f4f6fb); border-radius: 12px; padding: 10px; text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.cli-kpi b { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.cli-kpi span { font-size: .72rem; color: var(--text2); }
+.cli-datos { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; padding: 10px 2px 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+@media (max-width: 640px) { .cli-resumen { grid-template-columns: 1fr 1fr; } }

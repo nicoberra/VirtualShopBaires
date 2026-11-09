@@ -564,15 +564,42 @@ async function loadClientes(force=false) {
   }
 }
 
+// Compradores que todavía no están en Clientes: se arman con los datos de su último pedido
+function _clientesDePedidos() {
+  const dig = t => String(t || '').replace(/\D/g, '');
+  const yaEmail = new Set(_clientes.map(c => String(c.email || '').trim().toLowerCase()).filter(Boolean));
+  const yaTel = new Set(_clientes.map(c => dig(c.telefono)).filter(t => t.length >= 8));
+  const nuevos = new Map();
+  [..._pedidos].filter(p => p.estado !== 'Eliminado').sort((a, b) => _fechaPed(b) - _fechaPed(a)).forEach(p => {
+    const email = String(p.email || '').trim().toLowerCase(), tel = dig(p.telefono);
+    if (!email && tel.length < 8) return;
+    if ((email && yaEmail.has(email)) || (tel.length >= 8 && yaTel.has(tel))) return;
+    const clave = email || tel;
+    if (nuevos.has(clave)) return;
+    const dir = [p.calle, p.numeroCalle].filter(Boolean).join(' ') + (p.piso ? ', piso ' + p.piso : '');
+    nuevos.set(clave, { nombre: p.nombre || p.cliente || '', apellido: p.apellido || '', email, telefono: p.telefono || '', dni: p.dni || '',
+      ciudad: p.localidad || '', provincia: p.provincia || '', direccion: dir, cp: p.cp || '', origen: 'web', _dePedidos: true });
+  });
+  return [...nuevos.values()];
+}
+function _fechaPed(p) { const d = parseFecha(p.timestamp || p.fecha); return d ? d.getTime() : 0; }
+function _resumenCliente(c) {
+  const ped = pedidosDeCliente(c).filter(p => !['Cancelado', 'Eliminado'].includes(p.estado));
+  const gastado = ped.reduce((t, p) => t + _num(p.total !== undefined && p.total !== '' ? p.total : p.monto), 0);
+  const ultima = ped.reduce((m, p) => Math.max(m, _fechaPed(p)), 0);
+  return { n: ped.length, gastado, ultima };
+}
+
 function filtrarClientes() {
   const q = val('cli-search').toLowerCase();
+  const todos = [..._clientes, ..._clientesDePedidos()];
   const list = q
-    ? _clientes.filter(c =>
+    ? todos.filter(c =>
         String(c.nombre||'').toLowerCase().includes(q) ||
         String(c.apellido||'').toLowerCase().includes(q) ||
         String(c.email||'').toLowerCase().includes(q) ||
         String(c.telefono||'').includes(q))
-    : _clientes;
+    : todos;
   renderClientes(list);
 }
 
@@ -581,27 +608,28 @@ function renderClientes(list) {
   if (!list.length) { el.innerHTML = val('cli-search') ? uiVacio('fa-magnifying-glass', 'Sin resultados', 'No hay clientes que coincidan con la búsqueda.', { texto: 'Limpiar búsqueda', onclick: "$('cli-search').value='';filtrarClientes()" }) : uiVacio('fa-users', 'Todavía no hay clientes', 'Cuando alguien compre o se registre en la tienda va a aparecer acá.', { texto: 'Agregar cliente', icono: 'fa-plus', onclick: 'abrirModalCliente()' }); return; }
   el.innerHTML = `
     <table>
-      <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Compras</th><th></th></tr></thead>
+      <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Compras</th><th>Gastado</th><th></th></tr></thead>
       <tbody id="cli-tbody"></tbody>
     </table>`;
   const tbody = $('cli-tbody');
   list.forEach(c => {
-    const numPedidos = pedidosDeCliente(c).length;
+    const res = _resumenCliente(c), numPedidos = res.n;
     const nombreCompleto = [c.nombre, c.apellido].filter(Boolean).join(' ');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="td-nombre" style="cursor:pointer"><strong>${hx(nombreCompleto||'—')}</strong>${c.ciudad ? `<div class="prod-sub">${hx(c.ciudad)}</div>` : ''}</td>
+      <td class="td-nombre" style="cursor:pointer"><strong>${hx(nombreCompleto||'—')}</strong>${c._dePedidos ? ' <span class="cli-tag" title="Compró en la web; todavía no está guardado en Clientes">de pedidos</span>' : ''}${c.ciudad ? `<div class="prod-sub">${hx(c.ciudad)}</div>` : ''}</td>
       <td>${hx(c.email||'—')}</td>
       <td>${hx(c.telefono||'—')}</td>
       <td class="hide-mobile">${hx(c.ciudad||'—')}</td>
       <td style="text-align:center">
         <span class="badge ${numPedidos > 0 ? 'badge-conf' : ''}" style="cursor:${numPedidos>0?'pointer':'default'}">${numPedidos}</span>
       </td>
+      <td class="cli-gastado">${res.gastado ? fmtMoney(res.gastado) : '—'}</td>
       <td class="td-actions">
         ${c.telefono ? `<button class="btn-icon btn-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
         <button class="btn-icon" title="Ver historial"><i class="fa-solid fa-clock-rotate-left"></i></button>
-        <button class="btn-icon edit-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
-        <button class="btn-icon del-btn" title="Borrar" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>
+        ${c._dePedidos ? `<button class="btn-icon save-btn" title="Guardar en Clientes"><i class="fa-solid fa-user-plus"></i></button>` : `<button class="btn-icon edit-btn" title="Editar"><i class="fa-solid fa-pen"></i></button>
+        <button class="btn-icon del-btn" title="Borrar" style="color:var(--red)"><i class="fa-solid fa-trash"></i></button>`}
       </td>`;
     tr.querySelector('.td-nombre').addEventListener('click', () => verHistorialCliente(c));
     tr.querySelector('td:nth-child(5) .badge').addEventListener('click', () => verHistorialCliente(c));
@@ -613,24 +641,49 @@ function renderClientes(list) {
       });
     }
     tr.querySelector('.btn-icon:not(.btn-wa)').addEventListener('click', () => verHistorialCliente(c));
-    tr.querySelector('.edit-btn').addEventListener('click', () => editarCliente(c));
-    tr.querySelector('.del-btn').addEventListener('click', () => borrarCliente(c.id, c.nombre||''));
+    if (c._dePedidos) tr.querySelector('.save-btn').addEventListener('click', () => guardarClienteDePedidos(c));
+    else {
+      tr.querySelector('.edit-btn').addEventListener('click', () => editarCliente(c));
+      tr.querySelector('.del-btn').addEventListener('click', () => borrarCliente(c.id, c.nombre||''));
+    }
     tbody.appendChild(tr);
   });
 }
 
+async function guardarClienteDePedidos(c) {
+  const datos = { ...c }; delete datos._dePedidos;
+  try {
+    await crmOk({ action: 'add', tab: 'Clientes', ...datos, notas: 'compra web' });
+    toast('Cliente guardado'); invalidate('list:Clientes'); loadClientes(true);
+  } catch (e) { toast('Error: ' + e.message, 'err'); }
+}
+
 function verHistorialCliente(cli) {
-  const ped = pedidosDeCliente(cli);
+  const ped = pedidosDeCliente(cli).filter(p => p.estado !== 'Eliminado');
   const nombreCompleto = [cli.nombre, cli.apellido].filter(Boolean).join(' ');
-  $('mhist-title').textContent = `${nombreCompleto} — ${ped.length} pedido${ped.length !== 1 ? 's' : ''}`;
+  const res = _resumenCliente(cli);
+  $('mhist-title').textContent = `${nombreCompleto || 'Cliente'} — ${ped.length} pedido${ped.length !== 1 ? 's' : ''}`;
   const body = $('mhist-body');
+  const dato = (t, v) => v ? `<div><span class="ped-label">${t}:</span> ${hx(v)}</div>` : '';
+  const ficha = `<div class="cli-resumen">
+      <div class="cli-kpi"><b>${res.n}</b><span>compra${res.n !== 1 ? 's' : ''}</span></div>
+      <div class="cli-kpi"><b>${fmtMoney(res.gastado)}</b><span>gastado en total</span></div>
+      <div class="cli-kpi"><b>${res.n ? fmtMoney(res.gastado / res.n) : '—'}</b><span>por compra</span></div>
+      <div class="cli-kpi"><b>${res.ultima ? new Date(res.ultima).toLocaleDateString('es-AR') : '—'}</b><span>última compra</span></div>
+    </div>
+    <div class="cli-datos">
+      ${dato('Email', cli.email)}${dato('Teléfono', cli.telefono)}${dato('DNI/CUIT', cli.dni || cli.cuit)}
+      ${dato('Dirección', [cli.direccion, cli.ciudad, cli.provincia, cli.cp ? 'CP ' + cli.cp : ''].filter(Boolean).join(', '))}
+      ${dato('Origen', cli.origen)}${dato('Notas', cli.notas)}
+    </div>`;
   if (!ped.length) {
-    body.innerHTML = uiVacio('fa-bag-shopping', 'Sin pedidos registrados', 'Este cliente todavía no hizo compras.');
+    body.innerHTML = ficha + uiVacio('fa-bag-shopping', 'Sin pedidos registrados', 'Este cliente todavía no hizo compras.');
   } else {
-    const sorted = [...ped].sort((a,b) => new Date(b.fecha||0) - new Date(a.fecha||0));
-    body.innerHTML = sorted.map(p => {
-      const fecha = p.fecha ? new Date(p.fecha).toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
-      const esEnvio = (p.entrega||'').toLowerCase().includes('env');
+    const sorted = [...ped].sort((a,b) => _fechaPed(b) - _fechaPed(a));
+    body.innerHTML = ficha + sorted.map(p => {
+      const fd = parseFecha(p.timestamp || p.fecha);
+      const fecha = fd ? fd.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+      const esEnvio = (p.metodoEntrega || p.entrega || '').toLowerCase().includes('env');
       const estadoCls = {'pendiente':'badge-pend','confirmado':'badge-conf','en camino':'badge-cam','entregado':'badge-entr','cancelado':'badge-cancel'}[(p.estado||'').toLowerCase()] || '';
       return `<div class="hist-item">
         <div class="hist-header">
@@ -638,11 +691,11 @@ function verHistorialCliente(cli) {
           <span class="hist-fecha">${fecha}</span>
           <span class="badge ${estadoCls}">${hx(p.estado||'—')}</span>
         </div>
-        <div class="hist-productos">${hx(p.productos||'—')}</div>
+        <div class="hist-productos">${hx(p.productos||p.detalle||'—')}</div>
         <div class="hist-meta">
           <span><i class="fa-solid fa-${esEnvio?'truck':'store-alt'}" style="margin-right:4px;color:var(--text2)"></i>${esEnvio?'Envío a domicilio':'Retiro en local'}</span>
           <span><i class="fa-solid fa-credit-card" style="margin-right:4px;color:var(--text2)"></i>${hx(p.metodoPago||'—')}</span>
-          <span class="hist-total">$${Number(p.total||0).toLocaleString('es-AR')}</span>
+          <span class="hist-total">${fmtMoney(_num(p.total !== undefined && p.total !== '' ? p.total : p.monto))}</span>
         </div>
       </div>`;
     }).join('');

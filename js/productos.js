@@ -331,7 +331,8 @@ function abrirAvisoStock(pid) {
       <p class="aviso-prod">${_escAttr(nombreVisible(p))}</p>
       <label>Nombre<input name="nombre" autocomplete="given-name" required value="${_escAttr(prev.nombre || "")}"></label>
       <label>WhatsApp<input name="whatsapp" type="tel" inputmode="tel" autocomplete="tel" placeholder="11 2345 6789" required value="${_escAttr(prev.whatsapp || "")}"></label>
-      <label>Email <small>(opcional, te llega un aviso)</small><input name="email" type="email" inputmode="email" autocomplete="email" value="${_escAttr(prev.email || "")}"></label>
+      <label>Email <small>(opcional: te mandamos un único aviso cuando vuelva este producto)</small><input name="email" type="email" inputmode="email" autocomplete="email" value="${_escAttr(prev.email || "")}"></label>
+      <label class="aviso-ofertas"><input type="checkbox" name="ofertas"> <span>Además, quiero recibir ofertas e ingresos por email</span></label>
       <input name="website" tabindex="-1" autocomplete="off" class="aviso-trampa" aria-hidden="true">
       <p class="aviso-error" role="alert" hidden></p>
       <button type="submit" class="aviso-enviar">Avisame</button>
@@ -353,6 +354,9 @@ function abrirAvisoStock(pid) {
         body: JSON.stringify({ action: "aviso_stock", nombre: String(d.nombre).trim(), whatsapp: wa, email: String(d.email || "").trim(), producto: p.nombre, categoria: p.categoria, website: d.website || "" }) });
       const j = await r.json();
       if (!j.ok) throw new Error(j.error || "No se pudo guardar");
+      // Ofertas e ingresos: solo si tildó la casilla y dejó email
+      if (d.ofertas && d.email) fetch(CATALOGO_URL.split("?")[0], { method: "POST", redirect: "follow",
+        body: JSON.stringify({ action: "suscribir", email: String(d.email).trim(), nombre: String(d.nombre).trim(), origen: "aviso de stock" }) }).catch(() => {});
       form.innerHTML = `<div class="aviso-ico ok" aria-hidden="true"><i class="fa-solid fa-check"></i></div><h3>¡Listo!</h3>
         <p class="aviso-prod">Te avisamos apenas vuelva a entrar${d.email ? " (te llega un email)" : ""}.</p>
         <button type="button" class="aviso-enviar" onclick="this.closest('dialog').close()">Seguir mirando</button>`;

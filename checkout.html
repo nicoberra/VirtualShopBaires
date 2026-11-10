@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-title" content="VSB Tienda" />
   <meta name="robots" content="noindex" />
   <link rel="icon" href="/icon-vsb.webp?v=3" type="image/webp" />
-  <link rel="stylesheet" href="css/styles.css?v=21" />
+  <link rel="stylesheet" href="css/styles.css?v=22" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
   <style>
@@ -231,6 +231,8 @@
     .co-cuenta-check input { width: 20px; height: 20px; margin-top: 1px; accent-color: #CC1212; flex: 0 0 auto; }
     .co-cuenta .co-form-row { margin-top: 12px; margin-bottom: 0; }
     .co-cuenta-ok { margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: #ECFDF3; color: #166534; font-size: .88rem; font-weight: 600; }
+    .co-ofertas { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; font-size: .84rem; color: #374151; cursor: pointer; font-weight: 500; }
+    .co-ofertas input { width: 18px; height: 18px; margin-top: 1px; accent-color: #CC1212; flex: 0 0 auto; }
     .co-partido-ayuda { margin: 6px 2px 0; font-size: .8rem; color: #4B5563; min-height: 1em; }
     .co-envio-result {
       display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
@@ -403,6 +405,7 @@
           <div class="co-form-row required">
             <label for="f-email">Email</label>
             <input class="co-input" type="email" id="f-email" placeholder="juan@email.com" autocomplete="email" />
+            <label class="co-ofertas"><input type="checkbox" id="f-ofertas"> <span>Quiero recibir ofertas e ingresos por email</span></label>
           </div>
           <div class="co-2col">
             <div class="co-form-row required">
@@ -983,6 +986,9 @@ async function submitOrder() {
   btn.disabled = true;
   // Mis compras queda listo en este celular con el email de la compra
   try { localStorage.setItem("vsb_mc_email", email); } catch (e) {}
+  // Ofertas e ingresos por email: solo si tildó la casilla (no frena la compra)
+  if (document.getElementById("f-ofertas").checked)
+    fetch(CRM_URL, { method: "POST", redirect: "follow", body: JSON.stringify({ action: "suscribir", email, nombre: nombre + " " + apellido, origen: "checkout" }) }).catch(() => {});
   if (crearCuenta) await crearCuentaCheckout(nombre + " " + apellido, email, passCuenta);
 
   // ── MercadoPago: crear preferencia y redirigir ───────────

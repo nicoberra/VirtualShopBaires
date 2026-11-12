@@ -1,7 +1,8 @@
 """Mantiene en el Drive las fotos de productos que muestra la tienda, separadas por categoría,
 para que los agentes de marketing las usen en historias de Instagram.
 
-    Destino: G:\\Mi unidad\\Contenido AI HQ\\VirtualShopBaires\\Historias\\<Categoría>\\<Producto> - N.jpg
+    Destino (UNA sola carpeta para los agentes, sin Playa, Salud ni Varios):
+    G:\\Mi unidad\\Contenido AI HQ\\VirtualShopBaires\\Fotos de productos\\<Categoría>\\<Producto>\\1.jpg, 2.jpg…
 
 Uso (en la compu del dueño, con Google Drive para escritorio en G:):
     python tools/historias_drive.py            # sincroniza
@@ -17,7 +18,9 @@ Necesita Playwright (lee la lista igual que la ve la tienda).
 import os, re, sys, json, random, urllib.request, concurrent.futures as cf
 from playwright.sync_api import sync_playwright
 
-BASE = r"G:\Mi unidad\Contenido AI HQ\VirtualShopBaires\Historias"
+BASE = r"G:\Mi unidad\Contenido AI HQ\VirtualShopBaires\Fotos de productos"
+# Categorías que el dueño no quiere en la carpeta de los agentes (2026-11-12)
+EXCLUIR = {"Playa", "Salud", "Varios"}
 REGISTRO = os.path.join(BASE, "_fotos.json")
 TIENDA = "https://virtualshopbaires.com.ar/productos.html"
 RAW = "https://raw.githubusercontent.com/nicoberra/VirtualShopBaires/main/"
@@ -78,6 +81,7 @@ def main():
     simular = "--simular" in sys.argv
     if not os.path.isdir(os.path.dirname(BASE)):
         sys.exit(f"No encuentro la carpeta del Drive: {os.path.dirname(BASE)}")
+    os.makedirs(BASE, exist_ok=True)
     try:
         registro = json.load(open(REGISTRO, encoding="utf-8"))
     except Exception:
@@ -89,11 +93,13 @@ def main():
 
     deseado = {}   # ruta relativa -> url
     for p in productos:
-        carpeta = limpio(p["categoria"], 60)
+        if p["categoria"] in EXCLUIR:
+            continue
+        carpeta = os.path.join(limpio(p["categoria"], 60), limpio(p["nombre"], 100))
         for i, u in enumerate(p["imagenes"], 1):
             ext = os.path.splitext(u.split("?")[0])[1].lower()
             ext = ext if ext in EXT_FOTO else ".jpg"
-            deseado[os.path.join(carpeta, f"{limpio(p['nombre'])} - {i}{ext}")] = u
+            deseado[os.path.join(carpeta, f"{i}{ext}")] = u
 
     # Qué bajar: lo que falta o lo que cambió de foto
     tareas = [(u, os.path.join(BASE, rel)) for rel, u in deseado.items()

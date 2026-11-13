@@ -216,6 +216,59 @@
   }
   @media (prefers-reduced-motion: reduce) { .iv-t3 > span > span, .iv-sol { animation: none; } }
   @media (prefers-reduced-motion: reduce) { .iv-fotos { scroll-behavior: auto; } .iv-comprar, .iv-desc summary i, .iv-flecha, .iv-grid .iv-card { transition: none; } }
+
+  /* ===== Carrito del catálogo ===== */
+  .iv-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .iv-agregar, .iv-ya { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; border-radius: 12px; border: 0;
+    font: inherit; font-weight: 800; font-size: .9rem; cursor: pointer; transition: transform .15s ease, background-color .2s ease; }
+  .iv-agregar { background: #fff; color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+  .iv-agregar.iv-ok { background: #16a34a; color: #fff; box-shadow: none; }
+  .iv-ya { background: #25D366; color: #fff; }
+  .iv-ya:hover { background: #1EBE5A; }
+  .iv-agregar:active, .iv-ya:active { transform: scale(.97); }
+  .iv-colores button[aria-pressed="false"] { opacity: .9; }
+  .iv-elegi { margin: 0; color: #b91c1c; font-weight: 700; font-size: .84rem; }
+  .iv-sacude { animation: ivSacude .35s ease; }
+  @keyframes ivSacude { 0%,100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+  #iv-grupos .iv-grid .iv-acciones { grid-template-columns: 1fr; gap: 6px; }
+  #iv-grupos .iv-grid .iv-agregar, #iv-grupos .iv-grid .iv-ya { min-height: 38px; font-size: .82rem; }
+
+  .iv-carro-btn { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 2000; display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border: 0; border-radius: 999px; background: #0E1E46; color: #fff; font: inherit; font-weight: 800; cursor: pointer;
+    box-shadow: 0 10px 28px rgba(14,30,70,.35); }
+  .iv-carro-n { min-width: 22px; height: 22px; border-radius: 999px; background: #FA0202; display: grid; place-items: center; font-size: .78rem; padding: 0 6px; }
+  .iv-pulso { animation: ivPulso .45s ease; }
+  @keyframes ivPulso { 50% { transform: scale(1.12); } }
+  .iv-carro { border: 0; padding: 0; border-radius: 20px; width: min(480px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); position: fixed; inset: 0; margin: auto;
+    height: fit-content; overflow: auto; box-shadow: 0 30px 80px rgba(14,30,70,.35); }
+  .iv-carro::backdrop { background: rgba(14,30,70,.55); }
+  .iv-carro-cab { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px 6px; position: sticky; top: 0; background: #fff; z-index: 1; }
+  .iv-carro-cab h2 { margin: 0; font-size: 1.25rem; }
+  .iv-carro-x { width: 38px; height: 38px; border: 0; border-radius: 50%; background: #f1f3f7; font-size: 1.4rem; cursor: pointer; }
+  .iv-carro-lista { list-style: none; margin: 0; padding: 0 18px; }
+  .iv-carro-item { display: grid; grid-template-columns: 56px 1fr auto auto; gap: 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid #eef0f4; }
+  .iv-carro-item img, .iv-carro-sinfoto { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #f1f3f7; }
+  .iv-carro-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .iv-carro-info b { font-size: .9rem; line-height: 1.25; }
+  .iv-carro-info small { color: #4b5563; }
+  .iv-carro-precio { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .iv-cant { display: flex; align-items: center; gap: 4px; background: #f1f3f7; border-radius: 999px; padding: 3px; }
+  .iv-cant button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: #fff; font-size: 1.1rem; font-weight: 800; cursor: pointer; }
+  .iv-cant span { min-width: 22px; text-align: center; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .iv-carro-quitar { width: 36px; height: 36px; border: 0; background: none; color: #9ca3af; cursor: pointer; font-size: 1rem; }
+  .iv-carro-quitar:hover { color: #b91c1c; }
+  .iv-carro-total { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 18px 4px; font-size: 1.05rem; }
+  .iv-carro-total b { font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+  .iv-carro-nombre { display: flex; flex-direction: column; gap: 5px; padding: 8px 18px 0; font-weight: 700; font-size: .88rem; }
+  .iv-carro-nombre input { font: inherit; font-size: 16px; padding: 12px; border: 1.5px solid #e4e4e7; border-radius: 10px; }
+  .iv-carro-nombre input:focus { outline: none; border-color: var(--accent); }
+  .iv-carro-error { margin: 6px 18px 0; color: #b91c1c; font-size: .84rem; font-weight: 600; }
+  .iv-carro-enviar { display: flex; align-items: center; justify-content: center; gap: 10px; width: calc(100% - 36px); margin: 14px 18px 8px; min-height: 52px;
+    border: 0; border-radius: 14px; background: #25D366; color: #fff; font: inherit; font-weight: 800; font-size: 1.02rem; cursor: pointer; }
+  .iv-carro-enviar i { font-size: 1.3rem; }
+  .iv-carro-vaciar { display: block; margin: 0 auto 16px; border: 0; background: none; color: #6b7280; text-decoration: underline; font: inherit; font-size: .84rem; cursor: pointer; }
+  .iv-carro-vacio { padding: 10px 18px 22px; color: #4b5563; }
+  @media (prefers-reduced-motion: reduce) { .iv-sacude, .iv-pulso { animation: none; } }
 </style>
 </head>
 <body>
@@ -371,12 +424,18 @@
         <h3 class="iv-nombre">${_escHTML(nombre)}</h3>
         ${(() => { const m = ivMedidas(p); return m.length ? `<div class="iv-medidas">${m.map(x => `<span>${_escHTML(x)}</span>`).join("")}</div>` : ""; })()}
         ${colores.length > 1 ? `<div class="iv-colores" role="group" aria-label="Color">${colores.map((v, i) =>
-          `<button type="button" data-color="${_escAttr(v.color)}" aria-pressed="${i === 0}">${_escHTML(v.color)}</button>`).join("")}</div>` : ""}
+          `<button type="button" data-color="${_escAttr(v.color)}" aria-pressed="${(ivEstado[p.id] || {}).color === v.color}">${_escHTML(v.color)}</button>`).join("")}</div>
+          <p class="iv-elegi" hidden>Elegí un color</p>` : ""}
         ${p.descripcion ? `<details class="iv-desc"><summary>Ver descripción <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary><div>${descripcionHTML(p.descripcion)}</div></details>` : ""}
         <div class="iv-precio-caja">${ivPrecioHTML(p)}</div>
         ${sin ? "" : `<p class="iv-entrega"><i class="fa-solid fa-house" aria-hidden="true"></i> Retirás por el lote 707 o te lo llevamos a tu lote</p>`}
-        <a class="iv-comprar" href="${_escAttr(ivLinkWa(p))}" target="_blank" rel="noopener noreferrer">
-          <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${sin ? "Avisame cuando entra" : "Comprar por WhatsApp"}</a>
+        ${sin || !ivPrecio(p).valido
+          ? `<a class="iv-comprar" href="${_escAttr(ivLinkWa(p))}" target="_blank" rel="noopener noreferrer">
+              <i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ${sin ? "Avisame cuando entra" : "Consultar precio"}</a>`
+          : `<div class="iv-acciones">
+              <button type="button" class="iv-agregar" data-pid="${p.id}"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito</button>
+              <button type="button" class="iv-ya" data-pid="${p.id}"><i class="fa-solid fa-bolt" aria-hidden="true"></i> Comprar ahora</button>
+            </div>`}
       </div>
     </article>`;
   }
@@ -473,7 +532,7 @@
     ivEstado[p.id] = { color: b.dataset.color };
     card.querySelectorAll(".iv-colores button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
     card.querySelector(".iv-precio-caja").innerHTML = ivPrecioHTML(p);
-    card.querySelector(".iv-comprar").href = ivLinkWa(p);
+    const aviso = card.querySelector(".iv-elegi"); if (aviso) aviso.hidden = true;
     // Si el color tiene foto propia, se muestra
     const v = ivVariante(p), foto = v && ((v.imagenes || [])[0] || v.imagen);
     if (foto) {
@@ -481,6 +540,126 @@
       if (i >= 0) { const f = card.querySelector(".iv-fotos"); f.scrollTo({ left: f.clientWidth * i, behavior: "smooth" }); }
     }
   });
+
+  // ===== Carrito del catálogo: se arma acá y se manda en UN solo WhatsApp con nombre, productos, colores, cantidades y fotos =====
+  const IV_CARRITO = "iv_carrito_v1";
+  let ivCarrito = [];
+  try { ivCarrito = JSON.parse(localStorage.getItem(IV_CARRITO) || "[]"); } catch (e) { ivCarrito = []; }
+  const ivGuardar = () => { try { localStorage.setItem(IV_CARRITO, JSON.stringify(ivCarrito)); } catch (e) {} };
+  const ivAbs = (u) => { try { return new URL(fotoSrc(u), location.href).href; } catch (e) { return String(u); } };
+  const ivDinero = (n) => formatPrecio(Math.round(n));
+
+  // Arma el ítem con lo elegido; si hay más de un color y no eligió, avisa y no sigue
+  function ivItem(p, card) {
+    const colores = (p.variantes || []).filter(v => v.stock !== false && v.color && !/^[úu]nico$/i.test(v.color));
+    if (colores.length > 1 && !(ivEstado[p.id] || {}).color) {
+      const aviso = card && card.querySelector(".iv-elegi");
+      if (aviso) { aviso.hidden = false; aviso.classList.remove("iv-sacude"); void aviso.offsetWidth; aviso.classList.add("iv-sacude"); }
+      return null;
+    }
+    const v = ivVariante(p), pr = ivPrecio(p);
+    const foto = (v && ((v.imagenes || [])[0] || v.imagen)) || ivFotos(p)[0] || "";
+    return { clave: p.nombre + "|" + (colores.length > 1 ? v.color : ""), pid: p.id, nombre: ivNombre(p.nombre),
+             color: colores.length > 1 ? v.color : "", precio: Math.round(precioTransferencia(pr.precio)), foto: foto ? ivAbs(String(foto).split("#")[0]) : "", cant: 1 };
+  }
+  function ivMensaje(items, nombre) {
+    const l = [`Hola! Soy ${nombre}. Quiero comprar:`, ""];
+    let total = 0;
+    items.forEach((it, i) => {
+      const sub = it.precio * it.cant; total += sub;
+      l.push(`${i + 1}) ${it.nombre}`);
+      if (it.color) l.push(`   Color: ${it.color}`);
+      l.push(it.cant > 1 ? `   ${it.cant} × ${ivDinero(it.precio)} = ${ivDinero(sub)}` : `   ${ivDinero(it.precio)}`);
+      if (it.foto) l.push(`   Foto: ${it.foto}`);
+      l.push("");
+    });
+    if (items.length > 1 || items[0].cant > 1) l.push(`Total: ${ivDinero(total)}`);
+    l.push("¿Está disponible?");
+    return l.join("\n");
+  }
+
+  // Panel del carrito (también se usa para "Comprar ahora" con un solo producto)
+  const ivCarroDlg = document.createElement("dialog");
+  ivCarroDlg.className = "iv-carro"; ivCarroDlg.setAttribute("aria-labelledby", "iv-carro-tit");
+  document.body.appendChild(ivCarroDlg);
+  ivCarroDlg.addEventListener("click", e => { if (e.target === ivCarroDlg) ivCarroDlg.close(); });
+  let ivDirecto = null;   // ítem de "Comprar ahora" (no toca el carrito)
+
+  const ivBoton = document.createElement("button");
+  ivBoton.type = "button"; ivBoton.className = "iv-carro-btn"; ivBoton.hidden = true;
+  ivBoton.innerHTML = '<i class="fa-solid fa-cart-shopping" aria-hidden="true"></i><span class="iv-carro-n">0</span><span class="iv-carro-txt">Ver carrito</span>';
+  ivBoton.addEventListener("click", () => { ivDirecto = null; ivPintarCarro(); ivCarroDlg.showModal(); });
+  document.body.appendChild(ivBoton);
+
+  function ivActualizarBoton() {
+    const n = ivCarrito.reduce((t, it) => t + it.cant, 0);
+    ivBoton.hidden = !n;
+    ivBoton.querySelector(".iv-carro-n").textContent = n;
+    ivBoton.setAttribute("aria-label", `Ver carrito (${n} producto${n !== 1 ? "s" : ""})`);
+  }
+  function ivPintarCarro() {
+    const items = ivDirecto ? [ivDirecto] : ivCarrito;
+    let nombreGuardado = ""; try { nombreGuardado = localStorage.getItem("iv_nombre") || ""; } catch (e) {}
+    const total = items.reduce((t, it) => t + it.precio * it.cant, 0);
+    ivCarroDlg.innerHTML = `
+      <div class="iv-carro-cab"><h2 id="iv-carro-tit">${ivDirecto ? "Tu compra" : "Tu carrito"}</h2>
+        <button type="button" class="iv-carro-x" aria-label="Cerrar">&times;</button></div>
+      ${items.length ? `<ul class="iv-carro-lista">${items.map((it, i) => `
+        <li class="iv-carro-item">
+          ${it.foto ? `<img src="${_escAttr(it.foto)}" alt="" loading="lazy">` : `<span class="iv-carro-sinfoto"></span>`}
+          <div class="iv-carro-info"><b>${_escHTML(it.nombre)}</b>${it.color ? `<small>Color: ${_escHTML(it.color)}</small>` : ""}
+            <span class="iv-carro-precio">${ivDinero(it.precio * it.cant)}</span></div>
+          <div class="iv-cant" role="group" aria-label="Cantidad">
+            <button type="button" data-i="${i}" data-d="-1" aria-label="Uno menos">−</button>
+            <span aria-live="polite">${it.cant}</span>
+            <button type="button" data-i="${i}" data-d="1" aria-label="Uno más">+</button>
+          </div>
+          ${ivDirecto ? "" : `<button type="button" class="iv-carro-quitar" data-i="${i}" aria-label="Quitar ${_escAttr(it.nombre)}"><i class="fa-solid fa-trash-can"></i></button>`}
+        </li>`).join("")}</ul>
+        <div class="iv-carro-total"><span>Total</span><b>${ivDinero(total)}</b></div>
+        <label class="iv-carro-nombre">Tu nombre<input id="iv-nombre" autocomplete="name" placeholder="Ej: Juan Pérez" value="${_escAttr(nombreGuardado)}"></label>
+        <p class="iv-carro-error" hidden>Escribí tu nombre para mandar el pedido.</p>
+        <button type="button" class="iv-carro-enviar"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Enviar pedido por WhatsApp</button>
+        ${ivDirecto ? "" : `<button type="button" class="iv-carro-vaciar">Vaciar carrito</button>`}`
+      : `<p class="iv-carro-vacio">Todavía no agregaste productos.</p>`}`;
+  }
+  ivCarroDlg.addEventListener("click", e => {
+    const t = e.target.closest && e.target.closest("button");
+    if (!t) return;
+    if (t.classList.contains("iv-carro-x")) return ivCarroDlg.close();
+    const lista = ivDirecto ? [ivDirecto] : ivCarrito;
+    if (t.dataset.d) {
+      const it = lista[Number(t.dataset.i)]; it.cant = Math.max(1, Math.min(20, it.cant + Number(t.dataset.d)));
+      if (!ivDirecto) { ivGuardar(); ivActualizarBoton(); }
+      return ivPintarCarro();
+    }
+    if (t.classList.contains("iv-carro-quitar")) { ivCarrito.splice(Number(t.dataset.i), 1); ivGuardar(); ivActualizarBoton(); return ivPintarCarro(); }
+    if (t.classList.contains("iv-carro-vaciar")) { ivCarrito = []; ivGuardar(); ivActualizarBoton(); return ivCarroDlg.close(); }
+    if (t.classList.contains("iv-carro-enviar")) {
+      const inp = ivCarroDlg.querySelector("#iv-nombre"), nombre = inp.value.trim();
+      if (nombre.length < 2) { ivCarroDlg.querySelector(".iv-carro-error").hidden = false; inp.focus(); return; }
+      try { localStorage.setItem("iv_nombre", nombre); } catch (ex) {}
+      window.open(`https://wa.me/${IV_WA}?text=${encodeURIComponent(ivMensaje(lista, nombre))}`, "_blank", "noopener");
+    }
+  });
+  ivCarroDlg.addEventListener("input", e => { if (e.target.id === "iv-nombre") { const er = ivCarroDlg.querySelector(".iv-carro-error"); if (er) er.hidden = true; } });
+  // Agregar al carrito / Comprar ahora (en la grilla y en la ficha agrandada)
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest(".iv-agregar, .iv-ya");
+    if (!b) return;
+    e.stopPropagation();
+    const card = b.closest(".iv-card"), p = PRODUCTOS.find(x => x.id === Number(b.dataset.pid));
+    const it = p && ivItem(p, card);
+    if (!it) return;
+    if (b.classList.contains("iv-ya")) { ivDirecto = it; ivPintarCarro(); ivCarroDlg.showModal(); return; }
+    const ya = ivCarrito.find(x => x.clave === it.clave);
+    if (ya) ya.cant = Math.min(20, ya.cant + 1); else ivCarrito.push(it);
+    ivGuardar(); ivActualizarBoton();
+    b.classList.add("iv-ok"); b.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Agregado';
+    setTimeout(() => { b.classList.remove("iv-ok"); b.innerHTML = '<i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito'; }, 1400);
+    ivBoton.classList.remove("iv-pulso"); void ivBoton.offsetWidth; ivBoton.classList.add("iv-pulso");
+  }, true);
+  ivActualizarBoton();
 
   // ===== Celular: grilla de fotos (3 por fila); al tocar una, se agranda con animación =====
   const ivCelu = window.matchMedia("(max-width: 640px)");

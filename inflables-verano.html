@@ -269,6 +269,8 @@
   .iv-carro-vaciar { display: block; margin: 0 auto 16px; border: 0; background: none; color: #6b7280; text-decoration: underline; font: inherit; font-size: .84rem; cursor: pointer; }
   .iv-carro-vacio { padding: 10px 18px 22px; color: #4b5563; }
   @media (prefers-reduced-motion: reduce) { .iv-sacude, .iv-pulso { animation: none; } }
+
+  .iv-carro-btn[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -474,10 +476,15 @@
   let ivLista = [];
   let ivCat = "todos";   // "todos" o el id de un grupo
   function ivPintar() {
-    const q = document.getElementById("iv-buscar").value.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const sinTilde = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const q = sinTilde(document.getElementById("iv-buscar").value).trim();
+    const palabras = q.split(/\s+/).filter(Boolean);
     const tope = ivTope();
     const enPresu = (p) => { if (tope === null) return true; const f = ivFinal(p); return f !== null && f <= tope; };
-    const coincide = (p) => enPresu(p) && (!q || (p.nombre + " " + (p.descripcion || "")).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(q));
+    const tiene = (texto) => palabras.every(w => texto.includes(w));
+    const enNombre = (p) => tiene(sinTilde(p.nombre));
+    const hayEnNombre = palabras.length && ivLista.some(p => enPresu(p) && enNombre(p));
+    const coincide = (p) => enPresu(p) && (!palabras.length || (hayEnNombre ? enNombre(p) : tiene(sinTilde(p.nombre + " " + (p.descripcion || "")))));
     const visibles = ivLista.filter(coincide);
     const conStock = visibles.filter(p => !p.agotado && hayStock(p)), sinStock = visibles.filter(p => p.agotado || !hayStock(p));
     const grupos = IV_GRUPOS.filter(g => g.titulo).sort((a, b) => a.orden - b.orden)
@@ -559,7 +566,7 @@
     }
     const v = ivVariante(p), pr = ivPrecio(p);
     const foto = (v && ((v.imagenes || [])[0] || v.imagen)) || ivFotos(p)[0] || "";
-    return { clave: p.nombre + "|" + (colores.length > 1 ? v.color : ""), pid: p.id, nombre: ivNombre(p.nombre),
+    return { clave: p.nombre + "|" + (colores.length > 1 ? v.color : ""), pid: p.id, nombre: ivNombre(p.nombre), nombreCompleto: p.nombre,
              color: colores.length > 1 ? v.color : "", precio: Math.round(precioTransferencia(pr.precio)), foto: foto ? ivAbs(String(foto).split("#")[0]) : "", cant: 1 };
   }
   function ivMensaje(items, nombre) {
@@ -570,6 +577,7 @@
       l.push(`${i + 1}) ${it.nombre}`);
       if (it.color) l.push(`   Color: ${it.color}`);
       l.push(it.cant > 1 ? `   ${it.cant} × ${ivDinero(it.precio)} = ${ivDinero(sub)}` : `   ${ivDinero(it.precio)}`);
+      l.push(`   Ver: ${IV_PAGINA}#${ivSlug(it.nombreCompleto || it.nombre)}`);
       if (it.foto) l.push(`   Foto: ${it.foto}`);
       l.push("");
     });

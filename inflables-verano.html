@@ -507,7 +507,7 @@
         <div class="container">
           <h2 id="t-${g.id}">${_escHTML(g.titulo)} <small>${g.items.length} modelo${g.items.length !== 1 ? "s" : ""}</small></h2>
           ${g.texto ? `<p>${_escHTML(g.texto)}</p>` : ""}
-          <div class="iv-grid">${g.items.map(ivTarjeta).join("")}</div>
+          <div class="iv-grid">${g.items.map(p => ivTarjeta(p)).join("")}</div>
         </div>
       </section>`).join("") : `<p class="iv-vacio">No encontramos inflables${q ? ` con «${_escHTML(q)}»` : ""}${tope !== null ? ` hasta ${formatPrecio(tope)}` : ""}. Probá con otra búsqueda, subí el presupuesto o escribinos por WhatsApp.</p>`;
   }

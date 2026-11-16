@@ -30,6 +30,7 @@
 // ============================================================
 
 const STOCK_ACTIVO = true; // false = todos sin stock (pausar ventas sin tocar el Sheet)
+const MOSTRAR_AGOTADOS = false; // false = los productos sin stock no aparecen en la web (pedido del dueño 2026-11-16)
 
 const SHEET_ID        = "1sufFbmZQzjG8i8FP-XybYReqeQgsHFjhSV2KEMaNTnA";
 const DRIVE_FOLDER_ID = "1xBYFnxDn-uTjoyFGc0thzOF_WS16jUz5";
@@ -43,7 +44,7 @@ let IMAGE_MAP  = {};   // { "Categoria": { "Nombre producto": "fileId" } }
 // ---------------------------------------------------------------------------
 //  CACHE localStorage
 // ---------------------------------------------------------------------------
-const _CACHE_DATA   = 'vsb_data_v19';
+const _CACHE_DATA   = 'vsb_data_v20';
 const _CACHE_IMAGES = 'vsb_images_v7';
 const _TTL_DATA     = 5 * 60 * 1000;    // 5 minutos: los cambios del CRM se ven rápido
 const _TTL_IMAGES   = 60 * 60 * 1000;   // 1 hora
@@ -398,9 +399,9 @@ async function cargarProductos() {
     PRODUCTOS = resultados.flat()
       .filter(p => p.precio > 0 || p.descripcion)
       .map(p => ({ ...p, orden: _sbOrden[p.categoria + "|" + String(p.nombre).trim()], categoria: CATEGORY_ALIASES[p.categoria] || p.categoria, id: id++ }));
-    // Sin stock: también se muestran (al final del listado), sin precio y con "Avisame cuándo entra"
+    // Sin stock: desde 2026-11-16 NO se muestran en la web (pedido del dueño). Con true vuelven al final con "Avisame cuándo entra"
     const yaEsta = new Set(PRODUCTOS.map(p => p.categoria + "|" + p.nombre));
-    _sbAgotados.forEach(a => {
+    if (MOSTRAR_AGOTADOS) _sbAgotados.forEach(a => {
       const cat = CATEGORY_ALIASES[a.categoria] || a.categoria;
       if (yaEsta.has(cat + "|" + a.nombre) || !hojasCargables.includes(a.categoria)) return;
       PRODUCTOS.push({ nombre: a.nombre, descripcion: a.descripcion, precio: 0, precioOriginal: null, badge: null, destacado: false,

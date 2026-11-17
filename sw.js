@@ -1,5 +1,5 @@
 /* Service Worker — Virtual Shop Baires (Tienda) */
-const CACHE_NAME = 'vsb-store-v30';
+const CACHE_NAME = 'vsb-store-v31';
 
 // Recursos estáticos a pre-cachear (app shell)
 const PRECACHE_URLS = [

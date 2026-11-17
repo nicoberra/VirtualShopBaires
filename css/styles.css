@@ -3863,3 +3863,12 @@ body { background: #f4f5f7; }
   .product-card .product-img { height: auto; padding: 0; }
   .product-card .product-img img { inset: 0; top: 0; left: 0; width: 100%; height: 100%; }
 }
+
+/* 2026-11-16 (regla del dueño): NUNCA franjas blancas alrededor de la foto. El espacio que la foto no llena
+   se rellena con la misma foto desenfocada; el producto se sigue viendo entero. */
+.product-img.con-fondo::before {
+  content: ""; position: absolute; inset: -24px; z-index: -1; pointer-events: none;
+  background: var(--foto-fondo) center / cover no-repeat;
+  filter: blur(24px) saturate(1.15); transform: scale(1.08);
+}
+.product-img.con-fondo { isolation: isolate; }

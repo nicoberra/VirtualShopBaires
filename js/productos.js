@@ -57,7 +57,13 @@ function _evaluarFoto(img) {
 }
 document.addEventListener("load", (e) => {
   const t = e.target;
-  if (t && t.tagName === "IMG" && t.closest && t.closest(".product-img")) _evaluarFoto(t);
+  if (t && t.tagName === "IMG" && t.closest && t.closest(".product-img")) {
+    _evaluarFoto(t);
+    // Regla del dueño: nunca franjas blancas. Lo que la foto no llena se cubre con la misma foto desenfocada.
+    const caja = t.closest(".product-img");
+    caja.style.setProperty("--foto-fondo", `url("${(t.currentSrc || t.src).replace(/"/g, "%22")}")`);
+    caja.classList.add("con-fondo");
+  }
 }, true);
 function ponerFoto(imgEl, url) { imgEl.src = fotoSrc(url); imgEl.style.cssText = fotoEstilo(url); }
 

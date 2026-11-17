@@ -697,6 +697,7 @@ function openProductModal(pid) {
   const p = PRODUCTOS.find(x => x.id === pid);
   if (!p) { if (typeof showToast === "function") showToast("Ese producto ya no está disponible", "error"); return; }
   registrarInteraccion(p, "vista");
+  if (typeof vsbPixel === "function") vsbPixel("ViewContent", { content_ids: [String(p.id)], content_name: p.nombre, content_category: p.categoria || "", content_type: "product", value: p.precio });
 
   // Sincronizar estado de variantes con la tarjeta
   if (p.tieneVariantes && !selectedVariants[pid]) selectedVariants[pid] = {};

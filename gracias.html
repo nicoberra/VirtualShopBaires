@@ -33,6 +33,7 @@
     .wa-btn { background: #25D366; color: #fff; font-weight: 700; }
     .wa-btn:hover { background: #1EBE5A; color: #fff; }
   </style>
+  <script src="js/meta-pixel.js?v=1"></script>
 </head>
 <body>
 
@@ -110,6 +111,15 @@ if (ref) {
   waLink.href = 'https://wa.me/5491149457266?text=' +
     encodeURIComponent('Hola! Acabo de pagar por MercadoPago. Mi referencia es ' + ref);
 }
+
+// Píxel de Meta: compra aprobada por Mercado Pago (una sola vez, con lo guardado en el checkout)
+try {
+  const c = JSON.parse(localStorage.getItem('vsb_px_compra') || 'null');
+  if (c && estado === 'aprobado' && Date.now() - c.t < 6 * 3600 * 1000 && typeof vsbPixel === 'function') {
+    vsbPixel('Purchase', { content_ids: c.ids, content_type: 'product', num_items: c.n, value: c.value }, 'pedido-' + c.id);
+    localStorage.removeItem('vsb_px_compra');
+  }
+} catch (e) {}
 
 // Estado pendiente (MP lo usa para transferencias bancarias dentro de MP)
 if (estado === 'pendiente') {

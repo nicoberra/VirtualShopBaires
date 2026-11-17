@@ -85,6 +85,7 @@ const Cart = (() => {
       });
     }
     save();
+    if (typeof vsbPixel === "function") vsbPixel("AddToCart", { content_ids: [String(p.id)], content_name: p.nombre, content_type: "product", value: finalPrecio });
     showToast(`✓ ${p.nombre} agregado al carrito`);
   }
 

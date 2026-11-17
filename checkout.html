@@ -251,6 +251,7 @@
     @media (max-width: 640px) { .co-zonas { grid-template-columns: repeat(2, 1fr); } }
     @media (prefers-reduced-motion: reduce) { .co-zona, .co-zona-check { transition: none; } .co-zona:hover { transform: none; } }
   </style>
+  <script src="js/meta-pixel.js?v=1"></script>
 </head>
 <body>
 
@@ -576,7 +577,7 @@
   </div>
 </div>
 
-<script src="js/cart.js?v=5"></script>
+<script src="js/cart.js?v=6"></script>
 <script src="js/main.js?v=7"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
@@ -617,6 +618,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("empty-state").style.display = "block";
     return;
   }
+  if (typeof vsbPixel === "function") vsbPixel("InitiateCheckout", { content_ids: cartItems.map(i => String(i.id)), content_type: "product", num_items: cartItems.reduce((s, i) => s + i.qty, 0), value: Cart.getTotal() });
   document.getElementById("checkout-main").style.display = "block";
   renderItems();
 
@@ -1017,6 +1019,8 @@ async function submitOrder() {
       });
       hideLoading();
       if (data.ok && data.url) {
+        // La compra se cuenta en gracias.html cuando Mercado Pago vuelve con el pago aprobado
+        try { localStorage.setItem("vsb_px_compra", JSON.stringify({ id: idPedido, value: Cart.getTotal(), ids: cartItems.map(i => String(i.id)), n: cartItems.reduce((s, i) => s + i.qty, 0), t: Date.now() })); } catch (e) {}
         Cart.clear();
         try { sessionStorage.removeItem("vsb_id_pedido"); } catch (e) {}
         window.location.href = data.url;
@@ -1049,6 +1053,8 @@ async function submitOrder() {
 
     createdOrder = data;
     customerEmail = email;
+    // Compra por transferencia/efectivo: el total viene del servidor
+    if (typeof vsbPixel === "function") vsbPixel("Purchase", { content_ids: cartItems.map(i => String(i.id)), content_type: "product", num_items: cartItems.reduce((s, i) => s + i.qty, 0), value: data.total || Cart.getTotal() }, "pedido-" + (data.orderNumber || idPedido));
     Cart.clear();
     try { sessionStorage.removeItem("vsb_id_pedido"); } catch (e) {}
     showConfirmation(data, email);

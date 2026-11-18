@@ -4,7 +4,7 @@
  * Mientras META_PIXEL_ID esté vacío no se carga nada (queda apagado).
  * El ID del píxel es público (no es una clave secreta). */
 (function () {
-  var META_PIXEL_ID = '3798975690160277'; // conjunto de datos «Pixel de MercadoShops» (de Virtual Shop)
+  var META_PIXEL_ID = '1446799197056704'; // píxel propio de la cuenta de anuncios (portfolio Virtual Shop Baires, 2026-11-18)
 
   if (!/^\d{6,20}$/.test(META_PIXEL_ID)) { window.vsbPixel = function () {}; return; }
 

@@ -110,7 +110,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="css/styles.css?v=24" />
+  <link rel="stylesheet" href="css/styles.css?v=25" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="dns-prefetch" href="https://script.google.com" />
@@ -643,7 +643,7 @@
 <script src="js/sheets.js?v=21"></script>
 <script src="js/productos.js?v=19"></script>
 <script src="js/cart.js?v=6"></script>
-<script src="js/main.js?v=7"></script>
+<script src="js/main.js?v=8"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
   // Mapa de categoría → ícono FA (para las más comunes)
@@ -861,7 +861,9 @@
     const slide = (c, lazy) => {
       const ext = CATS_EXTERNAS[String(c).toLowerCase().trim()];
       const href = ext || "productos.html?cat=" + encodeURIComponent(c).replace(/%20/g, "+");
-      const img = CAT_IMG[c] || (productos.find(p => p.categoria === c && p.imagen) || {}).imagen || "";
+      // Sin foto cargada en el CRM: la de un producto de la categoría, priorizando las fotos propias (no las de Mercado Libre)
+      const deCat = productos.filter(p => p.categoria === c && p.imagen);
+      const img = CAT_IMG[c] || (deCat.find(p => !/mlstatic/.test(p.imagen)) || deCat[0] || {}).imagen || "";
       const nombre = CAT_NOMBRE_CORTO[c] || c;
       return `<a href="${escAttr(href)}"${ext ? ' target="_blank" rel="noopener"' : ""} class="cat-slide">
         <div class="cat-slide-img">${img ? `<img src="${escAttr(img)}" alt="${escAttr(nombre)}"${lazy ? ' loading="lazy"' : ""} />` : ""}</div>

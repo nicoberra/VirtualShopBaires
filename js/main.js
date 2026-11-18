@@ -385,7 +385,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const fotoDe = c => {
     if (FOTO[c]) return FOTO[c];
-    if (typeof PRODUCTOS !== "undefined") { const p = PRODUCTOS.find(x => x.categoria === c && x.imagen); if (p && typeof fotoSrc === "function") return fotoSrc(p.imagen); }
+    if (typeof PRODUCTOS !== "undefined") { const dc = PRODUCTOS.filter(x => x.categoria === c && x.imagen); const p = dc.find(x => !/mlstatic/.test(x.imagen)) || dc[0]; if (p && typeof fotoSrc === "function") return fotoSrc(p.imagen); }
     return "";
   };
   // Solo categorías con algo en stock (cuando el catálogo ya cargó); las externas siempre

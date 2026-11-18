@@ -3516,8 +3516,8 @@ body { background: #f4f5f7; }
     border: 1px solid var(--line); box-shadow: 0 16px 40px rgba(17, 24, 39, .12);
   }
   /* Buscador más grande y útil */
-  .header-search-form { max-width: 420px; height: 44px; background: #f4f5f7; border: 1px solid var(--line); }
-  .header-search-form input { font-size: .92rem; }
+  .header-search-form { max-width: 340px; height: 38px; background: #f4f5f7; border: 1px solid var(--line); }
+  .header-search-form input { font-size: .86rem; }
   .header-search-form:focus-within { background: #fff; border-color: var(--ink); box-shadow: 0 0 0 3px rgba(17, 24, 39, .06); }
 }
 .header-search-form input::placeholder { color: #6b7280; }
@@ -3770,6 +3770,8 @@ body { background: #f4f5f7; }
 @media (max-width: 480px) { .dw-lista { gap: 8px; } .dw-txt b { font-size: min(.78rem, 2.8vw); } .dw-txt small { font-size: min(.64rem, 2.4vw); } }
 /* Portada en compu/tablet: los teléfonos se ajustan al alto del bloque, completos y sin cortarse */
 @media (min-width: 481px) {
+  /* minmax(0,1fr): la fila no crece con el contenido del video (antes medía más que el bloque y cortaba los teléfonos abajo) */
+  .hero-video-grid { grid-template-rows: minmax(0, 1fr); }
   .hero-video-grid .hero-phone-frame { height: min(calc(100% - 24px), 640px); width: auto; max-width: 100%; aspect-ratio: 9 / 19; justify-self: center; align-self: center; }
 }
 

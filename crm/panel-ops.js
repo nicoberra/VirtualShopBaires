@@ -356,12 +356,14 @@ function filtrarClientes() {
   renderClientes(list);
 }
 
+// Fecha de alta del cliente (columna Fecha de Clientes), como dd/mm/aaaa
+function _altaCli(f) { if (!f) return '—'; const s = String(f).trim(); const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[3] + '/' + m[2] + '/' + m[1]; const d = new Date(s); return isNaN(d) ? hx(s.slice(0, 10)) : d.toLocaleDateString('es-AR'); }
 function renderClientes(list) {
   const el = $('cli-table');
   if (!list.length) { el.innerHTML = val('cli-search') ? uiVacio('fa-magnifying-glass', 'Sin resultados', 'No hay clientes que coincidan con la búsqueda.', { texto: 'Limpiar búsqueda', onclick: "$('cli-search').value='';filtrarClientes()" }) : uiVacio('fa-users', 'Todavía no hay clientes', 'Cuando alguien compre o se registre en la tienda va a aparecer acá.', { texto: 'Agregar cliente', icono: 'fa-plus', onclick: 'abrirModalCliente()' }); return; }
   el.innerHTML = `
     <table>
-      <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Compras</th><th></th></tr></thead>
+      <thead><tr><th>Nombre</th><th>Email</th><th>Teléfono</th><th>Ciudad</th><th>Compras</th><th title="Fecha en que se registró">Alta</th><th></th></tr></thead>
       <tbody id="cli-tbody"></tbody>
     </table>`;
   const tbody = $('cli-tbody');
@@ -377,6 +379,7 @@ function renderClientes(list) {
       <td style="text-align:center">
         <span class="badge ${numPedidos > 0 ? 'badge-conf' : ''}" style="cursor:${numPedidos>0?'pointer':'default'}">${numPedidos}</span>
       </td>
+      <td class="cli-alta" style="white-space:nowrap">${_altaCli(c.fecha || (/^r\d{13}/.test(String(c.id || "")) ? new Date(+String(c.id).slice(1, 14)).toISOString() : ""))}</td>
       <td class="td-actions">
         ${c.telefono ? `<button class="btn-icon btn-wa" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
         <button class="btn-icon" title="Ver historial"><i class="fa-solid fa-clock-rotate-left"></i></button>

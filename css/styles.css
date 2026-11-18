@@ -3874,3 +3874,8 @@ body { background: #f4f5f7; }
   filter: blur(24px) saturate(1.15); transform: scale(1.08);
 }
 .product-img.con-fondo { isolation: isolate; }
+
+/* Catálogo en compu: tarjetas más chicas (4 columnas o más) para que entre la tarjeta entera en la pantalla */
+@media (min-width: 641px) {
+  .products-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 18px; }
+}

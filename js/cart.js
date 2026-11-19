@@ -6,6 +6,22 @@ function formatPrecio(n) {
 const Cart = (() => {
   let items = JSON.parse(localStorage.getItem("vsb_cart") || "[]");
 
+  // Productos renombrados: los carritos viejos pasan al nombre nuevo (el servidor busca el precio por nombre)
+  if (items.length) {
+    fetch("/tools/renombres.json", { cache: "no-cache" })
+      .then(r => (r.ok ? r.json() : {}))
+      .then(ren => {
+        let cambio = false;
+        items.forEach(i => {
+          let n = i.nombre, k = 0;
+          while (ren[n] && k++ < 5) n = ren[n];
+          if (n !== i.nombre) { i.nombre = n; cambio = true; }
+        });
+        if (cambio) save();
+      })
+      .catch(() => {});
+  }
+
   function save() {
     localStorage.setItem("vsb_cart", JSON.stringify(items));
     updateBadge();

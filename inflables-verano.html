@@ -365,12 +365,10 @@
   }
 
   // Todas las fotos del producto y de sus colores, sin repetir.
-  // Primero va la foto de uso (la 2.ª de la galería: gente usando el inflable); después, el resto.
+  // La galería ya viene con la foto de uso (gente usando el inflable) en primer lugar.
   function ivFotos(p) {
-    const vs = p.variantes || [];
-    const uso = (p.imagenes || [])[1] || ((vs.find(v => (v.imagenes || []).length > 1) || {}).imagenes || [])[1];
-    const fotos = [...(uso ? [uso] : []), ...(p.imagenes || []), ...(p.imagen ? [p.imagen] : [])];
-    vs.forEach(v => { fotos.push(...(v.imagenes || [])); if (v.imagen) fotos.push(v.imagen); });
+    const fotos = [...(p.imagenes || []), ...(p.imagen ? [p.imagen] : [])];
+    (p.variantes || []).forEach(v => { fotos.push(...(v.imagenes || [])); if (v.imagen) fotos.push(v.imagen); });
     return [...new Set(fotos.map(u => String(u).split("#")[0]).filter(Boolean))];
   }
 

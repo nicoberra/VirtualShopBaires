@@ -21,6 +21,7 @@ SUPABASE_URL = "https://dtsixnqwwrbwybulpuxo.supabase.co"
 SUPABASE_PUB = "sb_publishable_nGmdSmwKGuiF5LG9fbA8dw_auHYFgCM"   # clave pública de la tienda
 UMBRAL = 0.75   # parecido mínimo entre título de ML y nombre del producto
 SALIDA = os.path.join(os.path.dirname(__file__), "..", "supabase", "06-ventas-ml.sql")
+RENOMBRES = os.path.join(os.path.dirname(__file__), "renombres.json")   # {"nombre viejo": "nombre nuevo"}
 
 
 def palabras(s):
@@ -52,7 +53,12 @@ def leer_productos():
 
 def main():
     pubs, prods = leer_ml(sys.argv[1]), leer_productos()
-    cand = [(p, palabras(p["nombre"])) for p in prods]
+    # Los productos renombrados también se comparan con su nombre viejo (parecido al título de ML)
+    ren = json.load(open(RENOMBRES, encoding="utf-8")) if os.path.exists(RENOMBRES) else {}
+    viejos = {}
+    for v, n in ren.items():
+        viejos.setdefault(n, []).append(v)
+    cand = [(p, palabras(nom)) for p in prods for nom in [p["nombre"]] + viejos.get(p["nombre"], [])]
     total, sin = {}, []
     for m in pubs:
         mt = palabras(m["titulo"])

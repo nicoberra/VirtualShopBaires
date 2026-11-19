@@ -491,6 +491,32 @@ def main():
     sm.append("</urlset>\n")
     open(os.path.join(RAIZ, "sitemap.xml"), "w", encoding="utf-8", newline="\n").write("\n".join(sm))
 
+    # Productos renombrados: la dirección vieja (ya indexada) redirige a la nueva. No van al sitemap.
+    redirs = 0
+    ren_f = os.path.join(RAIZ, "tools", "renombres.json")
+    ren = json.load(open(ren_f, encoding="utf-8")) if os.path.exists(ren_f) else {}
+    por_nombre = {norm(p["nombre"]): p for p in productos}
+    for viejo, nuevo in ren.items():
+        viejo_slug, p = slugify(viejo), por_nombre.get(norm(nuevo))
+        while p is None and nuevo in ren:          # renombrado más de una vez
+            nuevo = ren[nuevo]; p = por_nombre.get(norm(nuevo))
+        if not p or viejo_slug in usados:
+            continue
+        destino = f"{SITIO}/producto/{p['slug']}/"
+        d = os.path.join(dir_prod, viejo_slug)
+        os.makedirs(d, exist_ok=True)
+        open(os.path.join(d, "index.html"), "w", encoding="utf-8", newline="\n").write(
+            f'<!DOCTYPE html>\n<html lang="es"><head><meta charset="utf-8" />\n{MARCADOR}\n'
+            f'<title>{esc(p["nombre"])} | Virtual Shop Baires</title>\n'
+            f'<link rel="canonical" href="{destino}" />\n<meta name="robots" content="noindex" />\n'
+            f'<meta http-equiv="refresh" content="0; url={destino}" />\n'
+            f'<script>location.replace({json.dumps(destino)} + location.search + location.hash)</script>\n'
+            f'</head><body><p>Este producto cambió de dirección: <a href="{destino}">{esc(p["nombre"])}</a></p></body></html>\n')
+        usados.add(viejo_slug)
+        redirs += 1
+    if redirs:
+        print(f"  {redirs} direcciones viejas redirigen a la nueva (tools/renombres.json)")
+
     sin_stock = sum(1 for p in productos if not any(v["stock"] for v in p["variantes"]))
     print(f"OK: {len(productos)} productos, {sum(1 for c in CATEGORIAS if por_cat.get(c['tab']))} categorías, "
           f"{len(urls)} URLs en sitemap, {sin_stock} sin stock según planilla, "

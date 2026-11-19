@@ -609,7 +609,7 @@ function renderProductCard(p) {
     : '';
 
   const descHTML = p.descripcion
-    ? `<p class="product-desc product-desc-short">${p.descripcion}</p>`
+    ? `<p class="product-desc product-desc-short">${_escHTML(p.descripcion)}</p>`
     : "";
 
   let variantesHTML = "";

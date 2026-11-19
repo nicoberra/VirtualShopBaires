@@ -19,6 +19,13 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SHEET_ID = "1sufFbmZQzjG8i8FP-XybYReqeQgsHFjhSV2KEMaNTnA"
 SITIO = "https://virtualshopbaires.com.ar"
 MARCA = "Virtual Shop Baires"
+# Garantías de compra (mismos datos que faq.html y que BENEFICIOS_HTML en js/productos.js)
+BENEFICIOS = """<ul class="beneficios" aria-label="Envío, pagos y cambios">
+        <li><i class="fa-solid fa-truck-fast" aria-hidden="true"></i><span><b>Envío a todo el país</b>AMBA en 24 a 48 h hábiles · Interior en 3 a 7 días hábiles</span></li>
+        <li><i class="fa-solid fa-credit-card" aria-hidden="true"></i><span><b>Pagá como prefieras</b>Mercado Pago con tarjeta o en cuotas · 10% OFF por transferencia</span></li>
+        <li><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span><b>Cambios y devoluciones</b>Dentro de los 7 días hábiles de recibido</span></li>
+        <li><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span><b>Te asesoramos por WhatsApp</b>Antes y después de tu compra</span></li>
+      </ul>"""
 HOY = date.today().isoformat()
 CACHE = os.path.join(RAIZ, "tools", ".cache_planilla.json")
 MARCADOR = "<!-- generado por tools/generar_seo.py: no editar a mano -->"
@@ -284,15 +291,25 @@ ESTILOS = """<style>
   .seo-card span { padding: 10px 12px 0; font-size: .82rem; line-height: 1.35; flex: 1; }
   .seo-card b { padding: 6px 12px 12px; color: var(--red); font-size: 1rem; }
   .pdp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
-  .pdp-img { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 14px rgba(0,0,0,.06); }
-  .pdp-img img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+  .pdp-img { position: relative; aspect-ratio: 4 / 5; background: #eef1f5; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 14px rgba(0,0,0,.06); }
+  /* Sin franjas blancas: la misma foto desenfocada rellena los costados */
+  .pdp-img::before { content: ""; position: absolute; inset: 0; background: var(--fondo) center / cover no-repeat;
+    filter: blur(26px) saturate(1.1); transform: scale(1.2); opacity: .85; }
+  .pdp-img img { position: relative; width: 100%; height: 100%; object-fit: contain; display: block; }
   .pdp-thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
-  .pdp-thumbs img { width: 64px; height: 64px; object-fit: contain; background: #fff; border-radius: 10px; border: 1px solid rgba(0,0,0,.08); cursor: pointer; flex: none; }
+  .pdp-thumbs img { width: 64px; height: 64px; object-fit: cover; background: #eef1f5; border-radius: 10px; border: 1px solid rgba(0,0,0,.08); cursor: pointer; flex: none; }
   .pdp-precio { font-size: 1.8rem; font-weight: 900; color: var(--red); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
   .pdp-nota { font-size: .85rem; color: var(--gray); margin: 0 0 16px; }
   .pdp-vars { font-size: .9rem; margin: 0 0 18px; color: var(--gray-light); }
   .pdp-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
   .pdp-acciones .btn-primary, .pdp-acciones .btn-wa { display: inline-flex; align-items: center; gap: 8px; }
+  .beneficios { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid rgba(0,0,0,.08);
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .beneficios li { display: flex; gap: 10px; align-items: flex-start; font-size: .78rem; line-height: 1.35; color: var(--gray, #6b7280); }
+  .beneficios i { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+    background: rgba(204,18,18,.08); color: var(--red, #CC1212); font-size: .85rem; }
+  .beneficios b { display: block; color: #1A1A1A; font-size: .82rem; margin-bottom: 1px; }
+  @media (max-width: 520px) { .beneficios { grid-template-columns: 1fr; gap: 10px; } }
   .pdp-desc { white-space: pre-line; line-height: 1.65; color: #374151; max-width: 75ch; }
   .seo-ver-todo { display: inline-block; margin-top: 18px; color: var(--red); font-weight: 700; text-decoration: none; }
   @media (max-width: 760px) { .seo-wrap { padding-left: 16px; padding-right: 16px; } .pdp { grid-template-columns: 1fr; gap: 18px; } .seo-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
@@ -393,7 +410,7 @@ def main():
 
         imgs = p["imagenes"][:8]
         principal = imgs[0] if imgs else "logo.png"
-        thumbs = "".join(f'<img src="{esc(i)}" alt="{esc(p["nombre"])} – foto {n + 1}" loading="lazy" onclick="document.getElementById(\'pdp-main\').src=this.src" />'
+        thumbs = "".join(f'<img src="{esc(i)}" alt="{esc(p["nombre"])} – foto {n + 1}" loading="lazy" onclick="document.getElementById(\'pdp-main\').src=this.src;document.getElementById(\'pdp-caja\').style.setProperty(\'--fondo\',\'url(\'+this.src+\')\')" />'
                          for n, i in enumerate(imgs)) if len(imgs) > 1 else ""
         vars_txt = []
         if colores:
@@ -409,7 +426,7 @@ def main():
   {migas_html(items_migas)}
   <div class="pdp">
     <div>
-      <div class="pdp-img"><img id="pdp-main" src="{esc(principal)}" alt="{esc(p['nombre'])}" width="600" height="600" fetchpriority="high" /></div>
+      <div class="pdp-img" id="pdp-caja" style="--fondo:url('{esc(principal)}')"><img id="pdp-main" src="{esc(principal)}" alt="{esc(p['nombre'])}" width="600" height="600" fetchpriority="high" /></div>
       <div class="pdp-thumbs">{thumbs}</div>
     </div>
     <div>
@@ -422,6 +439,7 @@ def main():
         <button type="button" class="btn-primary" id="pdp-comprar" onclick="pdpComprar()"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Elegir variante y agregar al carrito</button>
         <a class="btn-wa" href="https://wa.me/5491149457266?text={wa}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
       </div>
+      {BENEFICIOS}
     </div>
   </div>
   {'<h2 class="seo-h2">Descripción de ' + esc(recortar(p['nombre'], 70)) + '</h2><div class="pdp-desc">' + esc(p['descripcion']) + '</div>' if p['descripcion'] else ''}

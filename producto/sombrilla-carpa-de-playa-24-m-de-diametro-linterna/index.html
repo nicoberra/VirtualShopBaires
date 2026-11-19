@@ -21,7 +21,7 @@
   <link rel="canonical" href="https://virtualshopbaires.com.ar/producto/sombrilla-carpa-de-playa-24-m-de-diametro-linterna/" />
   <link rel="icon" href="/icon-vsb.webp?v=3" type="image/webp" />
   <meta name="theme-color" content="#CC1212" />
-  <link rel="stylesheet" href="css/styles.css?v=26" />
+  <link rel="stylesheet" href="css/styles.css?v=27" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
@@ -44,15 +44,25 @@
   .seo-card span { padding: 10px 12px 0; font-size: .82rem; line-height: 1.35; flex: 1; }
   .seo-card b { padding: 6px 12px 12px; color: var(--red); font-size: 1rem; }
   .pdp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
-  .pdp-img { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 14px rgba(0,0,0,.06); }
-  .pdp-img img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+  .pdp-img { position: relative; aspect-ratio: 4 / 5; background: #eef1f5; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 14px rgba(0,0,0,.06); }
+  /* Sin franjas blancas: la misma foto desenfocada rellena los costados */
+  .pdp-img::before { content: ""; position: absolute; inset: 0; background: var(--fondo) center / cover no-repeat;
+    filter: blur(26px) saturate(1.1); transform: scale(1.2); opacity: .85; }
+  .pdp-img img { position: relative; width: 100%; height: 100%; object-fit: contain; display: block; }
   .pdp-thumbs { display: flex; gap: 8px; margin-top: 10px; overflow-x: auto; }
-  .pdp-thumbs img { width: 64px; height: 64px; object-fit: contain; background: #fff; border-radius: 10px; border: 1px solid rgba(0,0,0,.08); cursor: pointer; flex: none; }
+  .pdp-thumbs img { width: 64px; height: 64px; object-fit: cover; background: #eef1f5; border-radius: 10px; border: 1px solid rgba(0,0,0,.08); cursor: pointer; flex: none; }
   .pdp-precio { font-size: 1.8rem; font-weight: 900; color: var(--red); margin: 6px 0 4px; font-variant-numeric: tabular-nums; }
   .pdp-nota { font-size: .85rem; color: var(--gray); margin: 0 0 16px; }
   .pdp-vars { font-size: .9rem; margin: 0 0 18px; color: var(--gray-light); }
   .pdp-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
   .pdp-acciones .btn-primary, .pdp-acciones .btn-wa { display: inline-flex; align-items: center; gap: 8px; }
+  .beneficios { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid rgba(0,0,0,.08);
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+  .beneficios li { display: flex; gap: 10px; align-items: flex-start; font-size: .78rem; line-height: 1.35; color: var(--gray, #6b7280); }
+  .beneficios i { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+    background: rgba(204,18,18,.08); color: var(--red, #CC1212); font-size: .85rem; }
+  .beneficios b { display: block; color: #1A1A1A; font-size: .82rem; margin-bottom: 1px; }
+  @media (max-width: 520px) { .beneficios { grid-template-columns: 1fr; gap: 10px; } }
   .pdp-desc { white-space: pre-line; line-height: 1.65; color: #374151; max-width: 75ch; }
   .seo-ver-todo { display: inline-block; margin-top: 18px; color: var(--red); font-weight: 700; text-decoration: none; }
   @media (max-width: 760px) { .seo-wrap { padding-left: 16px; padding-right: 16px; } .pdp { grid-template-columns: 1fr; gap: 18px; } .seo-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
@@ -110,8 +120,8 @@
   <nav class="seo-crumbs" aria-label="Migas de pan"><a href="">Inicio</a> <span aria-hidden="true">›</span> <a href="playa/">Playa</a> <span aria-hidden="true">›</span> <span aria-current="page">Sombrilla carpa de playa 2,4 m de diámetro + linterna</span></nav>
   <div class="pdp">
     <div>
-      <div class="pdp-img"><img id="pdp-main" src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973245897.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna" width="600" height="600" fetchpriority="high" /></div>
-      <div class="pdp-thumbs"><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973245897.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 1" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973242089.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 2" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-azul-1795055244008.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 3" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-gris-1795055250048.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 4" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-roja-1795055256475.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 5" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-verde-1795055262595.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 6" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src" /></div>
+      <div class="pdp-img" id="pdp-caja" style="--fondo:url('https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973245897.jpg')"><img id="pdp-main" src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973245897.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna" width="600" height="600" fetchpriority="high" /></div>
+      <div class="pdp-thumbs"><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973245897.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 1" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src;document.getElementById('pdp-caja').style.setProperty('--fondo','url('+this.src+')')" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-1794973242089.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 2" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src;document.getElementById('pdp-caja').style.setProperty('--fondo','url('+this.src+')')" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-azul-1795055244008.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 3" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src;document.getElementById('pdp-caja').style.setProperty('--fondo','url('+this.src+')')" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-gris-1795055250048.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 4" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src;document.getElementById('pdp-caja').style.setProperty('--fondo','url('+this.src+')')" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-roja-1795055256475.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 5" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src;document.getElementById('pdp-caja').style.setProperty('--fondo','url('+this.src+')')" /><img src="https://virtualshopbaires.com.ar/img/productos/playa/sombrilla-playa-carpa-24-metros-diametro-linterna-verde-1795055262595.jpg" alt="Sombrilla carpa de playa 2,4 m de diámetro + linterna – foto 6" loading="lazy" onclick="document.getElementById('pdp-main').src=this.src;document.getElementById('pdp-caja').style.setProperty('--fondo','url('+this.src+')')" /></div>
     </div>
     <div>
       <h1 class="seo-h1">Sombrilla carpa de playa 2,4 m de diámetro + linterna</h1>
@@ -123,6 +133,12 @@
         <button type="button" class="btn-primary" id="pdp-comprar" onclick="pdpComprar()"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Elegir variante y agregar al carrito</button>
         <a class="btn-wa" href="https://wa.me/5491149457266?text=Hola%21%20%F0%9F%91%8B%20Quiero%20consultar%20sobre%20%2ASombrilla%20carpa%20de%20playa%202%2C4%20m%20de%20di%C3%A1metro%20%2B%20linterna%2A%0A%F0%9F%94%97%20https%3A//virtualshopbaires.com.ar/producto/sombrilla-carpa-de-playa-24-m-de-diametro-linterna/%0A%0A%C2%BFTienen%20stock%20disponible%3F" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
       </div>
+      <ul class="beneficios" aria-label="Envío, pagos y cambios">
+        <li><i class="fa-solid fa-truck-fast" aria-hidden="true"></i><span><b>Envío a todo el país</b>AMBA en 24 a 48 h hábiles · Interior en 3 a 7 días hábiles</span></li>
+        <li><i class="fa-solid fa-credit-card" aria-hidden="true"></i><span><b>Pagá como prefieras</b>Mercado Pago con tarjeta o en cuotas · 10% OFF por transferencia</span></li>
+        <li><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span><b>Cambios y devoluciones</b>Dentro de los 7 días hábiles de recibido</span></li>
+        <li><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span><b>Te asesoramos por WhatsApp</b>Antes y después de tu compra</span></li>
+      </ul>
     </div>
   </div>
   <h2 class="seo-h2">Descripción de Sombrilla carpa de playa 2,4 m de diámetro + linterna</h2><div class="pdp-desc">Sombrilla carpa de playa reforzada de 2,4 metros de diámetro, con filtro de protección UV y ventilación con cierre. Su tela antidesgarro y de alta densidad repele el agua.
@@ -227,7 +243,7 @@ Incluye:
 </div>
 
 <script src="js/sheets.js?v=21"></script>
-<script src="js/productos.js?v=20"></script>
+<script src="js/productos.js?v=21"></script>
 <script src="js/cart.js?v=7"></script>
 <script src="js/main.js?v=8"></script>
 <script src="js/mejoras-ui.js"></script>

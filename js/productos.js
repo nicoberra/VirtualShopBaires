@@ -264,6 +264,13 @@ function formatPrecioExacto(n) {
   const x = Number(n), dec = Math.round(x * 100) % 100 !== 0;
   return "$" + x.toLocaleString("es-AR", { minimumFractionDigits: dec ? 2 : 0, maximumFractionDigits: 2 });
 }
+// Garantías de compra en la ficha: mismos datos que faq.html (envíos, pagos, cambios). Si cambian ahí, cambiar acá.
+const BENEFICIOS_HTML = `<ul class="beneficios" aria-label="Envío, pagos y cambios">
+  <li><i class="fa-solid fa-truck-fast" aria-hidden="true"></i><span><b>Envío a todo el país</b>AMBA en 24 a 48 h hábiles · Interior en 3 a 7 días hábiles</span></li>
+  <li><i class="fa-solid fa-credit-card" aria-hidden="true"></i><span><b>Pagá como prefieras</b>Mercado Pago con tarjeta o en cuotas · ${DESCUENTO_TRANSFERENCIA}% OFF por transferencia</span></li>
+  <li><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span><b>Cambios y devoluciones</b>Dentro de los 7 días hábiles de recibido</span></li>
+  <li><i class="fa-brands fa-whatsapp" aria-hidden="true"></i><span><b>Te asesoramos por WhatsApp</b>Antes y después de tu compra</span></li>
+</ul>`;
 function htmlTransfer(precio) {
   return `<div class="precio-transfer"><strong>${formatPrecioExacto(precioTransferencia(precio))}</strong> con transferencia <span class="precio-transfer-off">${DESCUENTO_TRANSFERENCIA}% OFF</span></div>`;
 }
@@ -804,6 +811,7 @@ function openProductModal(pid) {
           ${addBtnHTML}
           ${waBtnHTML}
         </div>
+        ${BENEFICIOS_HTML}
       </div>
     </div>`;
 

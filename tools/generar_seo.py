@@ -287,7 +287,7 @@ ESTILOS = """<style>
   .seo-card { background: var(--black-3, #fff); border-radius: 14px; overflow: hidden; text-decoration: none; color: inherit;
               box-shadow: 0 2px 12px rgba(0,0,0,.06); display: flex; flex-direction: column; transition: transform .18s ease, box-shadow .18s ease; }
   .seo-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0,0,0,.10); }
-  .seo-card img { width: 100%; aspect-ratio: 1; object-fit: contain; background: #fff; }
+  .seo-card img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; object-position: center; display: block; background: #eef1f5; }
   .seo-card span { padding: 10px 12px 0; font-size: .82rem; line-height: 1.35; flex: 1; }
   .seo-card b { padding: 6px 12px 12px; color: var(--red); font-size: 1rem; }
   .pdp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
@@ -302,7 +302,9 @@ ESTILOS = """<style>
   .pdp-nota { font-size: .85rem; color: var(--gray); margin: 0 0 16px; }
   .pdp-vars { font-size: .9rem; margin: 0 0 18px; color: var(--gray-light); }
   .pdp-acciones { display: flex; flex-wrap: wrap; gap: 10px; }
-  .pdp-acciones .btn-primary, .pdp-acciones .btn-wa { display: inline-flex; align-items: center; gap: 8px; }
+  .pdp-acciones .btn-primary { display: inline-flex; align-items: center; gap: 8px; }
+  .pdp-segura { margin: 10px 0 0; font-size: .82rem; color: var(--gray, #6b7280); display: flex; align-items: center; gap: 6px; }
+  .pdp-segura i { color: #1a7f37; }
   .beneficios { list-style: none; margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid rgba(0,0,0,.08);
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
   .beneficios li { display: flex; gap: 10px; align-items: flex-start; font-size: .78rem; line-height: 1.35; color: var(--gray, #6b7280); }
@@ -412,13 +414,15 @@ def main():
         principal = imgs[0] if imgs else "logo.png"
         thumbs = "".join(f'<img src="{esc(i)}" alt="{esc(p["nombre"])} – foto {n + 1}" loading="lazy" onclick="document.getElementById(\'pdp-main\').src=this.src;document.getElementById(\'pdp-caja\').style.setProperty(\'--fondo\',\'url(\'+this.src+\')\')" />'
                          for n, i in enumerate(imgs)) if len(imgs) > 1 else ""
+        # «Único» no es una opción para elegir: no se muestra y el botón dice solo «Agregar al carrito»
+        colores_reales = [c for c in colores if norm(c) not in ("unico", "u", "")]
+        talles_reales = [t for t in talles if norm(t) not in ("unico", "u", "")]
         vars_txt = []
-        if colores:
-            vars_txt.append("<strong>Colores:</strong> " + esc(", ".join(colores)))
-        if talles:
-            vars_txt.append("<strong>Medidas:</strong> " + esc(", ".join(talles)))
+        if colores_reales:
+            vars_txt.append(("<strong>Colores:</strong> " if len(colores_reales) > 1 else "<strong>Color:</strong> ") + esc(", ".join(colores_reales)))
+        if talles_reales:
+            vars_txt.append(("<strong>Medidas:</strong> " if len(talles_reales) > 1 else "<strong>Medida:</strong> ") + esc(", ".join(talles_reales)))
         relacionados = [x for x in por_cat.get(p["tab"], []) if x is not p][:6]
-        wa = urllib.parse.quote(f"Hola! 👋 Quiero consultar sobre *{p['nombre']}*\n🔗 {url}\n\n¿Tienen stock disponible?")
         resumen = (f"{esc(p['nombre'])} {desde}{precio} en {MARCA}: producto importado nuevo, "
                    f"con envío a todo el país y 10% de descuento pagando por transferencia.")
         cuerpo = f"""
@@ -436,9 +440,9 @@ def main():
       <p class="seo-intro">{resumen}</p>
       {'<p class="pdp-vars">' + '<br>'.join(vars_txt) + '</p>' if vars_txt else ''}
       <div class="pdp-acciones">
-        <button type="button" class="btn-primary" id="pdp-comprar" onclick="pdpComprar()"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Elegir variante y agregar al carrito</button>
-        <a class="btn-wa" href="https://wa.me/5491149457266?text={wa}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Consultar por WhatsApp</a>
+        <button type="button" class="btn-primary" id="pdp-comprar" onclick="pdpComprar()"><i class="fa-solid fa-cart-plus" aria-hidden="true"></i> Agregar al carrito</button>
       </div>
+      <p class="pdp-segura"><i class="fa-solid fa-lock" aria-hidden="true"></i> Compra segura con Mercado Pago o transferencia</p>
       {BENEFICIOS}
     </div>
   </div>

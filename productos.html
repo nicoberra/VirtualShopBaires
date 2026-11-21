@@ -19,7 +19,7 @@
   <link rel="canonical" href="https://virtualshopbaires.com.ar/productos.html" />
   <link rel="icon" href="/icon-vsb.webp?v=3" type="image/webp" />
   <meta name="theme-color" content="#CC1212" />
-  <link rel="stylesheet" href="css/styles.css?v=27" />
+  <link rel="stylesheet" href="css/styles.css?v=28" />
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
   <link rel="preconnect" href="https://docs.google.com" />
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" as="style" crossorigin onload="this.onload=null;this.rel='stylesheet'" />
@@ -236,7 +236,8 @@
   let maxPrice = 999999;
 
   const params = new URLSearchParams(window.location.search);
-  if (params.get("cat")) selectedCat = params.get("cat");
+  // ?cat=Inflables (también acepta ?categoria=Inflables)
+  if (params.get("cat") || params.get("categoria")) selectedCat = params.get("cat") || params.get("categoria");
   if (params.get("buscar")) document.getElementById("search-input").value = params.get("buscar");
 
   // Solo las categorías con algún producto en stock (vuelven a aparecer solas cuando entra stock) + las externas

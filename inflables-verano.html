@@ -194,7 +194,9 @@
   .iv-ov .iv-nombre { font-size: 1.15rem; }
   .iv-ov .iv-precio b { font-size: 1.7rem; }
   .iv-ov .iv-cuenta { bottom: 12px; right: 12px; }
-  html.iv-fijo, html.iv-fijo body { overflow: hidden; }
+  html.iv-fijo, html.iv-fijo body { overflow: hidden; overscroll-behavior: none; }
+  .iv-ov .iv-fotos { overscroll-behavior-x: contain; }
+  .iv-ov-panel.iv-arrastra { overflow: hidden; border-radius: 22px; user-select: none; -webkit-user-select: none; }
 
   @media (max-width: 640px) {
     .iv-grupo { padding-top: 20px; }
@@ -684,7 +686,8 @@
     </div>`;
   document.body.appendChild(ivOv);
   const ivPanel = ivOv.querySelector(".iv-ov-panel"), ivFondo = ivOv.querySelector(".iv-ov-fondo");
-  let ivOrigen = null, ivAnim = null;
+  let ivOrigen = null, ivAnim = null, ivAnimFondo = null;
+  let ivToque = null, ivSaliendo = false, ivSinAnim = false;
   const IV_CURVA = "cubic-bezier(.2,.8,.2,1)";
 
   // Desde dónde y hasta dónde: el panel arranca encogido y recortado justo sobre la foto tocada
@@ -693,16 +696,23 @@
     return { transform: `translate(${r.left - f.left}px, ${r.top - f.top}px) scale(${k})`,
              clipPath: `inset(0px 0px ${Math.max(0, f.height - f.width)}px 0px round ${8 / k}px)` };
   }
+  function ivLimpiar() {
+    ivToque = null;
+    [ivAnim, ivAnimFondo].forEach(a => a && a.cancel());
+    ivAnim = ivAnimFondo = null;
+    ivPanel.classList.remove("iv-arrastra");
+    ivPanel.style.transform = ivFondo.style.opacity = "";
+  }
   function ivAbrir(tile) {
     const p = PRODUCTOS.find(x => x.id === Number(tile.dataset.pid));
     if (!p) return;
     ivOrigen = tile;
+    ivLimpiar(); ivSaliendo = ivSinAnim = false;
     ivOv.querySelector(".iv-ov-cont").innerHTML = ivTarjeta(p, true);
     ivPanel.scrollTop = 0;
     ivOv.hidden = false;
     document.documentElement.classList.add("iv-fijo");
     if (history.state === null || !history.state.ivGrande) history.pushState({ ivGrande: 1 }, "");
-    if (ivAnim) ivAnim.cancel();
     if (ivSinMov.matches) { ivFondo.animate([{ opacity: 0 }, { opacity: 1 }], 160); ivPanel.animate([{ opacity: 0 }, { opacity: 1 }], 200); }
     else {
       const d = ivDesde(tile);
@@ -711,12 +721,14 @@
     }
     ivOv.querySelector(".iv-ov-cerrar").focus({ preventScroll: true });
   }
-  function ivCerrar() {
+  function ivCerrar(sinAnim) {
     if (ivOv.hidden) return;
+    ivSaliendo = true;
     const fin = () => { ivOv.hidden = true; document.documentElement.classList.remove("iv-fijo"); ivOv.querySelector(".iv-ov-cont").innerHTML = ""; if (ivOrigen) ivOrigen.focus({ preventScroll: true }); };
     const r = ivOrigen && ivOrigen.getBoundingClientRect();
     const visible = r && r.bottom > 0 && r.top < innerHeight;
-    if (ivAnim) ivAnim.cancel();
+    ivLimpiar();
+    if (sinAnim) { fin(); return; }
     if (ivSinMov.matches || !visible) {
       ivFondo.animate([{ opacity: 1 }, { opacity: 0 }], 200);
       ivPanel.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: "translateY(24px)" }], { duration: 220, easing: "ease-in" }).onfinish = fin;
@@ -727,11 +739,92 @@
     ivAnim = ivPanel.animate([{ transform: "none", clipPath: "inset(0px 0px 0px 0px round 0px)" }, ivDesde(ivOrigen)], { duration: 360, easing: IV_CURVA, fill: "forwards" });
     ivAnim.onfinish = () => { ivAnim.cancel(); ivAnim = null; fin(); };
   }
-  // Cerrar: botón, fondo, tecla Escape o el "atrás" del celular
-  ivOv.querySelector(".iv-ov-cerrar").addEventListener("click", () => history.back());
-  ivFondo.addEventListener("click", () => history.back());
-  window.addEventListener("popstate", () => ivCerrar());
-  document.addEventListener("keydown", e => { if (e.key === "Escape" && !ivOv.hidden) history.back(); });
+  // Cerrar: deslizar, botón, fondo, tecla Escape o el "atrás" del celular
+  // Un solo history.back() por cierre: con dos, la gente se iría del catálogo.
+  function ivSalir() {
+    if (ivOv.hidden || ivSaliendo) return;
+    ivSaliendo = true;
+    history.back();
+  }
+  ivOv.querySelector(".iv-ov-cerrar").addEventListener("click", ivSalir);
+  ivFondo.addEventListener("click", ivSalir);
+  // Sin animación propia si ya la hizo el gesto o el "atrás" del teléfono
+  window.addEventListener("popstate", e => ivCerrar(ivSinAnim || e.hasUAVisualTransition === true));
+  document.addEventListener("keydown", e => { if (e.key === "Escape") ivSalir(); });
+
+  // Deslizar para salir:
+  //  - hacia abajo, si la ficha está arriba de todo (si no, es scroll para leer);
+  //  - hacia la derecha, salvo sobre la 2.ª foto en adelante (ahí vuelve a la foto anterior), o siempre desde el borde izquierdo.
+  // Son eventos touch y no pointer porque hay que frenar el scroll nativo solo cuando el gesto es para salir.
+  const IV_DECIDE = 8, IV_BORDE = 24, IV_RAPIDO = 0.4;   // px, px, px/ms
+  function ivMover(t) {
+    ivPanel.style.transform = t.eje === "y" ? `translate3d(0, ${t.d}px, 0)` : `translate3d(${t.d}px, 0, 0)`;
+    ivFondo.style.opacity = Math.max(0, 1 - t.d / (t.eje === "y" ? innerHeight : innerWidth));
+  }
+  function ivSoltar(t, cancelado, ahora) {
+    ivToque = null;
+    if (!t.eje) return;
+    const a = t.puntos[0], b = t.puntos[t.puntos.length - 1];
+    // Si el dedo quedó quieto antes de soltar, no cuenta como deslizamiento rápido
+    const v = ahora - b.t > 100 ? 0 : (b.d - a.d) / Math.max(16, b.t - a.t);
+    const largo = t.eje === "y" ? innerHeight : innerWidth, umbral = t.eje === "y" ? 130 : largo * 0.33;
+    const sale = !cancelado && v > -0.1 && (t.d > umbral || (t.d > 30 && v > IV_RAPIDO));
+    const desde = { transform: ivPanel.style.transform || "none" }, opacidad = Number(ivFondo.style.opacity || 1);
+    const quieto = ivSinMov.matches;
+    let hasta, ms;
+    if (sale) {
+      ivSaliendo = true;
+      hasta = quieto ? { transform: desde.transform, opacity: 0 }
+        : { transform: t.eje === "y" ? `translate3d(0, ${largo}px, 0)` : `translate3d(${largo}px, 0, 0)` };
+      ms = quieto ? 120 : Math.min(280, Math.max(140, (largo - t.d) / Math.max(v, 1.6)));
+    } else {
+      hasta = { transform: "none" };
+      ms = quieto ? 1 : 240;
+    }
+    ivPanel.style.transform = ivFondo.style.opacity = "";
+    const opciones = { duration: ms, easing: "cubic-bezier(.22, 1, .36, 1)", fill: "forwards" };
+    ivAnimFondo = ivFondo.animate([{ opacity: opacidad }, { opacity: sale ? 0 : 1 }], opciones);
+    ivAnim = ivPanel.animate([desde, hasta], opciones);
+    ivAnim.onfinish = () => {
+      if (!sale) { ivLimpiar(); return; }
+      ivSinAnim = true;
+      if (history.state && history.state.ivGrande) history.back(); else ivCerrar(true);
+    };
+  }
+  ivPanel.addEventListener("touchstart", e => {
+    if (e.touches.length > 1) { if (ivToque) ivSoltar(ivToque, true); return; }   // dos dedos: es zoom
+    if (ivSaliendo || (window.visualViewport && visualViewport.scale > 1.01)) return;
+    const sel = getSelection();
+    if (sel && !sel.isCollapsed && e.target.closest(".iv-info")) return;   // está ajustando un texto seleccionado
+    const f = e.target.closest(".iv-fotos"), p = e.touches[0];
+    ivToque = { x: p.clientX, y: p.clientY, eje: null, d: 0, puntos: [{ d: -IV_DECIDE, t: e.timeStamp }],
+                abajo: ivPanel.scrollTop <= 0,
+                derecha: p.clientX < IV_BORDE || !f || f.scrollLeft < 2 };
+  }, { passive: true });
+  ivPanel.addEventListener("touchmove", e => {
+    const t = ivToque;
+    if (!t || e.touches.length > 1) return;
+    const p = e.touches[0], dx = p.clientX - t.x, dy = p.clientY - t.y;
+    if (!t.eje) {
+      const ax = Math.abs(dx), ay = Math.abs(dy), lejos = Math.max(ax, ay);
+      if (lejos < 4) return;
+      const eje = t.abajo && dy > 0 && ay >= ax ? "y" : t.derecha && dx > 0 && ax > ay * 1.2 ? "x" : null;
+      if (!e.cancelable) { ivToque = null; return; }   // el navegador ya está haciendo scroll
+      if (!eje) { if (lejos >= IV_DECIDE) ivToque = null; return; }
+      e.preventDefault();   // desde el primer movimiento: iOS después ya no deja frenar el scroll
+      if (lejos < IV_DECIDE) return;
+      ivLimpiar(); ivToque = t;   // corta la animación que estuviera en curso
+      t.eje = eje;
+      ivPanel.classList.add("iv-arrastra");
+    } else if (e.cancelable) e.preventDefault();
+    t.d = Math.max(0, (t.eje === "y" ? dy : dx) - IV_DECIDE);
+    const ahora = e.timeStamp;
+    t.puntos.push({ d: t.d, t: ahora });
+    while (t.puntos.length > 2 && ahora - t.puntos[0].t > 100) t.puntos.shift();
+    ivMover(t);
+  }, { passive: false });
+  ivPanel.addEventListener("touchend", e => { if (ivToque) ivSoltar(ivToque, false, e.timeStamp); });
+  ivPanel.addEventListener("touchcancel", () => { if (ivToque) ivSoltar(ivToque, true); });
   // Tocar una foto de la grilla (solo en el celular)
   document.getElementById("iv-grupos").addEventListener("click", e => {
     if (!ivEsCelu()) return;

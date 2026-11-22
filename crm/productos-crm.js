@@ -1251,16 +1251,8 @@ function _recuperarFoto(p, url, enVariante) {
   const k = _claveGal(p), antes = (_papelera[k] || []).slice();
   const err = e => { if (e.message !== 'auth') toast('No se pudo recuperar: ' + e.message, 'err'); };
   _papeleraSacar(p, url); _repintarFotos(p);
-  _enColaFotos(() => {
-    if (enVariante) {
-      const urls = _fotosVarDe(p);
-      if (urls.some(u => fotoSrcCRM(u) === fotoSrcCRM(url))) return;
-      return _guardarFotosVariante(p, p, urls.concat(url), 'Foto recuperada ✓');
-    }
-    const urls = _galeriaDe(p);
-    if (urls.some(u => fotoSrcCRM(u) === fotoSrcCRM(url))) return;
-    return guardarFotos(p, urls.concat(url), 'Foto recuperada ✓');
-  }).catch(e => { _papelera[k] = antes; _repintarFotos(p); err(e); });
+  _cambiarFotos(p, enVariante, act => act.some(u => _sinExtras(u) === _sinExtras(url)) ? null : act.concat(url),
+    { msg: 'Foto recuperada ✓' }).catch(e => { _papelera[k] = antes; _repintarFotos(p); err(e); });
 }
 
 function _normFoto(s) {
@@ -1529,15 +1521,6 @@ function _errServidorNuevo(r) {
   return /Acción desconocida|no disponible/.test(e) ? 'falta implementar la versión nueva del servidor' : e;
 }
 
-async function _guardarFotosVariante(p, v, urls, msg) {
-  const r = await crmEnviar({ action: 'variante_fotos_set', sheet: v._sheet || v.categoria, row: String(v._row), urls: JSON.stringify(urls) });
-  if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
-  v.imagenes = r.fotos || urls; v.imagen = v.imagenes[0] || '';
-  lsGuardar('productos', _productos);
-  _repintarFotos(p); filtrarProductos(true);
-  toast(msg);
-}
-
 function accionFotoVariante(p, acc, url) {
   if (!url) return;
   const err = e => { if (e.message !== 'auth') toast('No se pudo guardar: ' + e.message, 'err'); };
@@ -1545,18 +1528,13 @@ function accionFotoVariante(p, acc, url) {
     _ordenarFotos(p, true, [url].concat(_ordenVisto(p, true).filter(u => u !== url)));
   } else if (acc === 'encuadre') {
     const i = _fotosVarDe(p).indexOf(url);
-    abrirEncuadre(url, i === 0 ? 'Foto principal de la variante' : `Foto ${i + 1} de la variante`, nueva => _enColaFotos(() => {
-      const urls = _fotosVarDe(p), j = urls.indexOf(url);
-      if (j < 0) throw new Error('esa foto ya no está');
-      urls[j] = nueva;
-      return _guardarFotosVariante(p, p, urls, 'Encuadre guardado ✓');
-    }));
+    abrirEncuadre(url, i === 0 ? 'Foto principal de la variante' : `Foto ${i + 1} de la variante`, nueva => _cambiarFotos(p, true, act => _conEncuadre(act, url, nueva)));
   } else if (acc === 'quitar') {
     confirmar('¿Quitar esta foto de la variante? La vas a poder recuperar durante 5 minutos.', () => {
       const k = _claveSub(p, true) + '|' + url;
       _fotosQuitando.add(k); _repintarFotos(p);
-      _enColaFotos(() => _guardarFotosVariante(p, p, _fotosVarDe(p).filter(u => u !== url), 'Foto quitada ✓ Podés recuperarla durante 5 minutos'))
-        .then(() => _papeleraAnotar(p, url, true)).catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
+      _cambiarFotos(p, true, act => _sinFoto(act, url), { quita: url, msg: 'Foto quitada ✓ Podés recuperarla durante 5 minutos' })
+        .then(hecho => { if (hecho) _papeleraAnotar(p, url, true); }).catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
     });
   }
 }
@@ -1584,10 +1562,9 @@ async function subirFotoVariante(p, v, file) {
 async function usarFotoEnVariante(p, v, url, item) {
   item && item.classList.add('subiendo');
   try {
-    await _enColaFotos(() => {
-      const urls = _fotosVarDe(v).filter(u => fotoSrcCRM(u) !== fotoSrcCRM(url)).concat(url);
-      return _guardarFotosVariante(p, v, urls, 'Foto sumada a "' + (v.color || v.talle || 'la variante') + '" ✓');
-    });
+    await _cambiarFotos(v, true, act => act.filter(u => _sinExtras(u) !== _sinExtras(url)).concat(url),
+      { quita: url, msg: 'Foto sumada a "' + (v.color || v.talle || 'la variante') + '" ✓' });
+    _repintarFotos(p);
   } catch (e) {
     if (e.message !== 'auth') toast('No se pudo cambiar la foto: ' + e.message, 'err');
     item && item.classList.remove('subiendo');
@@ -1597,11 +1574,9 @@ async function usarFotoEnVariante(p, v, url, item) {
 function encuadrarVariante(p, v) {
   if (!v) return;
   abrirEncuadre(v.imagen, `Foto de ${v.color || v.talle || 'la variante'}`, async nueva => {
-    const r = await actualizarCampo(v, 'imagen_url', nueva);
-    if (r && r.ok === false) throw new Error(r.error);
-    v.imagen = nueva;
-    lsGuardar('productos', _productos);
-    renderFotos(p);
+    // Sin fotos propias, la variante usaba la del producto: pasa a tener esa, encuadrada
+    await _cambiarFotos(v, true, act => act.length ? _conEncuadre(act, v.imagen, nueva) : [nueva]);
+    _repintarFotos(p);
   });
 }
 
@@ -1759,28 +1734,66 @@ async function _fotosActuales(dato, enVariante) {
   return _fotosDelManifest(await _leerManifestTienda(), dato.categoria, dato.nombre);
 }
 
+function _sinExtras(u) { return String(u || '').split('#')[0].split('?')[0].trim(); }
+function _datoFotos(p) { return { categoria: p._sheet || p.categoria, nombre: p.nombre, row: String(p._row), vid: _vidDe(p) }; }
+function _sinFoto(act, url) {
+  const i = act.findIndex(u => u === url), j = i >= 0 ? i : act.findIndex(u => _sinExtras(u) === _sinExtras(url));
+  if (j < 0) return null;   // ya no estaba
+  return act.slice(0, j).concat(act.slice(j + 1));
+}
+function _conEncuadre(act, url, nueva) {
+  const i = act.findIndex(u => u === url), j = i >= 0 ? i : act.findIndex(u => _sinExtras(u) === _sinExtras(url));
+  if (j < 0) throw new Error('esa foto ya no está');
+  const urls = act.slice(); urls[j] = nueva;
+  return urls;
+}
+
+function _ponerLista(p, enVariante, urls) {
+  if (enVariante) {
+    p.imagenes = urls; p.imagen = urls[0] || '';
+    lsGuardar('productos', _productos); filtrarProductos(true);
+  } else {
+    _ponerGaleria(p, urls);
+    _fijarFotoPrincipal(p, urls[0]);
+  }
+  _repintarFotos(p);
+}
+async function _guardarListaFotos(p, enVariante, dato, urls) {
+  const r = await crmEnviar(enVariante
+    ? { action: 'variante_fotos_set', sheet: dato.categoria, row: dato.row, urls: JSON.stringify(urls) }
+    : { action: 'producto_fotos_set', categoria: dato.categoria, nombre: dato.nombre, urls: JSON.stringify(urls) });
+  if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
+  _ponerLista(p, enVariante, (r.fotos && r.fotos.length === urls.length) ? r.fotos : urls);
+}
+
+// Quitar, encuadrar, recuperar o sumar una foto: el cambio se aplica sobre la lista ACTUAL del servidor,
+// así una foto subida desde otro aparato no se pierde. Solo puede faltar la foto "quita".
+// Devuelve true si guardó algo.
+function _cambiarFotos(p, enVariante, cambiar, { quita, msg } = {}) {
+  const dato = _datoFotos(p);
+  return _enColaFotos(async () => {
+    const actuales = await _fotosActuales(dato, enVariante);
+    const urls = cambiar(actuales.slice());
+    if (!urls || (urls.length === actuales.length && urls.every((u, i) => u === actuales[i]))) { _ponerLista(p, enVariante, actuales); return false; }
+    const quedan = new Set(urls.map(_sinExtras));
+    if (actuales.some(u => !quedan.has(_sinExtras(u)) && _sinExtras(u) !== _sinExtras(quita))) throw new Error('se iba a perder otra foto, no se guardó');
+    await _guardarListaFotos(p, enVariante, dato, urls);
+    if (msg) toast(msg);
+    return true;
+  });
+}
+
 function _ordenarFotos(p, enVariante, orden) {
   const clave = _claveSub(p, enVariante);
   // Nombre y categoría de este momento, aunque después se renombre
-  const dato = { categoria: p._sheet || p.categoria, nombre: p.nombre, row: String(p._row), vid: _vidDe(p) };
+  const dato = _datoFotos(p);
   _ordenPedido[clave] = orden;
   const tarea = _enColaFotos(async () => {
     const actuales = await _fotosActuales(dato, enVariante);
     if (!actuales.length) throw new Error('no encontré las fotos, recargá el CRM');
     const urls = _soloReordenar(actuales, orden);
-    if (urls.some((u, i) => u !== actuales[i])) {
-      const r = await crmEnviar(enVariante
-        ? { action: 'variante_fotos_set', sheet: dato.categoria, row: dato.row, urls: JSON.stringify(urls) }
-        : { action: 'producto_fotos_set', categoria: dato.categoria, nombre: dato.nombre, urls: JSON.stringify(urls) });
-      if (!r || !r.ok) throw new Error(_errServidorNuevo(r));
-    }
-    if (enVariante) {
-      p.imagenes = urls; p.imagen = urls[0];
-      lsGuardar('productos', _productos); filtrarProductos(true);
-    } else {
-      _ponerGaleria(p, urls);
-      _fijarFotoPrincipal(p, urls[0]);
-    }
+    if (urls.some((u, i) => u !== actuales[i])) await _guardarListaFotos(p, enVariante, dato, urls);
+    else _ponerLista(p, enVariante, urls);
   });
   _repintarFotos(p);
   tarea.then(() => {
@@ -1793,15 +1806,6 @@ function _ordenarFotos(p, enVariante, orden) {
   });
 }
 
-async function guardarFotos(p, urls, msgOk) {
-  const r = await crmEnviar({ action: 'producto_fotos_set', categoria: p._sheet || p.categoria, nombre: p.nombre, urls: JSON.stringify(urls) });
-  if (!r || r.ok === false) throw new Error((r && r.error) || 'error');
-  _ponerGaleria(p, urls);
-  _repintarFotos(p);
-  _fijarFotoPrincipal(p, urls[0]);
-  toast(msgOk);
-}
-
 function accionFoto(p, acc, url) {
   if (!url) return;
   const err = e => { if (e.message !== 'auth') toast('Error: ' + e.message, 'err'); };
@@ -1809,18 +1813,13 @@ function accionFoto(p, acc, url) {
     _ordenarFotos(p, false, [url].concat(_ordenVisto(p, false).filter(u => u !== url)));
   } else if (acc === 'encuadre') {
     const i = _galeriaDe(p).indexOf(url);
-    abrirEncuadre(url, i === 0 ? 'Foto principal' : `Foto ${i + 1}`, nueva => _enColaFotos(() => {
-      const urls = _galeriaDe(p), j = urls.indexOf(url);
-      if (j < 0) throw new Error('esa foto ya no está');
-      urls[j] = nueva;
-      return guardarFotos(p, urls, 'Encuadre guardado ✓');
-    }));
+    abrirEncuadre(url, i === 0 ? 'Foto principal' : `Foto ${i + 1}`, nueva => _cambiarFotos(p, false, act => _conEncuadre(act, url, nueva)));
   } else if (acc === 'quitar') {
     confirmar('¿Quitar esta foto del producto en la tienda? La vas a poder recuperar durante 5 minutos.', () => {
       const k = _claveSub(p, false) + '|' + url;
       _fotosQuitando.add(k); _repintarFotos(p);
-      _enColaFotos(() => guardarFotos(p, _galeriaDe(p).filter(u => u !== url), 'Foto quitada ✓ Podés recuperarla durante 5 minutos'))
-        .then(() => _papeleraAnotar(p, url, false)).catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
+      _cambiarFotos(p, false, act => _sinFoto(act, url), { quita: url, msg: 'Foto quitada ✓ Podés recuperarla durante 5 minutos' })
+        .then(hecho => { if (hecho) _papeleraAnotar(p, url, false); }).catch(err).finally(() => { _fotosQuitando.delete(k); _repintarFotos(p); });
     });
   }
 }

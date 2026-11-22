@@ -160,6 +160,18 @@ let _sbVarFotos = {};     // "categoria|nombre|color" → fotos propias de esa v
 let _sbAgotados = [];
 let _sbUltimoPrecio = {};  // "categoria|nombre" → último precio de los agotados (vista precios_sin_stock)     // productos sin ninguna variante con stock: se muestran al final con "Avisame cuándo entra"
 
+// Una sola variante con las mismas fotos que el producto: manda el orden de la galería (el que se elige
+// en el CRM). Si la variante tiene fotos distintas (su color o modelo), se respetan las suyas.
+function _sbOrdenDeGaleria(p) {
+  const g = p.imagenes || [], vs = p.variantes || [];
+  if (vs.length !== 1 || !g.length) return;
+  const v = vs[0], suyas = v.imagenes || [];
+  const base = u => String(u || "").split("#")[0].split("?")[0].trim();
+  if (suyas.length !== g.length || suyas.map(base).sort().join("\n") !== g.map(base).sort().join("\n")) return;
+  v.imagenes = g.slice();
+  v.imagen_url = g[0];
+}
+
 async function _catalogoSupabase() {
   const h = { apikey: SUPABASE_PUB };
   const sel = "categoria,nombre,descripcion,subcategoria,destacado,imagenes,orden,variantes(color,talle,precio,precio_descuento,stock,imagen_url,imagenes,orden)";
@@ -181,6 +193,7 @@ async function _catalogoSupabase() {
     const hoja = hojas[p.categoria]; if (!hoja) return;
     _sbOrden[p.categoria + "|" + String(p.nombre).trim()] = p.orden;
     if (p.imagenes && p.imagenes.length) (imgs[p.categoria] = imgs[p.categoria] || {})[p.nombre] = p.imagenes;
+    _sbOrdenDeGaleria(p);
     (p.variantes || []).sort((a, b) => a.orden - b.orden).forEach(v => {
       if (v.imagenes && v.imagenes.length) _sbVarFotos[p.categoria + "|" + String(p.nombre).trim() + "|" + String(v.color || "").trim()] = v.imagenes;
       const cel = x => (x === null || x === undefined || x === "") ? null : { v: x };

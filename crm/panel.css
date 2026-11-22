@@ -1834,3 +1834,23 @@ img.prod-thumb, .prod-tabla img.prod-thumb, .prod-tabla .prod-var-row img.prod-t
 .cli-kpi span { font-size: .72rem; color: var(--text2); }
 .cli-datos { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .86rem; padding: 10px 2px 14px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
 @media (max-width: 640px) { .cli-resumen { grid-template-columns: 1fr 1fr; } }
+
+/* ── Ordenar fotos: arrastrar (compu) o mantener apretada y mover (celular) ── */
+.fotos-bloque-tit .orden-mouse, .fotos-bloque-tit .orden-dedo { display: block; margin-top: 4px; font-size: .78rem; color: var(--text); }
+.fotos-bloque-tit .orden-dedo { display: none; }
+.fotos-tiles.se-ordena .foto-tile[data-orden] { cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.fotos-tiles.se-ordena .foto-tile[data-orden] img { -webkit-user-drag: none; -webkit-touch-callout: none; user-select: none; }
+.fotos-tiles.ordenando .foto-tile[data-orden] { transition: transform 200ms cubic-bezier(.22, 1, .36, 1); }
+.fotos-tiles.ordenando .foto-btn, .fotos-tiles.ordenando .foto-principal { opacity: 0; pointer-events: none; }
+.fotos-tiles.ordenando .foto-tile.foto-en-mano { z-index: 5; transition: none; will-change: transform; box-shadow: 0 14px 30px rgba(16,24,40,.28); border-color: var(--red); }
+.fotos-tiles.ordenando .foto-tile.va-primera::after { content: 'Principal'; position: absolute; left: 6px; bottom: 6px; z-index: 1; padding: 2px 8px;
+  border-radius: 999px; background: var(--red); color: #fff; font-size: .68rem; font-weight: 700; pointer-events: none; }
+html.arrastrando-foto, html.arrastrando-foto * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+@media (hover: none) and (pointer: coarse) {
+  .fotos-bloque-tit .orden-mouse { display: none; }
+  .fotos-bloque-tit .orden-dedo { display: block; }
+  .fotos-tiles.se-ordena .foto-tile[data-orden] img { pointer-events: none; }   /* sin el "guardar imagen" del celular */
+}
+@media (prefers-reduced-motion: reduce) {
+  .fotos-tiles.ordenando .foto-tile[data-orden] { transition: none; }
+}

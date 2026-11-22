@@ -105,13 +105,15 @@ def main():
     tareas = [(u, os.path.join(BASE, rel)) for rel, u in deseado.items()
               if not (os.path.exists(os.path.join(BASE, rel)) and registro.get(rel) == u)]
     # Qué borrar: fotos del Drive que ya no están en el CRM
+    # Windows no distingue mayúsculas: una carpeta renombrada solo en mayúsculas es la misma carpeta
+    deseado_ci = {os.path.normcase(r) for r in deseado}
     sobran = []
     for raiz, _, archivos in os.walk(BASE):
         for a in archivos:
             if not a.lower().endswith(EXT_FOTO):
                 continue
             rel = os.path.relpath(os.path.join(raiz, a), BASE)
-            if rel not in deseado:
+            if os.path.normcase(rel) not in deseado_ci:
                 sobran.append(rel)
 
     print(f"Fotos en el CRM: {len(deseado)} | a bajar o reemplazar: {len(tareas)} | a borrar del Drive: {len(sobran)}")

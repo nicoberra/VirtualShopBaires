@@ -58,6 +58,7 @@ const VsbCuenta = (() => {
   function formulario(el, op = {}) {
     estilos();
     let modo = op.modo || "entrar", email = op.email || "";
+    let hashPend = "";   // se confirma el código junto con la contraseña (la del paso anterior)
 
     const pintar = (msg, tipo) => {
       const nota = msg ? `<p class="vc-msg ${tipo || "err"}" role="${tipo === "ok" ? "status" : "alert"}">${esc(msg)}</p>` : "";
@@ -88,6 +89,7 @@ const VsbCuenta = (() => {
         <p class="vc-sub">Te mandamos un código de 6 números a <b>${esc(email)}</b>. Si no lo ves, revisá el correo no deseado.</p>
         <form class="vc-campos" data-f="codigo" novalidate>
           <label for="vc-codigo">Código</label><input id="vc-codigo" class="vc-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
+          ${hashPend ? "" : '<label for="vc-pass">Tu contraseña</label><input id="vc-pass" type="password" autocomplete="current-password" required>'}
           <button class="vc-btn" type="submit">Confirmar</button>
         </form>${nota}
         <div class="vc-links"><button type="button" class="vc-link" data-reenviar>Mandarme otro código</button><button type="button" class="vc-link" data-ir="entrar">Volver</button></div>`;
@@ -132,7 +134,8 @@ const VsbCuenta = (() => {
           email = valor("vc-email").trim(); const pass = valor("vc-pass");
           if (!emailOk(email) || !pass) return pintar("Completá tu email y tu contraseña.");
           ocupado("Ingresando…");
-          const d = await api({ action: "loginUser", email, hash: await hash(pass, email), website });
+          hashPend = await hash(pass, email);
+          const d = await api({ action: "loginUser", email, hash: hashPend, website });
           if (d.ok && d.token) return entro(d);
           if (d.ok && d.verificar) { modo = "codigo"; return pintar(d.aviso || "", d.aviso ? "err" : "ok"); }
           libre();
@@ -146,7 +149,8 @@ const VsbCuenta = (() => {
           if (pass.length < 6) return pintar("La contraseña tiene que tener al menos 6 caracteres.");
           if (pass !== pass2) return pintar("Las contraseñas no coinciden.");
           ocupado("Creando…");
-          const d = await api({ action: "registerUser", nombre, email, hash: await hash(pass, email), website });
+          hashPend = await hash(pass, email);
+          const d = await api({ action: "registerUser", nombre, email, hash: hashPend, website });
           if (d.ok) { modo = "codigo"; return pintar(d.aviso || "", d.aviso ? "err" : "ok"); }
           libre();
           if (d.error === "email_taken") { modo = "entrar"; return pintar("Ya hay una cuenta con ese email. Entrá con tu contraseña o recuperala."); }
@@ -155,9 +159,11 @@ const VsbCuenta = (() => {
         if (f === "codigo") {
           const codigo = valor("vc-codigo").replace(/\D/g, "");
           if (codigo.length !== 6) return pintar("El código tiene 6 números.");
+          if (!hashPend) { const pass = valor("vc-pass"); if (!pass) return pintar("Escribí tu contraseña."); hashPend = await hash(pass, email); }
           ocupado("Confirmando…");
-          const d = await api({ action: "verifyEmail", email, codigo });
+          const d = await api({ action: "verifyEmail", email, codigo, hash: hashPend });
           if (d.ok && d.token) return entro(d);
+          if (/contraseña/.test(d.error || "")) hashPend = "";   // que la vuelva a escribir
           libre(); return pintar(d.error || "No pudimos confirmar el código.");
         }
         if (f === "reenviar") {

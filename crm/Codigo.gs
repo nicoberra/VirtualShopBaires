@@ -193,7 +193,7 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v26-cuentas-reembolsos' };
+    else if (accion === 'version')              out = { ok:true, version: 'v27-confirmar-con-clave' };
     else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
@@ -3046,10 +3046,17 @@ function _usuarioConfirmar(sh, u) {
   sh.getRange(u.fila, 5).setValue(f); u.datos[4] = f;
 }
 function tiendaVerificarEmail(p) {
-  var email = String(p.email || '').trim().toLowerCase();
-  if (!email || !p.codigo) return { ok:false, error:'Faltan datos' };
+  var email = String(p.email || '').trim().toLowerCase(), hash = String(p.hash || '').trim();
+  if (!email || !p.codigo || !hash) return { ok:false, error:'Faltan datos' };
   var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
   if (!u) return { ok:false, error:'No encontramos esa cuenta.' };
+  if (_bloqueado('login_tienda_' + email, 5)) return { ok:false, error: MSJ_BLOQUEO };
+  // Se confirma junto con la contraseña: si alguien re-registró este email con otra clave antes de que el
+  // dueño confirme, el código no le sirve a nadie para quedarse con la cuenta (el dueño usa "olvidé mi contraseña")
+  if (!_verificarClave(u.datos[3], hash).ok) {
+    _falloSumar('login_tienda_' + email, 900);
+    return { ok:false, error:'La contraseña no coincide. Si no la recordás, usá «¿Olvidaste tu contraseña?».' };
+  }
   var err = _codigoError(email, p.codigo);
   if (err) return { ok:false, error: err };
   _usuarioConfirmar(sh, u);

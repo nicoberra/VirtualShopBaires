@@ -243,7 +243,7 @@ console.log("Pestaña con formato viejo y Clientes ampliado");
     ContentService: {}, DriveApp: {}, Logger: { log() {} }, MailApp: {}, ScriptApp: {},
   };
   const gs = new Function(...Object.keys(stubs), readFileSync(join(root, "crm/Codigo.gs"), "utf8") +
-    "\nreturn { crearPedido, extPedidosListar, extPedidoActualizar, misPedidos, agregar, listar };")(...Object.values(stubs));
+    "\nreturn { crearPedido, extPedidosListar, extPedidoActualizar, misPedidos, agregar, listar, _direccionPedido };")(...Object.values(stubs));
 
   const r = gs.crearPedido({ nombre: "Ana", apellido: "Pérez", email: "ana@test.local", telefono: "11", dni: "30111222", metodoEntrega: "retiro",
     metodoPago: "transferencia", provincia: "CABA", localidad: "CABA", calle: "Calle", numeroCalle: "123", cp: "1000",
@@ -279,6 +279,21 @@ console.log("Pestaña con formato viejo y Clientes ampliado");
   const cli = gs.listar("Clientes")[0];
   assert.equal(cli.dni, "30111222"); assert.equal(cli.razon, "Ana SRL"); assert.equal(cli.apellido, "Pérez"); assert.equal(cli.clave, undefined);
   ok("Clientes: las columnas nuevas se agregan al final sin mover las existentes, y DNI/apellido/razón social se guardan");
+
+  // Pedido con Mercado Pago: guarda adónde enviar (antes llegaba sin dirección)
+  const dirMP = gs._direccionPedido({ calle: "Av. Siempreviva", numeroCalle: "742", piso: "2B", localidad: "Lanús", provincia: "Buenos Aires", cp: "1824" });
+  assert.equal(dirMP, "Av. Siempreviva 742, piso/depto 2B · Lanús, Buenos Aires (CP 1824)");
+  assert.equal(gs._direccionPedido({ localidad: "Lanús" }), "");
+  gs.agregar("Pedidos", { cliente: "Bruno Prueba", telefono: "5491100000000", detalle: "1x Reposera, Envío GBA 1", monto: 82999, estado: "Pendiente",
+    notas: "MercadoPago · ref: vsb-1 · email: bruno@test.local", direccion: dirMP, dni: "20111222", entrega: "Envío GBA 1 · Lanús", obs: "timbre 2B" });
+  gs.agregar("Clientes", { nombre: "Caro", email: "caro@test.local", direccion: "Mitre 50", ciudad: "Quilmes", provincia: "Buenos Aires", cp: "1878" });
+  gs.agregar("Pedidos", { cliente: "Caro", telefono: "11", detalle: "1x Silla", monto: 1, estado: "Pendiente", notas: "MercadoPago · ref: vsb-2 · email: caro@test.local" });
+  const mps = gs.extPedidosListar({}).filter(x => x.fuente === "mp");
+  const bruno = mps.find(x => x.orderNumber === "vsb-1"), caro = mps.find(x => x.orderNumber === "vsb-2");
+  assert.equal(bruno.direccion, dirMP); assert.equal(bruno.dni, "20111222"); assert.equal(bruno.metodoEntrega, "Envío GBA 1 · Lanús"); assert.equal(bruno.obs, "timbre 2B");
+  assert.ok(!bruno.direccionDeFicha);
+  assert.equal(caro.direccion, "Mitre 50 · Quilmes, Buenos Aires (CP 1878)"); assert.equal(caro.direccionDeFicha, true);
+  ok("pedido con Mercado Pago: guarda dirección, DNI, entrega y notas; uno viejo sin dirección toma la de la ficha del cliente");
 }
 
 // ── Catálogo público (para poder hacer privada la planilla) ──────────────────

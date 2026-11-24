@@ -1015,6 +1015,16 @@ async function submitOrder() {
         nombre:   nombre + ' ' + apellido,
         email,
         telefono,
+        dni,
+        // Dirección y entrega: sin esto el pedido con Mercado Pago llegaba al CRM sin adónde enviarlo
+        provincia:   payload.provincia,
+        localidad:   payload.localidad,
+        calle:       payload.calle,
+        numeroCalle: payload.numeroCalle,
+        piso:        payload.piso,
+        cp:          payload.cp,
+        entrega:     payload.metodoEntrega,
+        obs:         notes || "",
         ref:      'vsb-' + Date.now()
       });
       hideLoading();

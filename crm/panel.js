@@ -976,8 +976,9 @@ function renderPedidos(list) {
     }
 
     dc.innerHTML = `<div class="ped-detail-box">
+      ${typeof pedidoContactoHTML === 'function' ? `<div class="pc-celda">${pedidoContactoHTML(p)}</div>` : `
       ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
-      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}
+      ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}`}
       ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
       ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${hx(p.observaciones)}</div>` : ''}
       ${p.utm ? `<div><span class="ped-label">Vino de:</span> ${hx(decodeURIComponent(String(p.utm).replace(/utm_/g, '').replace(/&/g, ' · ').replace(/=/g, ': ')))}</div>` : ''}

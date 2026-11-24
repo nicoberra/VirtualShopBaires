@@ -92,7 +92,12 @@ var TABS = {
     { k:'notas',       h:'Notas'        },
     { k:'comprobante', h:'Comprobante'  },
     { k:'clienteid',   h:'ClienteID'    },
-    { k:'utm',         h:'UTM'          }   // origen de la visita (utm_campaign=oferta, etc.)
+    { k:'utm',         h:'UTM'          },  // origen de la visita (utm_campaign=oferta, etc.)
+    // Agregadas al final (2026-11-24): los pedidos con Mercado Pago no guardaban adónde enviar
+    { k:'direccion',   h:'Dirección'    },
+    { k:'dni',         h:'DNI'          },
+    { k:'entrega',     h:'Entrega'      },
+    { k:'obs',         h:'Notas cliente' }
   ],
   'Suscriptores': [
     { k:'id',     h:'ID'     },
@@ -186,7 +191,7 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v23-clientes-avisos' };
+    else if (accion === 'version')              out = { ok:true, version: 'v24-pedidos-direccion' };
     else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
@@ -1468,6 +1473,16 @@ function _detalleItems(items) {
 
 // ─── MERCADO PAGO ────────────────────────────────────────────
 
+// "Calle 123, piso/depto 4B · Localidad, Provincia (CP 1234)"
+function _direccionPedido(p) {
+  var s = function(x, n) { return String(x || '').trim().slice(0, n); };
+  var calle = s(p.calle, 80);
+  if (!calle) return '';
+  var d = calle + (s(p.numeroCalle, 12) ? ' ' + s(p.numeroCalle, 12) : '') + (s(p.piso, 20) ? ', piso/depto ' + s(p.piso, 20) : '');
+  var zona = [s(p.localidad, 60), s(p.provincia, 40)].filter(String).join(', ');
+  return d + (zona ? ' · ' + zona : '') + (s(p.cp, 12) ? ' (CP ' + s(p.cp, 12) + ')' : '');
+}
+
 function crearPreferencia(p) {
   if (!MP_ACCESS_TOKEN) return { ok:false, error:'MP_ACCESS_TOKEN no configurado en Codigo.gs' };
 
@@ -1539,7 +1554,11 @@ function crearPreferencia(p) {
     monto:    total,
     estado:   'Pendiente',
     notas:    'MercadoPago · ref: ' + ref + (p.email ? ' · email: ' + String(p.email).trim().toLowerCase().slice(0, 120) : ''),
-    utm:      _utmLimpio(p.utm)
+    utm:      _utmLimpio(p.utm),
+    direccion: _direccionPedido(p),
+    dni:      String(p.dni || '').slice(0, 20),
+    entrega:  String(p.entrega || '').slice(0, 120),
+    obs:      String(p.obs || '').slice(0, 300)
   });
 
   _clienteDesdeCompra(p);
@@ -2521,6 +2540,27 @@ function extPedidosListar(p) {
       result.push(obj);
     }
 
+    // Pedidos viejos sin dirección: se usa la de la ficha del cliente (por email o teléfono), si tiene
+    var fichas = null;
+    var deFicha = function(email, tel) {
+      if (!fichas) {
+        fichas = { email: {}, tel: {} };
+        var shC = ssO.getSheetByName('Clientes');
+        if (shC && shC.getLastRow() >= 2) {
+          var cc = TABS['Clientes'].map(function(c) { return c.k; }), dc = shC.getDataRange().getValues();
+          for (var q = 1; q < dc.length; q++) {
+            var f = {}; cc.forEach(function(k, i) { f[k] = dc[q][i]; });
+            if (!String(f.direccion || '').trim()) continue;
+            if (f.email) fichas.email[String(f.email).trim().toLowerCase()] = f;
+            var tq = String(f.telefono || '').replace(/\D/g, '').slice(-8);
+            if (tq.length === 8) fichas.tel[tq] = f;
+          }
+        }
+      }
+      var t8 = String(tel || '').replace(/\D/g, '').slice(-8);
+      return fichas.email[String(email || '').trim().toLowerCase()] || (t8.length === 8 ? fichas.tel[t8] : null) || null;
+    };
+
     // Pedidos de Mercado Pago (pestaña Pedidos): mismo formato para verlos en la misma lista
     var shM = ssO.getSheetByName('Pedidos');
     if (shM && shM.getLastRow() >= 2) {
@@ -2545,8 +2585,21 @@ function extPedidosListar(p) {
           estado:        dm[m][cols.indexOf('estado')] || 'Pendiente',
           observaciones: notas,
           comprobante:   dm[m][cols.indexOf('comprobante')],
-          utm:           dm[m][cols.indexOf('utm')] || ''
+          utm:           dm[m][cols.indexOf('utm')] || '',
+          direccion:     dm[m][cols.indexOf('direccion')] || '',
+          dni:           dm[m][cols.indexOf('dni')] || '',
+          metodoEntrega: dm[m][cols.indexOf('entrega')] || '',
+          obs:           dm[m][cols.indexOf('obs')] || ''
         });
+        var ult = result[result.length - 1];
+        if (!ult.direccion) {
+          var fc = deFicha(ult.email, ult.telefono);
+          if (fc) {
+            ult.direccion = String(fc.direccion).trim() + ([fc.ciudad, fc.provincia].filter(function(x) { return String(x || '').trim(); }).length ? ' · ' + [fc.ciudad, fc.provincia].filter(function(x) { return String(x || '').trim(); }).join(', ') : '') + (fc.cp ? ' (CP ' + fc.cp + ')' : '');
+            ult.direccionDeFicha = true;
+            if (!ult.dni && fc.dni) ult.dni = fc.dni;
+          }
+        }
       }
     }
 

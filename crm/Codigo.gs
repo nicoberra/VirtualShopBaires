@@ -144,7 +144,9 @@ function manejar(e) {
       'ext_categorias_list':1,'ext_categoria_foto':1,'fotos_papelera':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1,
       'push_suscribir':1,'push_desuscribir':1,'push_probar':1,
-      'leads_list':1
+      'leads_list':1,
+      // Viejas, sin uso en la web (la tienda usa registerUser / loginUser): públicas dejaban tomar la ficha de otro
+      'registrar':1, 'login':1, 'comprobante_subir':1
     };
     if (ADMIN_ACTIONS[accion]) {
       var tok = String(p.token || '').trim();
@@ -191,7 +193,7 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v24-pedidos-direccion' };
+    else if (accion === 'version')              out = { ok:true, version: 'v25-auditoria-pagos' };
     else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
@@ -679,10 +681,12 @@ function agregar(tab, p) {
     }
 
     if (m >= 0) {
-      // Ya existe: actualizar campos vacíos
+      // Ya existe: solo se completan los campos vacíos. Una compra (o alguien con un email ajeno)
+      // no puede pisar lo que la oficina cargó: notas, teléfono, dirección…
       for (var c2 = 0; c2 < cols.length; c2++) {
         var k = cols[c2].k;
-        if (k !== 'id' && k !== 'fecha' && p[k]) sh.getRange(m+1, c2+1).setValue(p[k]);
+        if (k !== 'id' && k !== 'fecha' && p[k] && !String(datos[m][c2] == null ? '' : datos[m][c2]).trim())
+          sh.getRange(m+1, c2+1).setValue(p[k]);
       }
       return String(datos[m][0]);
     }
@@ -2765,9 +2769,17 @@ function _confirmarPagoMP(pago) {
     for (var i = datos.length - 1; i >= 1; i--) {
       var notas = String(datos[i][cNotas] || '');
       if (notas.indexOf('ref: ' + ref) < 0) continue;
-      if (notas.indexOf('pago MP ' + pago.id) >= 0 || String(datos[i][cEstado]) === 'Confirmado') {
+      var estAct = String(datos[i][cEstado] || '').trim();
+      if (notas.indexOf('pago MP ' + pago.id) >= 0 || ['Confirmado', 'En camino', 'Entregado'].indexOf(estAct) >= 0) {
         cache.put(kPago, '1', 21600);
         return { ok:true, estado:'ya_confirmado' };
+      }
+      // Cancelado o eliminado: se anota el pago y se avisa, sin cambiar el estado (lo decide la oficina)
+      if (estAct === 'Cancelado' || estAct === 'Eliminado') {
+        sh.getRange(i + 1, cNotas + 1).setValue(notas + ' · pago MP ' + pago.id + ' aprobado (el pedido estaba ' + estAct + ')');
+        cache.put(kPago, '1', 21600);
+        avisarTelegram('⚠️ Pago MP aprobado de un pedido ' + estAct + '\n👤 ' + (datos[i][cols.indexOf('cliente')] || '—') + '\n💰 $' + (Number(pago.transaction_amount) || 0) + '\nRef: ' + ref);
+        return { ok:true, estado:'pago_en_pedido_' + estAct.toLowerCase() };
       }
       var monto = Number(datos[i][cMonto]) || 0;
       var pagado = Number(pago.transaction_amount) || 0;
@@ -2908,7 +2920,7 @@ function _buscarPedidoWeb(numero, email) {
   var d = sh.getDataRange().getValues(), ix = _mapaPedidos(d[0]);
   if (ix.orderNumber === undefined || ix.email === undefined) return null;
   for (var r = 1; r < d.length; r++) {
-    if (String(d[r][ix.orderNumber]) === numero && String(d[r][ix.email] || '').trim().toLowerCase() === email)
+    if (String(d[r][ix.orderNumber]).trim().toLowerCase() === String(numero).trim().toLowerCase() && String(d[r][ix.email] || '').trim().toLowerCase() === email)
       return { sh: sh, fila: r + 1, d: d[r], ix: ix, headers: d[0] };
   }
   return null;
@@ -2930,7 +2942,7 @@ function tiendaPedido(p) {
     } };
   }
   var m = misPedidos({ email: email });   // pedidos de Mercado Pago (por referencia)
-  var o = (m.orders || []).filter(function(x) { return String(x.numero) === numero; })[0];
+  var o = (m.orders || []).filter(function(x) { return String(x.numero).toLowerCase() === numero.toLowerCase(); })[0];
   if (!o) return { ok:false, error:'Pedido no encontrado' };
   return { ok:true, order: { numero: o.numero, fecha: o.fecha, email: email, metodoEntrega: o.metodoEntrega, total: o.total,
     estadoPago: o.estadoPago, estadoPedido: o.estadoPedido, productos: [], urlComprobante: '', numeroSeguimiento: '' } };
@@ -2979,6 +2991,7 @@ function misPedidos(p) {
     for (var r = 1; r < d.length; r++) {
       if (String(col(r, 'email') || '').trim().toLowerCase() !== email) continue;
       var estado = col(r, 'estado');
+      if (String(estado).trim() === 'Eliminado') continue;
       orders.push({
         numero:        col(r, 'orderNumber'),
         fecha:         col(r, 'timestamp'),
@@ -2999,9 +3012,10 @@ function misPedidos(p) {
     var dm = shM.getDataRange().getValues();
     for (var m = 1; m < dm.length; m++) {
       var notas = String(dm[m][cols.indexOf('notas')] || '');
-      if (notas.toLowerCase().indexOf('email: ' + email) < 0) continue;
+      if (((notas.match(/email: ([^\s·]+)/) || [])[1] || '').toLowerCase() !== email) continue;
       var refM = (notas.match(/ref: ([\w\-]+)/) || [])[1] || dm[m][cols.indexOf('id')];
       var est = dm[m][cols.indexOf('estado')];
+      if (String(est).trim() === 'Eliminado') continue;
       orders.push({
         numero:        refM,
         fecha:         dm[m][cols.indexOf('fecha')],

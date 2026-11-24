@@ -211,6 +211,40 @@ console.log("Mercado Pago: webhook y conciliación");
   ok("conciliación: ignora pagos de otras referencias y no re-confirma lo ya confirmado");
 }
 
+// ── Codigo.gs: pago que llega tarde y acciones viejas ───────────────────────
+console.log("Pagos tardíos y acciones viejas");
+{
+  const hojas = JSON.parse(JSON.stringify(BASE));
+  hojas.Pedidos.push(["p1", "2026-10-12", "Ana", "11", "1x Silla", 30000, "En camino", "MercadoPago · ref: vsb-501 · email: ana@test.local", "", ""]);
+  hojas.Pedidos.push(["p2", "2026-10-12", "Beto", "12", "1x Silla", 30000, "Cancelado", "MercadoPago · ref: vsb-502 · email: beto@test.local", "", ""]);
+  const pagos = { "9501": { id: 9501, status: "approved", external_reference: "vsb-501", transaction_amount: 30000 },
+                  "9502": { id: 9502, status: "approved", external_reference: "vsb-502", transaction_amount: 30000 } };
+  const env = crearEntorno(hojas, pagos, []);
+  const api = cargar("crm/Codigo.gs", env, ["mpWebhook"]);
+  api.mpWebhook({ action: "mp_webhook", type: "payment", "data.id": "9501" }, null);
+  assert.equal(env.HOJAS.Pedidos[1][6], "En camino");
+  ok("pago aprobado de un pedido ya en camino → no lo vuelve a Confirmado");
+  api.mpWebhook({ action: "mp_webhook", type: "payment", "data.id": "9502" }, null);
+  assert.equal(env.HOJAS.Pedidos[2][6], "Cancelado"); assert.match(env.HOJAS.Pedidos[2][7], /pago MP 9502 aprobado \(el pedido estaba Cancelado\)/);
+  assert.ok(env.telegram.some(t => /pedido Cancelado/.test(t)));
+  ok("pago aprobado de un pedido cancelado → lo anota y avisa, sin cambiar el estado");
+
+  const src = readFileSync(join(root, "crm/Codigo.gs"), "utf8");
+  const admin = src.slice(src.indexOf("var ADMIN_ACTIONS"), src.indexOf("};", src.indexOf("var ADMIN_ACTIONS")));
+  for (const acc of ["registrar", "login", "comprobante_subir"]) assert.ok(admin.includes(`'${acc}':1`), acc + " tiene que pedir token");
+  ok("registrar, login y comprobante_subir (sin uso en la web) piden token del CRM");
+
+  const h2 = JSON.parse(JSON.stringify(BASE));
+  h2.Pedidos.push(["q1", "2026-10-12", "Ana", "11", "1x Silla", 1, "Pendiente", "MercadoPago · ref: vsb-601 · email: ana@gmail.com", "", ""]);
+  h2.Pedidos.push(["q2", "2026-10-12", "Ana", "11", "1x Silla", 1, "Eliminado", "MercadoPago · ref: vsb-602 · email: ana@gmail.com", "", ""]);
+  const api2 = cargar("crm/Codigo.gs", crearEntorno(h2, {}, []), ["misPedidos", "tiendaPedido"]);
+  assert.equal(api2.misPedidos({ email: "ana@gmail.co" }).orders.length, 0);
+  assert.deepEqual(api2.misPedidos({ email: "ana@gmail.com" }).orders.map(o => o.numero), ["vsb-601"]);
+  ok("mis compras: email exacto (ana@gmail.co no ve los de ana@gmail.com) y sin pedidos eliminados");
+  assert.equal(api2.tiendaPedido({ order: "VSB-601", email: "ana@gmail.com" }).ok, true);
+  ok("seguimiento: encuentra el pedido de Mercado Pago aunque se escriba en mayúsculas");
+}
+
 // ── Codigo.gs: mis compras ──────────────────────────────────────────────────
 console.log("Mis compras");
 {

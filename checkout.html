@@ -932,7 +932,8 @@ async function submitOrder() {
   // Un id por intento de compra: si se reenvía (doble clic, reintento) el servidor devuelve
   // el mismo pedido. Cambia solo si cambia el carrito, el email, el pago o el envío.
   const idPedido = (() => {
-    const firma = JSON.stringify([cartItems.map(i => [i.nombre, i.color, i.talle, i.qty]), email, metodoPago, entrega, envio.costo]);
+    const firma = JSON.stringify([cartItems.map(i => [i.nombre, i.color, i.talle, i.qty]), email, metodoPago, entrega, envio.costo,
+      ["f-calle", "f-numero-calle", "f-piso", "f-localidad", "f-provincia", "f-cp"].map(v)]);
     try {
       const prev = JSON.parse(sessionStorage.getItem("vsb_id_pedido") || "null");
       if (prev && prev.f === firma) return prev.id;
@@ -1024,14 +1025,14 @@ async function submitOrder() {
         piso:        payload.piso,
         cp:          payload.cp,
         entrega:     payload.metodoEntrega,
-        obs:         notes || "",
+        obs:         payload.observaciones || "",
         ref:      'vsb-' + Date.now()
       });
       hideLoading();
       if (data.ok && data.url) {
         // La compra se cuenta en gracias.html cuando Mercado Pago vuelve con el pago aprobado
         try { localStorage.setItem("vsb_px_compra", JSON.stringify({ id: idPedido, value: Cart.getTotal(), ids: cartItems.map(i => String(i.id)), n: cartItems.reduce((s, i) => s + i.qty, 0), t: Date.now() })); } catch (e) {}
-        Cart.clear();
+        // El carrito se vacía en gracias.html: si el pago no se completa, vuelve con todo cargado
         try { sessionStorage.removeItem("vsb_id_pedido"); } catch (e) {}
         window.location.href = data.url;
       } else {
@@ -1194,6 +1195,13 @@ function showLoading(msg) {
   document.getElementById("loading-overlay").classList.add("show");
 }
 function hideLoading() { document.getElementById("loading-overlay").classList.remove("show"); }
+
+// Volvió de Mercado Pago sin pagar: el carrito sigue cargado para reintentar
+if (new URLSearchParams(location.search).get("mp") === "error") {
+  document.addEventListener("DOMContentLoaded", () => setTimeout(() => {
+    if (typeof showToastCo === "function") showToastCo("El pago no se completó. Tu carrito sigue acá: podés intentarlo de nuevo.");
+  }, 600));
+}
 
 function mpJSONP(params) {
   return new Promise((resolve, reject) => {

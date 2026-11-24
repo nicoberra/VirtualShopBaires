@@ -282,8 +282,10 @@ function renderOrder(o) {
     { label: "Entregado",               desc: "¡Tu pedido fue entregado con éxito!",         icon: "fa-circle-check",   estado: "ENTREGADO" },
   ];
 
-  const SEQ = ["PEDIDO CREADO","ESPERANDO PAGO","PREPARANDO PEDIDO","DESPACHADO","ENTREGADO"];
-  const currentIdx = SEQ.indexOf(o.estadoPedido);
+  // Estados reales del CRM → paso de la línea de tiempo
+  const est = String(o.estadoPedido || "").trim().toLowerCase();
+  const enRevision = est === "pendiente" && o.urlComprobante;
+  const currentIdx = ({ "": 0, pendiente: enRevision ? 2 : 1, confirmado: 3, "en camino": 4, entregado: 5 })[est] ?? 1;
 
   let tlHtml = "";
   STEPS.forEach((step, idx) => {

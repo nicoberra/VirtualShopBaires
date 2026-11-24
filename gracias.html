@@ -103,6 +103,9 @@ const params = new URLSearchParams(window.location.search);
 const ref    = params.get('ref') || '';
 const estado = params.get('estado') || 'aprobado';
 
+// Volvió de Mercado Pago con el pago hecho o en proceso: ahora sí se vacía el carrito
+if (ref) { try { localStorage.removeItem('vsb_cart'); } catch (e) {} }
+
 // Mostrar referencia
 if (ref) {
   document.getElementById('ref-box').style.display = 'block';

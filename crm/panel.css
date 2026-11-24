@@ -1868,14 +1868,29 @@ html.arrastrando-foto, html.arrastrando-foto * { cursor: grabbing !important; us
 .pc-btn.pc-ok { background: #e7f6ec; border-color: #1fa855; color: #11733a; }
 .pc-aviso { margin: 0; padding: 8px 10px; border-radius: 8px; background: #fff6e5; color: #7a4b00; font-size: .8rem; line-height: 1.4; }
 .pc-lista { display: flex; flex-direction: column; }
-.pc-fila { display: grid; grid-template-columns: 112px minmax(0, 1fr) 44px; align-items: center; gap: 8px; min-height: 44px; border-top: 1px solid var(--border); }
+.pc-fila { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 44px; border-top: 1px solid var(--border); }
 .pc-fila:first-child { border-top: 0; }
 .pc-k { color: var(--text2); font-size: .78rem; font-weight: 600; }
 .pc-v { font-size: .88rem; overflow-wrap: anywhere; user-select: text; }
-.pc-copiar { width: 44px; height: 44px; border: 0; border-radius: 10px; background: none; color: var(--text2); cursor: pointer; touch-action: manipulation; }
+.pc-copiar { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 44px; height: 44px; padding: 0 10px; border: 0; border-radius: 10px;
+  background: none; color: var(--text2); font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; touch-action: manipulation; }
+.pc-copiar span { display: none; }
 .pc-copiar:hover { background: var(--bg3); color: var(--text); }
 .pc-copiar.pc-ok { color: #11733a; }
 .pc-copiar.pc-ok i::before { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; }
+/* Compu: botones a la izquierda y los datos en dos columnas, cada uno con "Copiar" escrito */
+@media (min-width: 900px) {
+  .pc-bloque { display: grid; grid-template-columns: 230px minmax(0, 1fr); grid-template-areas: "acc lista" "aviso lista"; align-items: start; gap: 12px 20px; padding: 16px; }
+  .pc-acciones { grid-area: acc; flex-direction: column; }
+  .pc-acciones .pc-btn { width: 100%; }
+  .pc-aviso { grid-area: aviso; }
+  .pc-lista { grid-area: lista; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .pc-fila { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "k c" "v c"; row-gap: 2px; padding: 8px 6px 8px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg3); }
+  .pc-fila:first-child { border-top: 1px solid var(--border); }
+  .pc-k { grid-area: k; } .pc-v { grid-area: v; font-weight: 600; } .pc-copiar { grid-area: c; }
+  .pc-copiar span { display: inline; }
+  .pc-copiar:hover { background: var(--bg2); }
+}
 @media (max-width: 520px) {
   .pc-acciones .pc-btn { flex: 1 1 100%; }
   .pc-fila { grid-template-columns: 1fr 44px; grid-template-areas: "k c" "v c"; row-gap: 0; padding: 6px 0; }

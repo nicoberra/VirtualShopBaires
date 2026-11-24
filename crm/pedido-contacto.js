@@ -32,12 +32,12 @@ function _datosPedido(p) {
     campos: [
       ['Nombre', nombre],
       ['Teléfono', p.telefono || ''],
-      ['DNI/CUIT', p.dni || ''],
+      ['DNI', p.dni || ''],
       ['Email', p.email || ''],
       ['Dirección', calle],
-      ['Localidad', zona],
-      ['Entrega', p.metodoEntrega || ''],
-      ['Notas del cliente', p.obs || ''],
+      ['Ciudad', zona],
+      ['Cómo lo recibe', p.metodoEntrega || ''],
+      ['Nota del cliente', p.obs || ''],
     ].filter(c => String(c[1]).trim()),
   };
 }
@@ -62,15 +62,15 @@ function pedidoContactoHTML(p) {
       <div class="pc-fila">
         <span class="pc-k">${esc(k)}</span>
         <span class="pc-v">${esc(v)}</span>
-        <button type="button" class="pc-copiar" data-copiar="${esc(v)}" aria-label="Copiar ${esc(k.toLowerCase())}" title="Copiar"><i class="fa-regular fa-copy" aria-hidden="true"></i></button>
+        <button type="button" class="pc-copiar" data-copiar="${esc(v)}" aria-label="Copiar ${esc(k.toLowerCase())}"><i class="fa-regular fa-copy" aria-hidden="true"></i><span>Copiar</span></button>
       </div>`).join('');
   return `<div class="pc-bloque" onclick="event.stopPropagation()">
       <div class="pc-acciones">
-        ${wa ? `<a class="pc-btn pc-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> WhatsApp</a>` : ''}
-        <button type="button" class="pc-btn pc-todo" data-copiar="${esc(_textoPedido(p))}"><i class="fa-regular fa-clipboard" aria-hidden="true"></i> Copiar todos los datos</button>
+        ${wa ? `<a class="pc-btn pc-wa" href="https://wa.me/${wa}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> Escribirle por WhatsApp</a>` : ''}
+        <button type="button" class="pc-btn pc-todo" data-copiar="${esc(_textoPedido(p))}"><i class="fa-regular fa-clipboard" aria-hidden="true"></i> Copiar todo</button>
       </div>
-      ${p.direccionDeFicha ? '<p class="pc-aviso">La dirección sale de la ficha del cliente (este pedido no la guardó). Confirmala antes de enviar.</p>' : ''}
-      ${sinDir && envio ? '<p class="pc-aviso">Este pedido no tiene la dirección guardada. Pedísela por WhatsApp.</p>' : ''}
+      ${p.direccionDeFicha ? '<p class="pc-aviso">Esta dirección la sacamos de su ficha. Confirmala con el cliente antes de enviar.</p>' : ''}
+      ${sinDir && envio ? '<p class="pc-aviso">Falta la dirección. Pedísela por WhatsApp.</p>' : ''}
       <div class="pc-lista">${filas}</div>
     </div>`;
 }
@@ -91,6 +91,11 @@ document.addEventListener('click', async e => {
   if (!b) return;
   e.preventDefault();
   const ok = await _copiarTexto(b.dataset.copiar);
-  if (typeof toast === 'function') toast(ok ? (b.classList.contains('pc-todo') ? 'Datos copiados ✓' : 'Copiado ✓') : 'No se pudo copiar', ok ? 'ok' : 'err');
-  if (ok) { b.classList.add('pc-ok'); setTimeout(() => b.classList.remove('pc-ok'), 1200); }
+  if (typeof toast === 'function') toast(ok ? (b.classList.contains('pc-todo') ? 'Copiado todo ✓ Ya lo podés pegar' : 'Copiado ✓') : 'No se pudo copiar', ok ? 'ok' : 'err');
+  if (ok) {
+    // El botón dice "Copiado" un ratito: se ve qué se copió
+    const txt = b.querySelector('span'), antes = txt ? txt.textContent : '';
+    b.classList.add('pc-ok'); if (txt) txt.textContent = 'Copiado';
+    setTimeout(() => { b.classList.remove('pc-ok'); if (txt) txt.textContent = antes; }, 1400);
+  }
 }, true);   // en captura: el bloque frena el clic para que no se cierre la tarjeta

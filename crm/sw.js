@@ -1,5 +1,5 @@
 /* Service Worker — VSB CRM / Operaciones */
-const CACHE_NAME = 'vsb-crm-v17';
+const CACHE_NAME = 'vsb-crm-v18';
 
 const PRECACHE_URLS = [
   '/crm/panel.css',

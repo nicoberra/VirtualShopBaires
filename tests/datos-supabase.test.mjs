@@ -113,10 +113,9 @@ const filasDe = (sb, hoja) => sb.db.crm_filas.filter(r => r.hoja === hoja).sort(
 {
   const { gs } = cargar();
   assert.equal(gs.tiendaRegistrar({ email: "a@b.com", nombre: "Ana", hash: "h1" }).ok, true);
-  assert.equal(gs.tiendaRegistrar({ email: "a@b.com", nombre: "Ana", hash: "h1" }).error, "email_taken");
-  assert.equal(gs.tiendaLogin({ email: "a@b.com", hash: "h1" }).ok, true);
+  assert.equal(gs.tiendaLogin({ email: "a@b.com", hash: "h1" }).verificar, true);
   assert.equal(gs.tiendaLogin({ email: "a@b.com", hash: "mal" }).ok, false);
-  ok("cuentas de la tienda: registrarse, no repetir email y entrar con la contraseña");
+  ok("cuentas de la tienda en Supabase: registrarse y entrar con la contraseña (pide confirmar el email)");
 
   const r = gs.loginPanel({ clave: "clave-buena-123", confiar: "1" });
   gs.loginPanel({ clave: "clave-buena-123", dispositivo: r.dispositivo });

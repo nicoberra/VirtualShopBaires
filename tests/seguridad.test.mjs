@@ -241,8 +241,46 @@ console.log("Pagos tardíos y acciones viejas");
   assert.equal(api2.misPedidos({ email: "ana@gmail.co" }).orders.length, 0);
   assert.deepEqual(api2.misPedidos({ email: "ana@gmail.com" }).orders.map(o => o.numero), ["vsb-601"]);
   ok("mis compras: email exacto (ana@gmail.co no ve los de ana@gmail.com) y sin pedidos eliminados");
-  assert.equal(api2.tiendaPedido({ order: "VSB-601", email: "ana@gmail.com" }).ok, true);
-  ok("seguimiento: encuentra el pedido de Mercado Pago aunque se escriba en mayúsculas");
+  assert.equal(api2.tiendaPedido({ order: "VSB-601", email: "ana@gmail.com" }).error, "sesion");
+  ok("seguimiento: sin sesión no muestra el pedido (con sesión: tests/crm.test.mjs)");
+}
+
+// ── Codigo.gs: reembolsos y contracargos de Mercado Pago ────────────────────
+console.log("Reembolsos de Mercado Pago");
+{
+  const hojas = JSON.parse(JSON.stringify(BASE));
+  hojas.Pedidos.push(["p1", "2026-10-12", "Ana", "11", "1x Silla", 30000, "Confirmado", "MercadoPago · ref: vsb-701 · email: ana@test.local · pago MP 9701 aprobado", "", ""]);
+  hojas.Pedidos.push(["p2", "2026-10-12", "Beto", "12", "1x Silla", 30000, "Confirmado", "MercadoPago · ref: vsb-702 · email: beto@test.local · pago MP 9702 aprobado", "", ""]);
+  hojas.Pedidos.push(["p3", "2026-10-12", "Caro", "13", "1x Silla", 30000, "Entregado", "MercadoPago · ref: vsb-703 · email: caro@test.local · pago MP 9703 aprobado", "", ""]);
+  const pagos = {
+    "9701": { id: 9701, status: "refunded", external_reference: "vsb-701", transaction_amount: 30000, transaction_amount_refunded: 30000 },
+    "9702": { id: 9702, status: "approved", external_reference: "vsb-702", transaction_amount: 30000, transaction_amount_refunded: 5000 },
+    "9703": { id: 9703, status: "charged_back", external_reference: "vsb-703", transaction_amount: 30000 },
+  };
+  const env = crearEntorno(hojas, pagos, [pagos["9701"], pagos["9703"]]);
+  const api = cargar("crm/Codigo.gs", env, ["mpWebhook", "conciliarPagosMP", "misPedidos"]);
+  const fila = (i) => env.HOJAS.Pedidos[i];
+
+  let r = api.mpWebhook({ action: "mp_webhook", type: "payment", "data.id": "9701" }, null);
+  assert.equal(r.estado, "reembolsado"); assert.equal(fila(1)[6], "Cancelado"); assert.match(fila(1)[7], /Reembolsado por Mercado Pago/);
+  assert.ok(env.telegram.some(t => /Reembolsado por Mercado Pago/.test(t)));
+  ok("reembolso total → pedido Cancelado (no cuenta en facturación), nota y aviso");
+  r = api.mpWebhook({ action: "mp_webhook", type: "payment", "data.id": "9701" }, null);
+  assert.equal(r.estado, "ya_anotado"); assert.equal((fila(1)[7].match(/reembolso MP 9701/g) || []).length, 1);
+  ok("reembolso repetido → se anota una sola vez");
+  r = api.mpWebhook({ action: "mp_webhook", type: "payment", "data.id": "9702" }, null);
+  assert.equal(r.estado, "reembolso_parcial"); assert.equal(fila(2)[6], "Confirmado"); assert.match(fila(2)[7], /Reembolso parcial de \$5000/);
+  ok("reembolso parcial → se anota y avisa, sin cambiar el estado");
+  r = api.mpWebhook({ action: "mp_webhook", type: "payment", "data.id": "9703" }, null);
+  assert.equal(fila(3)[6], "Cancelado"); assert.match(fila(3)[7], /Contracargo de Mercado Pago/);
+  ok("contracargo → pedido Cancelado con la nota");
+  assert.equal(api.misPedidos({ email: "ana@test.local" }).orders[0].estadoPago, "PAGO REEMBOLSADO");
+  ok("mis compras: el cliente ve «pago reembolsado»");
+  env.cache.clear();
+  const c = api.conciliarPagosMP();
+  assert.equal(c.ok === false, false);
+  assert.equal((fila(1)[7].match(/reembolso MP 9701/g) || []).length, 1); assert.equal((fila(3)[7].match(/contracargo MP 9703/g) || []).length, 1);
+  ok("conciliación: revisa reembolsos y contracargos sin duplicar notas");
 }
 
 // ── Codigo.gs: mis compras ──────────────────────────────────────────────────

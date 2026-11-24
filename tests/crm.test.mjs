@@ -365,32 +365,69 @@ console.log("Cuentas de la tienda y seguimiento");
     Utilities: { DigestAlgorithm: { MD5: "md5", SHA_256: "sha256" }, Charset: { UTF_8: "utf8" }, computeDigest: (a, s) => toBytes(crypto.createHash(a).update(String(s)).digest()),
       formatDate: () => "13/10/2026 10:00", getUuid: () => crypto.randomUUID(), base64Decode: (s) => [...Buffer.from(s, "base64")], newBlob: (b, m, n) => ({ b, m, n }) },
     DriveApp: { getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({ createFile: (blob) => { archivos.push(blob); return { getUrl: () => "https://drive.google.com/file/d/abc/view" }; } }) },
-    ContentService: {}, Logger: { log() {} }, MailApp: {}, ScriptApp: {},
+    ContentService: {}, Logger: { log() {} }, ScriptApp: {},
+    MailApp: { getRemainingDailyQuota: () => 100, sendEmail: (o) => mails.push(o) },
   };
+  const mails = [];
+  const codigo = () => String(mails.at(-1).subject).slice(0, 6);
   const gs = new Function(...Object.keys(stubs), readFileSync(join(root, "crm/Codigo.gs"), "utf8") +
-    "\nreturn { tiendaRegistrar, tiendaLogin, tiendaCambiarClave, tiendaPedido, tiendaComprobante, suscribir };")(...Object.values(stubs));
+    "\nreturn { tiendaRegistrar, tiendaLogin, tiendaCambiarClave, tiendaPedido, tiendaComprobante, suscribir, tiendaVerificarEmail, tiendaOlvideClave, tiendaNuevaClave, tiendaMisPedidos, _claveComprobante };")(...Object.values(stubs));
   const h1 = "a".repeat(64), h2 = "b".repeat(64);
-  assert.equal(gs.tiendaRegistrar({ nombre: "Ana", email: "Ana@Test.local", hash: h1 }).ok, true);
-  assert.match(String(HOJAS.Usuarios.at(-1)[3]), /^s1\$/);
+  const reg = gs.tiendaRegistrar({ nombre: "Ana", email: "Ana@Test.local", hash: h1 });
+  assert.equal(reg.ok, true); assert.equal(reg.verificar, true); assert.equal(reg.token, undefined);
+  assert.match(String(HOJAS.Usuarios.at(-1)[3]), /^s1\$/); assert.equal(HOJAS.Usuarios.at(-1)[4], "");
+  assert.equal(mails.at(-1).to, "ana@test.local"); assert.match(mails.at(-1).subject, /^\d{6} es tu código/);
+  ok("registro: guarda hash con sal, la cuenta queda sin confirmar y le llega un código por email");
+  const l0 = gs.tiendaLogin({ email: "ana@test.local", hash: h1 });
+  assert.equal(l0.ok, true); assert.equal(l0.verificar, true); assert.equal(l0.token, undefined);
+  assert.equal(gs.tiendaMisPedidos({ email: "ana@test.local" }).error, "sesion");
+  ok("sin confirmar el email: entrar no da sesión (manda el código) y no se ven compras");
+  assert.equal(gs.tiendaVerificarEmail({ email: "ana@test.local", codigo: "000000" }).ok, false);
+  const ver = gs.tiendaVerificarEmail({ email: "ana@test.local", codigo: codigo() });
+  assert.equal(ver.ok, true); assert.match(ver.token, /^ses1\./); assert.ok(HOJAS.Usuarios.at(-1)[4]);
+  assert.equal(gs.tiendaVerificarEmail({ email: "ana@test.local", codigo: codigo() }).ok, false);
+  ok("código: el incorrecto no sirve, el correcto confirma y da sesión, y no se puede reusar");
   assert.equal(gs.tiendaRegistrar({ nombre: "Ana", email: "ana@test.local", hash: h1 }).error, "email_taken");
-  ok("registro: crea la pestaña Usuarios, guarda hash con sal y no duplica emails");
   const l = gs.tiendaLogin({ email: "ana@test.local", hash: h1 });
-  assert.equal(l.ok, true); assert.equal(l.nombre, "Ana");
+  assert.equal(l.ok, true); assert.equal(l.nombre, "Ana"); assert.match(l.token, /^ses1\./);
   assert.equal(gs.tiendaLogin({ email: "ana@test.local", hash: h2 }).error, "Contraseña incorrecta");
-  ok("login: devuelve nombre y email como espera mi-cuenta.html");
-  assert.equal(gs.tiendaCambiarClave({ email: "ana@test.local", oldHash: h1, newHash: h2 }).ok, true);
+  ok("confirmada: no se puede registrar de nuevo y entrar da la sesión");
+  const cc = gs.tiendaCambiarClave({ email: "ana@test.local", oldHash: h1, newHash: h2 });
+  assert.equal(cc.ok, true); assert.match(cc.token, /^ses1\./);
+  assert.equal(gs.tiendaMisPedidos({ token: l.token }).error, "sesion");
+  assert.equal(gs.tiendaMisPedidos({ token: cc.token }).ok, true);
   assert.equal(gs.tiendaLogin({ email: "ana@test.local", hash: h2 }).ok, true);
-  ok("cambiar contraseña funciona");
-  const o = gs.tiendaPedido({ order: "VSB-77", email: "ANA@test.local" });
+  ok("cambiar contraseña: la sesión vieja deja de valer y la nueva sí");
+  assert.equal(gs.tiendaMisPedidos({ token: cc.token.replace(/.$/, c => c === "0" ? "1" : "0") }).error, "sesion");
+  assert.equal(gs.tiendaMisPedidos({ token: cc.token.replace("ana%40test.local", "otro%40test.local") }).error, "sesion");
+  ok("una sesión alterada (firma o email cambiados) no sirve");
+  assert.equal(gs.tiendaOlvideClave({ email: "nadie@test.local" }).ok, true);
+  const antes = mails.length; assert.equal(gs.tiendaOlvideClave({ email: "ana@test.local" }).ok, true); assert.equal(mails.length, antes + 1);
+  const nueva = gs.tiendaNuevaClave({ email: "ana@test.local", codigo: codigo(), hash: h1 });
+  assert.equal(nueva.ok, true); assert.equal(gs.tiendaLogin({ email: "ana@test.local", hash: h1 }).ok, true);
+  ok("olvidé mi contraseña: código por email, nueva contraseña y sesión; no revela si el email existe");
+  // Alguien registra un email ajeno: queda sin confirmar y el dueño real lo recupera con el código
+  gs.tiendaRegistrar({ nombre: "Intruso", email: "beto@test.local", hash: h1 });
+  assert.equal(gs.tiendaLogin({ email: "beto@test.local", hash: h1 }).token, undefined);
+  const re = gs.tiendaRegistrar({ nombre: "Beto", email: "beto@test.local", hash: h2 });
+  assert.equal(re.ok, true);
+  const tokBeto = gs.tiendaVerificarEmail({ email: "beto@test.local", codigo: codigo() }).token;
+  assert.ok(tokBeto); assert.equal(gs.tiendaLogin({ email: "beto@test.local", hash: h1 }).ok, false);
+  ok("email ajeno registrado sin confirmar: no ve nada y el dueño real puede crear su cuenta");
+  const tok = nueva.token;
+  assert.equal(gs.tiendaPedido({ order: "VSB-77", email: "ana@test.local" }).error, "sesion");
+  const o = gs.tiendaPedido({ order: "VSB-77", token: tok });
   assert.equal(o.ok, true); assert.equal(o.order.numero, "VSB-77"); assert.equal(o.order.total, 27000); assert.equal(o.order.estadoPago, "PENDIENTE DE PAGO");
   assert.ok(!JSON.stringify(o).includes("Calle Falsa"));
-  assert.equal(gs.tiendaPedido({ order: "VSB-77", email: "otro@test.local" }).ok, false);
-  ok("estado del pedido: número + email, sin exponer la dirección; con otro email no lo muestra");
+  assert.equal(gs.tiendaPedido({ order: "VSB-77", token: tokBeto }).ok, false);
+  ok("estado del pedido: con la sesión, sin exponer la dirección; con la sesión de otro cliente no lo muestra");
   const png = Buffer.from("png").toString("base64");
-  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", email: "ana@test.local", fileBase64: "data:image/png;base64," + png, fileMimeType: "image/png" }).ok, true);
+  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", email: "ana@test.local", fileBase64: "data:image/png;base64," + png, fileMimeType: "image/png" }).error, "sesion");
+  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", email: "ana@test.local", clave: gs._claveComprobante("VSB-77", "ana@test.local"), fileBase64: "data:image/png;base64," + png, fileMimeType: "image/png" }).ok, true);
   assert.equal(archivos.length, 1); assert.match(HOJAS["Pedidos externos"][1][10], /^Comprobante: https:\/\/drive/);
-  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", email: "ana@test.local", fileBase64: png, fileMimeType: "text/html" }).ok, false);
-  ok("comprobante: se guarda en Drive, queda el link en el pedido y rechaza archivos que no son imagen/PDF");
+  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", token: tok, fileBase64: png, fileMimeType: "text/html" }).ok, false);
+  assert.equal(gs.tiendaComprobante({ orderNumber: "VSB-77", token: tokBeto, fileBase64: png, fileMimeType: "image/png" }).ok, false);
+  ok("comprobante: sin sesión solo con la clave del pedido recién hecho; otro cliente no puede; rechaza lo que no es imagen/PDF");
   gs.suscribir({ email: "news@test.local", nombre: "N" }); gs.suscribir({ email: "news@test.local" });
   assert.equal(HOJAS.Suscriptores.length, 2);
   ok("suscripción sin duplicados");

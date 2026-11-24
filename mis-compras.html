@@ -101,15 +101,8 @@
   <div class="container">
     <div class="mc-wrap">
 
-      <div class="mc-search">
-        <h2><i class="fa-solid fa-box-open" style="color:var(--red);margin-right:8px;"></i>Buscá tus pedidos</h2>
-        <p>Ingresá el email con el que hiciste la compra</p>
-        <div class="mc-input-row">
-          <input type="email" id="mc-email" placeholder="tumail@ejemplo.com" autocomplete="email" onkeydown="if(event.key==='Enter')buscarPedidos()" />
-          <button onclick="buscarPedidos()"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
-        </div>
-        <div id="mc-error" style="display:none;margin-top:12px;color:var(--red);font-size:0.85rem;"></div>
-      </div>
+      <div id="mc-sesion" style="margin-bottom:24px;"></div>
+      <div id="mc-error" style="display:none;margin:0 0 16px;color:var(--red);font-size:0.85rem;text-align:center;"></div>
 
       <div id="mc-results" style="display:none;"></div>
 
@@ -139,15 +132,27 @@
 <script src="js/cart.js?v=7"></script>
 <script src="js/main.js?v=8"></script>
 <script src="js/mejoras-ui.js"></script>
+<script src="js/cuenta.js?v=1"></script>
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 const CRM_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
-  const saved = localStorage.getItem("vsb_mc_email");
-  if (saved) document.getElementById("mc-email").value = saved;
+  const u = VsbCuenta.sesion();
+  u ? cargarCompras(u) : pedirSesion();
 });
+
+// Por seguridad, las compras se ven solo con la cuenta (email confirmado + contraseña)
+function pedirSesion(msg) {
+  document.getElementById("mc-results").style.display = "none";
+  VsbCuenta.formulario(document.getElementById("mc-sesion"), {
+    titulo: "Entrá para ver tus compras",
+    subtitulo: msg || "Tus compras se ven solo con tu cuenta. Si compraste sin cuenta, creala con el mismo email de la compra y vas a ver todos tus pedidos.",
+    alEntrar: cargarCompras
+  });
+}
+function cerrarSesionMC() { VsbCuenta.salir(); pedirSesion(); }
 
 function fmt(n) {
   return "$" + Number(n).toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -172,6 +177,7 @@ function badgeHtml(estadoPago, metodoPago) {
     "PENDIENTE DE VERIFICACIÓN":["badge-informada", "fa-hourglass-half", "En verificación"],
     "PAGO CONFIRMADO":         ["badge-confirmado", "fa-circle-check", "Pago confirmado"],
     "PAGO RECHAZADO":          ["badge-rechazado",  "fa-circle-xmark", "Pago rechazado"],
+    "PAGO REEMBOLSADO":        ["badge-rechazado",  "fa-rotate-left", "Pago reembolsado"],
   };
   const [cls, icon, label] = map[estadoPago] || ["badge-pendiente", "fa-clock", estadoPago || "—"];
   return `<span class="mc-badge ${cls}"><i class="fa-solid ${icon}" style="margin-right:4px;"></i>${escMC(label)}</span>`;
@@ -181,53 +187,39 @@ function escMC(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 }
 
-async function buscarPedidos() {
-  const email = document.getElementById("mc-email").value.trim();
+async function cargarCompras(u) {
   const errEl = document.getElementById("mc-error");
   const resEl = document.getElementById("mc-results");
   errEl.style.display = "none";
-  resEl.style.display = "none";
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    errEl.textContent = "Por favor ingresá un email válido.";
-    errEl.style.display = "block";
-    return;
-  }
-
-  localStorage.setItem("vsb_mc_email", email);
-
-  const btn = document.querySelector(".mc-input-row button");
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';
+  document.getElementById("mc-sesion").innerHTML = `
+    <div class="mc-search" style="margin-bottom:0;">
+      <h2><i class="fa-solid fa-box-open" style="color:var(--red);margin-right:8px;"></i>Tus pedidos</h2>
+      <p style="margin:0 0 12px;">${escMC(u.email)}</p>
+      <button type="button" onclick="cerrarSesionMC()" style="background:none;border:0;color:var(--gray);font:inherit;font-size:.85rem;cursor:pointer;text-decoration:underline;min-height:40px;">Cerrar sesión</button>
+    </div>`;
+  resEl.style.display = "block";
+  resEl.innerHTML = '<div class="mc-empty"><i class="fa-solid fa-spinner fa-spin"></i><p>Buscando tus pedidos…</p></div>';
 
   try {
-    // Pedidos web (CRM) + pedidos del sistema anterior; si uno falla se muestra el otro
-    const q = encodeURIComponent(email);
-    const [nuevos, viejos] = await Promise.all([
-      fetch(`${CRM_URL}?action=mis_pedidos&email=${q}`, { redirect: "follow" }).then(r => r.json()).catch(() => null),
-      fetch(`${APPS_SCRIPT_URL}?action=getMyOrders&email=${q}`, { redirect: "follow" }).then(r => r.json()).catch(() => null),
-    ]);
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
-
-    if (!(nuevos && nuevos.ok) && !(viejos && viejos.ok)) {
-      errEl.textContent = (nuevos && nuevos.error) || (viejos && viejos.error) || "Error al buscar.";
+    const r = await VsbCuenta.api({ action: "mis_pedidos", token: u.token });
+    if (!r.ok && r.error === "sesion") { VsbCuenta.salir(); pedirSesion("Tu sesión venció. Entrá de nuevo para ver tus compras."); return; }
+    if (!r.ok) {
+      resEl.style.display = "none";
+      errEl.textContent = r.error || "Error al buscar.";
       errEl.style.display = "block";
       return;
     }
-    const vistos = new Set();
-    const data = { orders: [ ...((nuevos && nuevos.ok && nuevos.orders) || []), ...((viejos && viejos.ok && viejos.orders) || []) ]
-      .filter(o => { const k = String(o.numero); if (vistos.has(k)) return false; vistos.add(k); return true; })
-      .sort((a, b) => String(b.fecha) > String(a.fecha) ? 1 : -1) };
+    const email = u.email;
+    const data = { orders: (r.orders || []).slice().sort((a, b) => String(b.fecha) > String(a.fecha) ? 1 : -1) };
 
     resEl.style.display = "block";
     if (!data.orders.length) {
-      resEl.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-box-open"></i><p>No encontramos pedidos con ese email.</p><p style="font-size:.85rem;margin-top:6px;">Revisá que sea el mismo email que usaste al comprar.</p><a href="productos.html" class="estado-vacio-btn">Ver productos</a></div>`;
+      resEl.innerHTML = `<div class="mc-empty"><i class="fa-solid fa-box-open"></i><p>Todavía no hay compras con ${escMC(email)}.</p><p style="font-size:.85rem;margin-top:6px;">Si compraste con otro email, creá la cuenta con ese.</p><a href="productos.html" class="estado-vacio-btn">Ver productos</a></div>`;
       return;
     }
 
     resEl.innerHTML = data.orders.map(o => {
-      const trackUrl = `order-status.html?order=${encodeURIComponent(o.numero)}&email=${encodeURIComponent(email)}`;
+      const trackUrl = `order-status.html?order=${encodeURIComponent(o.numero)}`;
       let productosText = "—";
       try {
         const prods = typeof o.productos === "string" ? JSON.parse(o.productos) : o.productos;
@@ -261,8 +253,7 @@ async function buscarPedidos() {
         </div>`;
     }).join("");
   } catch {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> Buscar';
+    resEl.style.display = "none";
     errEl.textContent = "Error de conexión. Verificá tu internet e intentá de nuevo.";
     errEl.style.display = "block";
   }

@@ -127,14 +127,21 @@
 <script src="js/cart.js?v=7"></script>
 <script src="js/main.js?v=8"></script>
 <script src="js/mejoras-ui.js"></script>
+<script src="js/cuenta.js?v=1"></script>
 <script>
 const APPS_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".copyright-year").forEach(el => el.textContent = new Date().getFullYear());
-  const user = JSON.parse(localStorage.getItem('vsb_user') || 'null');
-  user && user.nombre ? renderLoggedIn(user) : renderLogin();
+  const user = VsbCuenta.sesion();
+  user ? renderLoggedIn(user) : renderLogin();
 });
+
+// Después de entrar, vuelve a la página que lo pidió (solo páginas de la propia tienda)
+function paginaDeVuelta() {
+  const v = new URLSearchParams(location.search).get('volver') || '';
+  return /^[a-z0-9\-]+\.html(\?[\w=&%.\-]*)?$/i.test(v) ? v : '';
+}
 
 async function hashPass(password, email) {
   const enc  = new TextEncoder();
@@ -145,18 +152,15 @@ async function hashPass(password, email) {
 
 // â”€â”€ LOGIN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function renderLogin() {
-  document.getElementById('mc-wrap').innerHTML = `
-    <div class="mc-card">
-      <h2><i class="fa-solid fa-right-to-bracket"></i>Iniciá Sesión</h2>
-      <div class="mc-field-row">
-        <input type="email" id="l-email" aria-label="Email" placeholder="Tu email" autocomplete="email" />
-        <input type="password" id="l-pass" aria-label="Contraseña" placeholder="Contraseña" autocomplete="current-password" />
-        <button class="mc-btn-red" id="l-btn" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket" style="margin-right:6px;"></i>Ingresar</button>
-      </div>
-      <div class="mc-msg error" id="l-err" style="display:none;"></div>
-      <p style="text-align:center;margin-top:18px;font-size:0.83rem;color:var(--gray);">¿No tenés cuenta? <a href="index.html" style="color:var(--red);font-weight:600;">Registrate gratis →</a></p>
-    </div>`;
-  document.getElementById('l-pass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  // Viene de crear la cuenta en la portada: directo a poner el código
+  let pendiente = '';
+  try { pendiente = sessionStorage.getItem('vsb_cuenta_pendiente') || ''; sessionStorage.removeItem('vsb_cuenta_pendiente'); } catch (e) {}
+  VsbCuenta.formulario(document.getElementById('mc-wrap'), {
+    titulo: 'Iniciá sesión',
+    subtitulo: 'Con tu cuenta ves tus compras y el estado de cada pedido.',
+    modo: pendiente ? 'codigo' : 'entrar', email: pendiente,
+    alEntrar: u => { const v = paginaDeVuelta(); if (v) location.href = v; else renderLoggedIn(u); }
+  });
 }
 
 async function doLogin() {
@@ -193,9 +197,9 @@ function renderLoggedIn(user) {
 
   document.getElementById('mc-wrap').innerHTML = `
     <div class="mc-card" style="text-align:center;">
-      <div class="mc-avatar">${user.nombre.charAt(0).toUpperCase()}</div>
-      <div class="mc-nombre">${user.nombre}</div>
-      <div class="mc-email-lbl">${user.email}</div>
+      <div class="mc-avatar">${VsbCuenta.esc((user.nombre || user.email || '?').charAt(0).toUpperCase())}</div>
+      <div class="mc-nombre">${VsbCuenta.esc(user.nombre || '')}</div>
+      <div class="mc-email-lbl">${VsbCuenta.esc(user.email)}</div>
     </div>
 
     <div class="mc-links">
@@ -213,7 +217,7 @@ function renderLoggedIn(user) {
         <input type="password" id="cp-old" aria-label="Contraseña actual" placeholder="Contraseña actual" />
         <input type="password" id="cp-new" aria-label="Nueva contraseña (mínimo 6 caracteres)" placeholder="Nueva Contraseña (mín. 6 caracteres)" />
         <input type="password" id="cp-new2" aria-label="Repetir nueva contraseña" placeholder="Repetir nueva Contraseña" />
-        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass('${user.email}')">Cambiar Contraseña</button>
+        <button class="mc-btn-red" id="cp-btn" onclick="doChangePass()">Cambiar Contraseña</button>
       </div>
       <div class="mc-msg" id="cp-msg" style="display:none;"></div>
     </div>
@@ -225,7 +229,8 @@ function renderLoggedIn(user) {
     </div>`;
 }
 
-async function doChangePass(email) {
+async function doChangePass() {
+  const email = (VsbCuenta.sesion() || {}).email || '';
   const oldPass = document.getElementById('cp-old').value;
   const newPass = document.getElementById('cp-new').value;
   const newPass2= document.getElementById('cp-new2').value;
@@ -239,8 +244,9 @@ async function doChangePass(email) {
   try {
     const oldHash = await hashPass(oldPass, email);
     const newHash = await hashPass(newPass, email);
-    const res  = await fetch(`${APPS_URL}?action=changePassword&email=${encodeURIComponent(email)}&oldHash=${oldHash}&newHash=${newHash}`, { redirect: 'follow' });
-    const data = await res.json();
+    const data = await VsbCuenta.api({ action: 'changePassword', email, oldHash, newHash });
+    // La contraseña nueva invalida las sesiones viejas: esta sigue con el token nuevo
+    if (data.ok && data.token) VsbCuenta.guardar(Object.assign({}, VsbCuenta.sesion(), { token: data.token }));
     if (data.ok) { msg.textContent = '✓ Contraseña actualizada.'; msg.className = 'mc-msg ok'; document.getElementById('cp-old').value=''; document.getElementById('cp-new').value=''; document.getElementById('cp-new2').value=''; }
     else { msg.textContent = data.error || 'Error al cambiar Contraseña.'; msg.className = 'mc-msg error'; }
   } catch { msg.textContent = 'Error de conexión.'; msg.className = 'mc-msg error'; }
@@ -250,7 +256,7 @@ async function doChangePass(email) {
 
 function cerrarSesion() {
   if (!confirm('¿Seguro que querés cerrar Sesión?')) return;
-  localStorage.removeItem('vsb_user');
+  VsbCuenta.salir();
   window.location.href = 'index.html';
 }
 </script>

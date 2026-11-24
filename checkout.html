@@ -1165,6 +1165,7 @@ async function uploadProof() {
       action: "uploadProof",
       orderNumber: createdOrder.orderNumber,
       email,
+      clave: createdOrder.claveComprobante || "",
       fileBase64: base64,
       fileMimeType: file.type,
     };

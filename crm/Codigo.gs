@@ -193,7 +193,7 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v25-auditoria-pagos' };
+    else if (accion === 'version')              out = { ok:true, version: 'v26-cuentas-reembolsos' };
     else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
@@ -201,14 +201,17 @@ function manejar(e) {
     else if (accion === 'olvidarDispositivo')   out = olvidarDispositivo(p);
     else if (accion === 'ranking_actualizar')   out = actualizarRanking(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
-    else if (accion === 'mis_pedidos')          out = misPedidos(p);
+    else if (accion === 'mis_pedidos')          out = tiendaMisPedidos(p);
     else if (accion === 'catalogo')             out = catalogoPublico();
     // Cuentas de clientes y seguimiento (antes en otro script: ahora todo vive acá)
     else if (accion === 'registerUser')         out = tiendaRegistrar(p);
     else if (accion === 'loginUser')            out = tiendaLogin(p);
     else if (accion === 'changePassword')       out = tiendaCambiarClave(p);
+    else if (accion === 'verifyEmail')          out = tiendaVerificarEmail(p);
+    else if (accion === 'forgotPassword')       out = tiendaOlvideClave(p);
+    else if (accion === 'resetPassword')        out = tiendaNuevaClave(p);
     else if (accion === 'subscribe')            out = { ok:true, id: suscribir(p) };
-    else if (accion === 'getMyOrders')          out = misPedidos(p);
+    else if (accion === 'getMyOrders')          out = tiendaMisPedidos(p);
     else if (accion === 'getOrder')             out = tiendaPedido(p);
     else if (accion === 'uploadProof')          out = tiendaComprobante(p);
     else throw 'Acción desconocida: ' + accion;
@@ -2705,6 +2708,7 @@ function crearPedido(p) {
       ok:          true,
       orderNumber: orderNum,
       total:       p.total || 0,
+      claveComprobante: _claveComprobante(orderNum, p.email),
       bankData: {
         alias:   BANK_ALIAS,
         cbu:     BANK_CBU,
@@ -2810,7 +2814,42 @@ function mpWebhook(p, e) {
 
   var r = _mpGet('/v1/payments/' + id);
   if (r.code !== 200 || !r.json) { _registrarError('mp_webhook', 'No se pudo consultar el pago ' + id + ' (' + r.code + ')'); return { ok:true }; }
-  return _confirmarPagoMP(r.json);
+  var conf = _confirmarPagoMP(r.json);
+  return _reembolsoMP(r.json) || conf;
+}
+
+// Reembolso total o contracargo: el pedido pasa a Cancelado con la nota (así no cuenta en facturación).
+// Reembolso parcial: se anota y se avisa, sin cambiar el estado. Idempotente por pago.
+function _reembolsoMP(pago) {
+  if (!pago) return null;
+  var st = String(pago.status || ''), devuelto = Number(pago.transaction_amount_refunded) || 0;
+  var total = st === 'refunded' || st === 'charged_back';
+  var parcial = !total && st === 'approved' && devuelto > 0;
+  if (!total && !parcial) return null;
+  var ref = String(pago.external_reference || '');
+  if (!ref) return { ok:true, estado:'sin_ref' };
+  var marca = (st === 'charged_back' ? 'contracargo MP ' : total ? 'reembolso MP ' : 'reembolso parcial MP ') + pago.id + (parcial ? ' $' + devuelto : '');
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var sh = hoja('Pedidos');
+    var cols = TABS['Pedidos'].map(function(c) { return c.k; });
+    var cEstado = cols.indexOf('estado'), cNotas = cols.indexOf('notas');
+    var datos = sh.getDataRange().getValues();
+    for (var i = datos.length - 1; i >= 1; i--) {
+      var notas = String(datos[i][cNotas] || '');
+      if (notas.indexOf('ref: ' + ref) < 0) continue;
+      if (notas.indexOf(marca) >= 0) return { ok:true, estado:'ya_anotado' };
+      var texto = st === 'charged_back' ? 'Contracargo de Mercado Pago' : total ? 'Reembolsado por Mercado Pago' : 'Reembolso parcial de $' + devuelto + ' por Mercado Pago';
+      if (total) sh.getRange(i + 1, cEstado + 1).setValue('Cancelado');
+      sh.getRange(i + 1, cNotas + 1).setValue(notas + ' · 💸 ' + texto + ' (' + marca + ')');
+      var cliente = datos[i][cols.indexOf('cliente')] || 'Cliente';
+      avisarTelegram('💸 ' + texto + '\n👤 ' + cliente + '\n💰 $' + (total ? (Number(pago.transaction_amount) || 0) : devuelto) + '\nRef: ' + ref);
+      avisarPush('💸 ' + texto, cliente + ' · Ref ' + ref, 'pedidos');
+      return { ok:true, estado: total ? 'reembolsado' : 'reembolso_parcial' };
+    }
+  } finally { lock.releaseLock(); }
+  return { ok:true, estado:'sin_pedido' };
 }
 
 // Conciliación: confirma pagos aprobados de las últimas 48 h que no llegaron por webhook.
@@ -2822,12 +2861,26 @@ function conciliarPagosMP() {
   var r = _mpGet('/v1/payments/search?sort=date_created&criteria=desc&status=approved&limit=100' +
                  '&range=date_created&begin_date=' + encodeURIComponent(desde) + '&end_date=' + encodeURIComponent(hasta));
   if (r.code !== 200 || !r.json) { _registrarError('conciliarPagosMP', 'Búsqueda de pagos falló (' + r.code + ')'); return { ok:false }; }
-  var res = { revisados:0, confirmados:0 };
+  var res = { revisados:0, confirmados:0, reembolsos:0 };
+  var deMP = function(pago) { return String(pago.external_reference || '').indexOf('vsb-') === 0; };
   (r.json.results || []).forEach(function(pago) {
-    if (String(pago.external_reference || '').indexOf('vsb-') !== 0) return;
+    if (!deMP(pago)) return;
     res.revisados++;
     var x = _confirmarPagoMP(pago);
     if (x.estado === 'confirmado' || x.estado === 'monto_distinto') res.confirmados++;
+    var y = _reembolsoMP(pago);
+    if (y && y.estado === 'reembolso_parcial') res.reembolsos++;
+  });
+  var desde15 = new Date(Date.now() - 15 * 86400 * 1000).toISOString();
+  ['refunded', 'charged_back'].forEach(function(st) {
+    var r2 = _mpGet('/v1/payments/search?sort=date_last_updated&criteria=desc&status=' + st + '&limit=100' +
+                    '&range=date_last_updated&begin_date=' + encodeURIComponent(desde15) + '&end_date=' + encodeURIComponent(hasta));
+    if (r2.code !== 200 || !r2.json) return;
+    (r2.json.results || []).forEach(function(pago) {
+      if (!deMP(pago) || String(pago.status) !== st) return;
+      var y = _reembolsoMP(pago);
+      if (y && y.estado === 'reembolsado') res.reembolsos++;
+    });
   });
   return res;
 }
@@ -2858,7 +2911,7 @@ function _hojaUsuarios() {
   var sh = spreadsheet.getSheetByName('Usuarios');
   if (!sh) {
     sh = spreadsheet.insertSheet('Usuarios');
-    sh.appendRow(['Fecha registro', 'Email', 'Nombre', 'Hash contraseña']);
+    sh.appendRow(['Fecha registro', 'Email', 'Nombre', 'Hash contraseña', 'Email confirmado']);
     sh.setFrozenRows(1);
   }
   return sh;
@@ -2877,12 +2930,17 @@ function tiendaRegistrar(p) {
   if (errReg) return { ok:false, error: errReg };
   var lock = LockService.getScriptLock(); lock.waitLock(15000);
   try {
-    var sh = _hojaUsuarios();
-    if (_buscarUsuario(sh, email)) return { ok:false, error:'email_taken' };
-    sh.appendRow([Utilities.formatDate(new Date(), 'GMT-3', 'dd/MM/yyyy HH:mm'), email, nombre, _hashClave(hash)]);
-    try { agregar('Clientes', { nombre: nombre, email: email, origen: 'web', notas: 'cuenta web' }); } catch (ex) { _registrarError('cliente_cuenta', ex); }
-    return { ok:true };
+    var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
+    if (u && u.datos[4]) return { ok:false, error:'email_taken' };
+    if (u) { sh.getRange(u.fila, 3).setValue(nombre); sh.getRange(u.fila, 4).setValue(_hashClave(hash)); }
+    else {
+      sh.appendRow([Utilities.formatDate(new Date(), 'GMT-3', 'dd/MM/yyyy HH:mm'), email, nombre, _hashClave(hash), '']);
+      try { agregar('Clientes', { nombre: nombre, email: email, origen: 'web', notas: 'cuenta web' }); } catch (ex) { _registrarError('cliente_cuenta', ex); }
+    }
   } finally { lock.releaseLock(); }
+  // La cuenta queda activa cuando confirma el código que le llega al email
+  var aviso = _codigoEnviar(email, nombre, 'cuenta');
+  return { ok:true, verificar:true, email: email, aviso: aviso };
 }
 function tiendaLogin(p) {
   var email = String(p.email || '').trim().toLowerCase(), hash = String(p.hash || '').trim();
@@ -2895,8 +2953,12 @@ function tiendaLogin(p) {
   var v = _verificarClave(u.datos[3], hash);
   if (!v.ok) { _falloSumar('login_tienda_' + email, 900); return { ok:false, error:'Contraseña incorrecta' }; }
   _falloLimpiar('login_tienda_' + email);
-  if (v.actualizar) sh.getRange(u.fila, 4).setValue(_hashClave(hash));
-  return { ok:true, nombre: u.datos[2], email: u.datos[1] };
+  if (v.actualizar) { var nh = _hashClave(hash); sh.getRange(u.fila, 4).setValue(nh); u.datos[3] = nh; }
+  if (!u.datos[4]) {
+    var aviso = _codigoEnviar(email, u.datos[2], 'cuenta');
+    return { ok:true, verificar:true, nombre: u.datos[2], email: email, aviso: aviso };
+  }
+  return { ok:true, nombre: u.datos[2], email: email, token: _sesionCrear(u) };
 }
 function tiendaCambiarClave(p) {
   var email = String(p.email || '').trim().toLowerCase();
@@ -2908,8 +2970,117 @@ function tiendaCambiarClave(p) {
   if (_bloqueado('login_tienda_' + email, 5)) return { ok:false, error: MSJ_BLOQUEO };
   if (!_verificarClave(u.datos[3], viejo).ok) { _falloSumar('login_tienda_' + email, 900); return { ok:false, error:'Contraseña actual incorrecta' }; }
   _falloLimpiar('login_tienda_' + email);
-  sh.getRange(u.fila, 4).setValue(_hashClave(nuevo));
+  var nh = _hashClave(nuevo);
+  sh.getRange(u.fila, 4).setValue(nh); u.datos[3] = nh;
+  return u.datos[4] ? { ok:true, token: _sesionCrear(u) } : { ok:true };
+}
+
+// ─── SESIÓN DE CLIENTES DE LA TIENDA ─────────────────────────
+// La cuenta se confirma con un código que llega al email: así nadie ve compras ajenas creando una cuenta
+// con un email que no es suyo. La sesión es un token firmado que dura 60 días y deja de valer si cambia
+// la contraseña. Mis compras, el seguimiento y subir comprobantes la piden.
+var SESION_DIAS = 60;
+var _SECRETO_MEM = '';
+function _secretoSesion() {
+  if (_SECRETO_MEM) return _SECRETO_MEM;
+  var props = PropertiesService.getScriptProperties();
+  var s = props.getProperty('SESION_SECRETO') || '';
+  if (!s) {
+    s = _sha256(Utilities.getUuid() + ':' + Utilities.getUuid() + ':' + Date.now());
+    if (props.setProperty) props.setProperty('SESION_SECRETO', s);
+  }
+  return (_SECRETO_MEM = s);
+}
+function _firma(datos) { var s = _secretoSesion(); return _sha256(s + ':' + datos + ':' + s).slice(0, 40); }
+function _sesionCrear(u) {
+  var email = String(u.datos[1]).trim().toLowerCase(), exp = Date.now() + SESION_DIAS * 86400000;
+  return 'ses1.' + encodeURIComponent(email) + '.' + exp + '.' + _firma(email + ':' + exp + ':' + String(u.datos[3]).slice(-12));
+}
+// Email de una sesión válida (cuenta confirmada y contraseña sin cambiar), o ''
+function _sesionEmail(token) {
+  // "ses1.<email>.<vence>.<firma>": el email tiene puntos, así que se lee desde el final
+  var t = String(token || '').split('.');
+  if (t.length < 4 || t[0] !== 'ses1') return '';
+  var firma = t.pop(), exp = Number(t.pop()), email = '';
+  try { email = decodeURIComponent(t.slice(1).join('.')).trim().toLowerCase(); } catch (e) { return ''; }
+  if (!email || !(exp > Date.now())) return '';
+  var u = _buscarUsuario(_hojaUsuarios(), email);
+  if (!u || !u.datos[4]) return '';
+  return _firma(email + ':' + exp + ':' + String(u.datos[3]).slice(-12)) === firma ? email : '';
+}
+function _claveComprobante(numero, email) {
+  return _firma('comp:' + String(numero || '').trim().toLowerCase() + ':' + String(email || '').trim().toLowerCase()).slice(0, 24);
+}
+
+// Código de 6 números por email (30 minutos, 5 intentos, hasta 4 envíos por hora)
+function _codigoEnviar(email, nombre, motivo) {
+  if (!_limite('codigo_envio_' + email, 4, 3600)) return 'Ya te mandamos varios códigos. Esperá un rato y revisá también el correo no deseado.';
+  try { if (MailApp.getRemainingDailyQuota() < 1) return 'No pudimos mandar el email ahora. Escribinos por WhatsApp.'; } catch (e) {}
+  var codigo = String(100000 + Math.floor(Math.random() * 900000));
+  CacheService.getScriptCache().put('codigo_' + _md5(email), _sha256(codigo + ':' + email), 1800);
+  _falloLimpiar('codigo_' + email);
+  var clave = motivo === 'clave';
+  try {
+    MailApp.sendEmail({ to: email, name: 'Virtual Shop Baires',
+      subject: codigo + ' es tu código de Virtual Shop Baires',
+      htmlBody: '<div style="font-family:Arial,sans-serif;max-width:440px;color:#222">' +
+        '<p>Hola' + (nombre ? ' ' + _escHtmlGs(nombre) : '') + ',</p>' +
+        '<p>' + (clave ? 'Para elegir una contraseña nueva' : 'Para confirmar tu cuenta y ver tus compras') + ', ingresá este código en la web:</p>' +
+        '<p style="font-size:30px;font-weight:bold;letter-spacing:6px;margin:18px 0">' + codigo + '</p>' +
+        '<p style="color:#666;font-size:13px">Vence en 30 minutos. Si no lo pediste vos, ignorá este email: tu cuenta sigue igual.</p>' +
+        '<p>Virtual Shop Baires</p></div>' });
+  } catch (e) { _registrarError('codigo_email', e); return 'No pudimos mandar el email. Probá de nuevo en un rato.'; }
+  return '';
+}
+function _codigoError(email, codigo) {
+  if (_bloqueado('codigo_' + email, 5)) return 'Demasiados intentos. Pedí un código nuevo.';
+  var c = CacheService.getScriptCache(), k = 'codigo_' + _md5(email), guardado = c.get(k);
+  if (!guardado) return 'El código venció. Pedí uno nuevo.';
+  if (guardado !== _sha256(String(codigo || '').replace(/\D/g, '') + ':' + email)) { _falloSumar('codigo_' + email, 1800); return 'El código no es correcto.'; }
+  c.remove(k); _falloLimpiar('codigo_' + email);
+  return '';
+}
+function _usuarioConfirmar(sh, u) {
+  if (u.datos[4]) return;
+  var f = Utilities.formatDate(new Date(), 'GMT-3', 'dd/MM/yyyy HH:mm');
+  sh.getRange(u.fila, 5).setValue(f); u.datos[4] = f;
+}
+function tiendaVerificarEmail(p) {
+  var email = String(p.email || '').trim().toLowerCase();
+  if (!email || !p.codigo) return { ok:false, error:'Faltan datos' };
+  var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
+  if (!u) return { ok:false, error:'No encontramos esa cuenta.' };
+  var err = _codigoError(email, p.codigo);
+  if (err) return { ok:false, error: err };
+  _usuarioConfirmar(sh, u);
+  return { ok:true, nombre: u.datos[2], email: email, token: _sesionCrear(u) };
+}
+// Igual con o sin cuenta: no revela qué emails están registrados
+function tiendaOlvideClave(p) {
+  var email = String(p.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok:false, error:'Revisá el email.' };
+  if (String(p.website || '').trim()) return { ok:true };
+  var u = _buscarUsuario(_hojaUsuarios(), email);
+  if (u) { var err = _codigoEnviar(email, u.datos[2], 'clave'); if (err) return { ok:false, error: err }; }
   return { ok:true };
+}
+function tiendaNuevaClave(p) {
+  var email = String(p.email || '').trim().toLowerCase(), hash = String(p.hash || '').trim();
+  if (!email || !hash || !p.codigo) return { ok:false, error:'Faltan datos' };
+  var sh = _hojaUsuarios(), u = _buscarUsuario(sh, email);
+  if (!u) return { ok:false, error:'El código no es correcto.' };
+  var err = _codigoError(email, p.codigo);
+  if (err) return { ok:false, error: err };
+  var nh = _hashClave(hash);
+  sh.getRange(u.fila, 4).setValue(nh); u.datos[3] = nh;
+  _falloLimpiar('login_tienda_' + email);
+  _usuarioConfirmar(sh, u);   // el código llegó a su email: la cuenta queda confirmada
+  return { ok:true, nombre: u.datos[2], email: email, token: _sesionCrear(u) };
+}
+function tiendaMisPedidos(p) {
+  var email = _sesionEmail(p.token);
+  if (!email) return { ok:false, error:'sesion' };
+  return misPedidos({ email: email });
 }
 
 // ─── SEGUIMIENTO DE UN PEDIDO (order-status.html) ────────────
@@ -2926,8 +3097,10 @@ function _buscarPedidoWeb(numero, email) {
   return null;
 }
 function tiendaPedido(p) {
-  var numero = String(p.order || '').trim(), email = String(p.email || '').trim().toLowerCase();
-  if (!numero || !email) return { ok:false, error:'Faltan parámetros' };
+  var email = _sesionEmail(p.token);
+  if (!email) return { ok:false, error:'sesion' };
+  var numero = String(p.order || '').trim();
+  if (!numero) return { ok:false, error:'Faltan parámetros' };
   if (!_limite('seguimiento_' + email, 30, 600)) return { ok:false, error:'Demasiadas consultas. Esperá unos minutos.' };
   var w = _buscarPedidoWeb(numero, email);
   if (w) {
@@ -2951,8 +3124,13 @@ function tiendaPedido(p) {
 // Comprobante de transferencia: se guarda PRIVADO en Drive (carpeta "VSB-Comprobantes")
 // y el link queda en las observaciones del pedido para verlo desde el CRM.
 function tiendaComprobante(p) {
-  var numero = String(p.orderNumber || '').trim(), email = String(p.email || '').trim().toLowerCase();
-  if (!numero || !email || !p.fileBase64) return { ok:false, error:'Faltan datos requeridos' };
+  var numero = String(p.orderNumber || '').trim(), email = _sesionEmail(p.token);
+  // Sin sesión: solo con la clave que dio el pedido recién hecho (pantalla de confirmación del checkout)
+  if (!email) {
+    email = String(p.email || '').trim().toLowerCase();
+    if (!email || !p.clave || String(p.clave) !== _claveComprobante(numero, email)) return { ok:false, error:'sesion' };
+  }
+  if (!numero || !p.fileBase64) return { ok:false, error:'Faltan datos requeridos' };
   var datos = String(p.fileBase64).replace(/^data:[^;]+;base64,/, '');
   if (datos.length > 7000000) return { ok:false, error:'El archivo es muy grande (máx. 5 MB).' };
   var mime = String(p.fileMimeType || 'image/jpeg');
@@ -3024,7 +3202,7 @@ function misPedidos(p) {
         metodoPago:    'mercadopago',
         metodoEntrega: '',
         estadoPedido:  est,
-        estadoPago:    _estadoPagoWeb(est, 'mercadopago')
+        estadoPago:    /Reembolsado por Mercado Pago|Contracargo de Mercado Pago/.test(notas) ? 'PAGO REEMBOLSADO' : _estadoPagoWeb(est, 'mercadopago')
       });
     }
   }

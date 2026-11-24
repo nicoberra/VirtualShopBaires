@@ -760,22 +760,24 @@
 
     try {
       const hash = await hashPass(pass, email);
-      const res  = await fetch(`${STORE_API_URL}?action=registerUser&nombre=${encodeURIComponent(nombre)}&email=${encodeURIComponent(email)}&hash=${hash}`, { redirect: 'follow' });
+      const res  = await fetch(STORE_API_URL, { method: 'POST', body: JSON.stringify({ action: 'registerUser', nombre, email, hash }), redirect: 'follow' });
       const data = await res.json();
       if (!data.ok) {
-        if (data.error === 'email_taken') errEl.textContent = 'Ese email ya está registrado. ¿Querés iniciar sesión?';
+        if (data.error === 'email_taken') errEl.textContent = 'Ese email ya está registrado. Entrá desde Mi cuenta.';
         else errEl.textContent = data.error || 'Error al registrar.';
         errEl.style.display = 'block';
         btn.disabled = false; btn.textContent = 'Registrarme';
         return;
       }
-    } catch(_) {}
-
-    localStorage.setItem('vsb_user', JSON.stringify({ nombre, email }));
-    const hBtn = document.getElementById('header-user-btn');
-    if (hBtn) { hBtn.style.display = 'flex'; hBtn.title = 'Hola, ' + nombre + ' — Mi cuenta'; }
-    closeRegModal();
-    mostrarToast(nombre);
+    } catch(_) {
+      errEl.textContent = 'Error de conexión. Intentá de nuevo.';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'Registrarme';
+      return;
+    }
+    // La cuenta se activa con el código que le llegó por email: se pone en Mi cuenta
+    try { sessionStorage.setItem('vsb_cuenta_pendiente', email); } catch (e) {}
+    window.location.href = 'mi-cuenta.html';
   }
 
   async function hashPass(password, email) {

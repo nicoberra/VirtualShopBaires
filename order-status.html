@@ -127,15 +127,13 @@
   <div class="container">
     <div class="status-box">
 
-      <div class="search-card">
+      <div id="os-sesion" style="margin-bottom:24px;"></div>
+      <div class="search-card" id="os-buscar" style="display:none;">
         <h2><i class="fa-solid fa-magnifying-glass"></i> Buscar pedido</h2>
+        <p id="os-quien" style="font-size:.85rem;color:var(--gray);margin:-10px 0 16px;"></p>
         <div class="field-row">
           <label>Número de pedido</label>
           <input type="text" id="inp-order" placeholder="VSB-20260723-1234" />
-        </div>
-        <div class="field-row">
-          <label>Email con el que realizaste la compra</label>
-          <input type="email" id="inp-email" placeholder="tu@email.com" />
         </div>
         <button class="btn-buscar" onclick="buscarPedido()">
           <i class="fa-solid fa-magnifying-glass"></i> Buscar pedido
@@ -207,6 +205,7 @@
 <script src="js/cart.js?v=7"></script>
 <script src="js/main.js?v=8"></script>
 <script src="js/mejoras-ui.js"></script>
+<script src="js/cuenta.js?v=1"></script>
 <script>
 // REEMPLAZÁ con la misma URL del Apps Script que pusiste en checkout.html
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
@@ -219,8 +218,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const p = new URLSearchParams(window.location.search);
   if (p.get("order")) document.getElementById("inp-order").value = p.get("order");
-  if (p.get("email")) document.getElementById("inp-email").value = p.get("email");
-  if (p.get("order") && p.get("email")) buscarPedido();
+  const u = VsbCuenta.sesion();
+  if (u) mostrarBuscador(u); else pedirSesionOS();
+  if (u && p.get("order")) buscarPedido();
 
   const zone = document.getElementById("upload-zone-s");
   zone.addEventListener("dragover", e => { e.preventDefault(); zone.classList.add("drag"); });
@@ -231,26 +231,43 @@ document.addEventListener("DOMContentLoaded", () => {
     if (f) { document.getElementById("proof-file-s").files = e.dataTransfer.files; previewProofS({ files: [f] }); }
   });
 
-  ["inp-order", "inp-email"].forEach(id => {
+  ["inp-order"].forEach(id => {
     document.getElementById(id).addEventListener("keydown", e => { if (e.key === "Enter") buscarPedido(); });
   });
 });
+
+// Por seguridad, cada pedido se ve solo con la cuenta del cliente
+function pedirSesionOS(msg) {
+  document.getElementById("os-buscar").style.display = "none";
+  document.getElementById("order-result").style.display = "none";
+  VsbCuenta.formulario(document.getElementById("os-sesion"), {
+    titulo: "Entrá para ver tu pedido",
+    subtitulo: msg || "El estado de cada pedido se ve solo con tu cuenta. Si compraste sin cuenta, creala con el mismo email de la compra.",
+    alEntrar: u => { mostrarBuscador(u); if (document.getElementById("inp-order").value.trim()) buscarPedido(); }
+  });
+}
+function mostrarBuscador(u) {
+  document.getElementById("os-sesion").innerHTML = "";
+  document.getElementById("os-buscar").style.display = "block";
+  document.getElementById("os-quien").textContent = "Pedidos de " + u.email;
+}
 
 function fmt(n) { return "$" + Number(n).toLocaleString("es-AR"); }
 
 async function buscarPedido() {
   const orderNum = document.getElementById("inp-order").value.trim().toUpperCase();
-  const email    = document.getElementById("inp-email").value.trim().toLowerCase();
+  const u = VsbCuenta.sesion();
+  if (!u) { pedirSesionOS(); return; }
+  const email = u.email;
 
   if (!orderNum) { showError("Por favor ingresá el número de pedido."); return; }
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError("Por favor ingresá un email válido."); return; }
 
   clearError();
   document.getElementById("order-result").style.display = "none";
   document.getElementById("spinner").classList.add("show");
 
   try {
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=getOrder&order=${encodeURIComponent(orderNum)}&email=${encodeURIComponent(email)}`);
+    const res = { json: () => VsbCuenta.api({ action: "getOrder", order: orderNum, token: u.token }) };
     const data = await res.json();
     document.getElementById("spinner").classList.remove("show");
 
@@ -364,7 +381,7 @@ async function uploadProofS() {
     const payload = {
       action: "uploadProof",
       orderNumber: currentOrderNumber,
-      email: currentEmail,
+      token: (VsbCuenta.sesion() || {}).token,
       fileBase64: base64,
       fileMimeType: file.type,
     };

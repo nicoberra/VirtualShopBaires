@@ -168,6 +168,28 @@
     .co-btn-submit:active { transform: scale(0.98); }
     .co-btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
     .co-security { text-align: center; font-size: 0.72rem; color: #9CA3AF; margin-top: 8px; }
+    /* Confianza: cuotas, tarjetas, sellos y sugeridos */
+    .co-pay-cuotas { color: #1A1A2E; font-weight: 700; }
+    .co-tarjetas { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 1.35rem; color: #4B5563; }
+    .co-tarjetas span { font-size: 0.74rem; color: #6B7280; }
+    .co-cuotas { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 9px 11px; border-radius: 10px; background: #EEF7FD; color: #0B4F79; font-size: 0.8rem; line-height: 1.4; }
+    .co-cuotas i { margin-top: 2px; }
+    .co-cuotas[hidden], .co-sugeridos[hidden] { display: none; }
+    .co-sellos { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+    .co-sellos li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.76rem; color: #6B7280; line-height: 1.35; }
+    .co-sellos i { color: #16A34A; font-size: 0.95rem; width: 18px; text-align: center; margin-top: 1px; }
+    .co-sellos b { display: block; color: #1A1A2E; font-size: 0.8rem; }
+    .co-dudas { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin-top: 12px; border-radius: 12px; border: 1px solid #D1FAE5; background: #F0FDF4; color: #15803D; font-size: 0.84rem; font-weight: 700; text-decoration: none; }
+    .co-dudas i { font-size: 1.1rem; }
+    .co-sugeridos { margin-top: 12px; padding-top: 10px; border-top: 1px solid #F3F4F6; }
+    .co-sug-tit { font-size: 0.82rem; font-weight: 800; color: #1A1A2E; margin: 0 0 8px; }
+    .co-sug { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; }
+    .co-sug img { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; background: #F3F4F6; }
+    .co-sug-nom { font-size: 0.8rem; color: #1A1A2E; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .co-sug-pre { font-size: 0.8rem; font-weight: 700; color: #1A1A2E; margin-top: 2px; }
+    .co-sug-btn { min-height: 40px; padding: 0 14px; border-radius: 50px; border: 1.5px solid #CC1212; background: #fff; color: #CC1212; font: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; touch-action: manipulation; }
+    .co-sug-btn:hover { background: #FEF2F2; }
+    .co-sug-btn:active { transform: scale(0.97); }
 
     /* Estado vacío */
     .co-empty { text-align: center; padding: 80px 20px; color: #6B7280; max-width: 400px; margin: 0 auto; }
@@ -377,7 +399,8 @@
             <input type="radio" name="metodoPago" value="mercadopago" onchange="onPaymentChange()" />
             <div>
               <div class="co-pay-main" style="color:#009EE3;">Mercado Pago</div>
-              <span class="co-pay-sub">débito · crédito · cuotas · plata en cuenta</span>
+              <span class="co-pay-sub"><b class="co-pay-cuotas">Pagalo en cuotas con tarjeta de crédito</b> · débito · dinero en cuenta</span>
+              <span class="co-tarjetas" aria-label="Visa, Mastercard, American Express y más tarjetas"><i class="fa-brands fa-cc-visa" aria-hidden="true"></i><i class="fa-brands fa-cc-mastercard" aria-hidden="true"></i><i class="fa-brands fa-cc-amex" aria-hidden="true"></i><span aria-hidden="true">y más</span></span>
             </div>
           </label>
 
@@ -538,11 +561,18 @@
         <div class="co-card co-sticky">
           <h3 class="co-card-title">Tu pedido</h3>
           <div id="co-items-list" class="co-items-scroll"></div>
+          <div id="co-sugeridos" class="co-sugeridos" hidden></div>
           <div id="co-price-summary" class="co-prices"></div>
+          <p id="co-cuotas" class="co-cuotas" hidden><i class="fa-solid fa-credit-card" aria-hidden="true"></i> Podés pagarlo en cuotas con tarjeta de crédito. Elegís la cantidad en Mercado Pago.</p>
           <button class="co-btn-submit" id="btn-submit" onclick="submitOrder()">
             <i class="fa-solid fa-lock" style="margin-right:6px;"></i>Pago seguro · Confirmar pedido
           </button>
-          <p class="co-security"><i class="fa-solid fa-shield-halved" style="margin-right:3px;"></i>Tus datos son privados y seguros</p>
+          <ul class="co-sellos" aria-label="Compra segura">
+            <li><i class="fa-solid fa-lock" aria-hidden="true"></i><span><b>Pago seguro con Mercado Pago</b>Los datos de tu tarjeta los cargás en Mercado Pago, no en nuestra web</span></li>
+            <li><i class="fa-solid fa-box" aria-hidden="true"></i><span><b>Importador directo</b>Sin intermediarios · Envío a todo el país</span></li>
+            <li><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span><b>Cambios y devoluciones</b>Dentro de los 7 días hábiles de recibido</span></li>
+          </ul>
+          <a class="co-dudas" href="https://wa.me/5491149457266?text=Hola!%20Tengo%20una%20duda%20antes%20de%20pagar%20mi%20pedido." target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" aria-hidden="true"></i> ¿Dudas antes de pagar? Escribinos por WhatsApp</a>
         </div>
       </div>
 
@@ -577,11 +607,12 @@
   </div>
 </div>
 
+<script src="js/sheets.js?v=22"></script>
 <script src="js/cart.js?v=7"></script>
 <script src="js/main.js?v=8"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
+const CO_API_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 const CRM_URL = "https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWqpTCOWVHxuzaaTt1PH3lwiJ8ju_PigCFVgsEiRrbgE3dN/exec";
 const DISCOUNT_PCT = 10;
 
@@ -621,6 +652,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof vsbPixel === "function") vsbPixel("InitiateCheckout", { content_ids: cartItems.map(i => String(i.id)), content_type: "product", num_items: cartItems.reduce((s, i) => s + i.qty, 0), value: Cart.getTotal() });
   document.getElementById("checkout-main").style.display = "block";
   renderItems();
+  cargarSugeridos();
 
   const zone = document.getElementById("upload-zone");
   if (zone) {
@@ -790,6 +822,62 @@ function renderItems() {
   renderPrices("co-price-summary");
 }
 
+// ─── SUMÁ A TU PEDIDO ───
+// Hasta 3 productos con stock y una sola opción (se suman sin elegir color): primero infladores si hay
+// inflables en el carrito; después más baratos de la misma categoría (tipo accesorio). Mismo Cart.add que la
+// tienda (precio de la tienda; el servidor lo recalcula igual).
+let _sugeridos = [];
+async function cargarSugeridos() {
+  try {
+    if (typeof cargarProductos !== "function") return;
+    if (!PRODUCTOS.length) await cargarProductos();
+    renderSugeridos();
+  } catch (e) { /* sin sugeridos no pasa nada */ }
+}
+function _opcionUnica(p) {
+  if (p.agotado || p.disponible === false) return null;
+  if (!p.tieneVariantes) return p.precio > 0 ? { variante: null, precio: p.precio } : null;
+  const vs = (p.variantes || []).filter(v => v.stock && v.precio > 0);
+  return vs.length === 1 ? { variante: { color: vs[0].color || null, talle: vs[0].talle || null }, precio: vs[0].precio } : null;
+}
+function elegirSugeridos(items, productos) {
+  if (!items.length) return [];
+  const enCarrito = new Set(items.map(i => i.nombre));
+  const cats = new Set(items.map(i => i.categoria));
+  const tope = Math.max(...items.map(i => Number(i.precio) || 0));
+  const inflable = items.some(i => /inflable|colch[oó]n|pileta|bote|flotador|isla/i.test(i.nombre));
+  const ok = productos.map(p => ({ p, o: _opcionUnica(p) })).filter(x => x.o && !enCarrito.has(x.p.nombre));
+  const infladores = inflable ? ok.filter(x => /^\s*(inflador|bomba de aire|bomba (para )?inflar|parche)/i.test(x.p.nombre)) : [];
+  const accesorios = ok.filter(x => cats.has(x.p.categoria) && x.o.precio <= tope * 0.35 && !infladores.includes(x));
+  return infladores.concat(accesorios).slice(0, 3);
+}
+function renderSugeridos() {
+  const caja = document.getElementById("co-sugeridos");
+  if (!caja) return;
+  _sugeridos = elegirSugeridos(cartItems, typeof PRODUCTOS !== "undefined" ? PRODUCTOS : []);
+  caja.hidden = !_sugeridos.length;
+  if (!_sugeridos.length) { caja.innerHTML = ""; return; }
+  const esc = t => String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  caja.innerHTML = '<p class="co-sug-tit">Sumá a tu pedido</p>' + _sugeridos.map((x, i) => {
+    const img = x.p.imagen || (x.p.imagenes || [])[0] || "";
+    const src = img && typeof fotoSrc === "function" ? fotoSrc(img) : String(img).split("#")[0];
+    return `<div class="co-sug">
+      ${src ? `<img src="${esc(src)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">` : '<span></span>'}
+      <div><div class="co-sug-nom">${esc(x.p.nombre)}</div><div class="co-sug-pre">${fmt(x.o.precio)}</div></div>
+      <button type="button" class="co-sug-btn" data-i="${i}" aria-label="Sumar ${esc(x.p.nombre)} al pedido">Sumar</button>
+    </div>`;
+  }).join("");
+  caja.querySelectorAll(".co-sug-btn").forEach(b => b.addEventListener("click", () => {
+    const x = _sugeridos[Number(b.dataset.i)];
+    if (!x) return;
+    if (x.o.variante) Cart.add(x.p.id, x.o.variante, x.o.precio); else Cart.add(x.p.id);
+    cartItems = Cart.getItems();
+    renderItems();
+    renderSugeridos();
+    if (typeof actualizarEnvio === "function") actualizarEnvio();
+  }));
+}
+
 function calcPrices() {
   const sub = cartItems.reduce((s, i) => s + i.precio * i.qty, 0);
   const esTransferencia = ["transferencia", "efectivo"].includes(getPaymentMethod());
@@ -847,6 +935,8 @@ function toggleAddressFields() {
 
 function onPaymentChange() {
   renderItems();
+  const cuotas = document.getElementById("co-cuotas");
+  if (cuotas) cuotas.hidden = getPaymentMethod() !== "mercadopago";
   const btn = document.getElementById("btn-submit");
   if (!btn) return;
   if (getPaymentMethod() === "mercadopago") {
@@ -1169,7 +1259,7 @@ async function uploadProof() {
       fileBase64: base64,
       fileMimeType: file.type,
     };
-    const res = await fetch(APPS_SCRIPT_URL, {
+    const res = await fetch(CO_API_URL, {
       method: "POST",
       body: JSON.stringify(payload),
       redirect: "follow",

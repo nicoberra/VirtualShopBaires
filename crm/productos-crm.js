@@ -707,7 +707,7 @@ function abrirAgregarVariante(grupo) {
         <div class="form-row">
           <div class="form-group">
             <label for="nv-precio">Precio ($)</label>
-            <input type="number" id="nv-precio" min="0" step="1" value="${precioN}">
+            <input type="number" id="nv-precio" min="0" step="1" value="${precioN}" inputmode="numeric">
           </div>
           <div class="form-group">
             <label for="nv-sku">SKU</label>
@@ -886,7 +886,7 @@ function editarCeldaSku(td, p) {
 
 async function editarCeldaNum(td, p, campo, valorActual, onSave, prefix='$', customRender=null) {
   if (td.querySelector('input')) return;
-  td.innerHTML = `<input type="number" class="inline-input" value="${valorActual}" min="0" step="1">`;
+  td.innerHTML = `<input type="number" class="inline-input" inputmode="numeric" value="${valorActual}" min="0" step="1">`;
   const input = td.querySelector('input');
   input.focus(); input.select();
   const renderVal = customRender || (v => v

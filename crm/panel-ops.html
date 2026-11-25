@@ -167,14 +167,14 @@
       </div>
       <div class="form-row">
         <div class="form-group"><label>Teléfono</label><input type="tel" id="mcli-telefono" placeholder="+54 9 11 1234-5678"></div>
-        <div class="form-group"><label>DNI</label><input type="text" id="mcli-dni" placeholder="12345678"></div>
+        <div class="form-group"><label>DNI</label><input type="text" id="mcli-dni" placeholder="12345678" inputmode="numeric"></div>
       </div>
       <div class="form-group"><label>Email</label><input type="email" id="mcli-email" placeholder="email@ejemplo.com"></div>
 
       <p class="modal-section-label" style="margin-top:14px">Dirección de entrega</p>
       <div class="form-row">
         <div class="form-group" style="flex:2"><label>Dirección</label><input type="text" id="mcli-direccion" placeholder="Av. Corrientes 1234, Piso 3"></div>
-        <div class="form-group"><label>CP</label><input type="text" id="mcli-cp" placeholder="1043"></div>
+        <div class="form-group"><label>CP</label><input type="text" id="mcli-cp" placeholder="1043" inputmode="numeric"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Localidad</label><input type="text" id="mcli-ciudad" placeholder="CABA"></div>
@@ -183,7 +183,7 @@
 
       <p class="modal-section-label" style="margin-top:14px">Datos de facturación</p>
       <div class="form-row">
-        <div class="form-group"><label>CUIT / CUIL</label><input type="text" id="mcli-cuit" placeholder="20-12345678-9"></div>
+        <div class="form-group"><label>CUIT / CUIL</label><input type="text" id="mcli-cuit" placeholder="20-12345678-9" inputmode="numeric"></div>
         <div class="form-group">
           <label>Condición IVA</label>
           <select id="mcli-iva" class="sel">
@@ -242,7 +242,7 @@
         <small class="text-muted">Formato: cantidad x nombre, separados por coma</small>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Monto ($)</label><input type="number" id="mped-monto" placeholder="0" min="0"></div>
+        <div class="form-group"><label>Monto ($)</label><input type="number" id="mped-monto" placeholder="0" min="0" inputmode="numeric"></div>
         <div class="form-group">
           <label>Estado</label>
           <select id="mped-estado" class="sel">
@@ -401,11 +401,11 @@
       <div class="form-row">
         <div class="form-group">
           <label>Precio ($)</label>
-          <input type="number" id="np-precio" min="0" step="1" value="0">
+          <input type="number" id="np-precio" min="0" step="1" value="0" inputmode="numeric">
         </div>
         <div class="form-group">
           <label>Stock (unidades)</label>
-          <input type="number" id="np-stock" min="0" step="1" value="1">
+          <input type="number" id="np-stock" min="0" step="1" value="1" inputmode="numeric">
         </div>
       </div>
       <div class="form-group">
@@ -461,7 +461,7 @@
 <script src="panel-ops.js?v=27"></script>
 <script src="version-crm.js?v=1"></script>
 <script src="orden-fotos.js?v=1"></script>
-<script src="productos-crm.js?v=39"></script>
+<script src="productos-crm.js?v=40"></script>
 <script src="nav-movil.js?v=1"></script>
 <script src="login-glass.js?v=3"></script>
 <script src="confianza.js?v=2"></script>

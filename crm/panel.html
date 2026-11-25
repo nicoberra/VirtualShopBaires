@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="panel.css?v=56">
+  <link rel="stylesheet" href="panel.css?v=57">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -59,9 +59,10 @@
   <!-- MOBILE TOP NAV -->
   <div id="mobile-nav">
     <div class="mobile-logo"><img class="nav-logo-img" src="logo-vsb.webp?v=3" alt="Virtual Shop Baires" width="720" height="243"></div>
-    <button id="btn-refresh-global" class="btn-refresh" onclick="refreshCurrent()" title="Actualizar"><i class="fa-solid fa-rotate-right"></i></button>
+    <button id="btn-refresh-global" class="btn-refresh" onclick="refreshCurrent()" title="Actualizar" aria-label="Actualizar"><i class="fa-solid fa-rotate-right"></i></button>
+    <button type="button" class="btn-refresh btn-salir-movil" onclick="if(confirm('¿Querés salir del CRM?'))logout()" title="Salir" aria-label="Salir del CRM"><i class="fa-solid fa-right-from-bracket"></i></button>
     <div id="mobile-nav-scroll">
-      <button class="mnav-btn" data-sec="panel"        onclick="goTo('panel')">        <i class="fa-solid fa-gauge-high"></i><span class="mnav-label">Panel</span></button>
+      <button class="mnav-btn" data-sec="panel"        onclick="goTo('panel')">        <i class="fa-solid fa-house"></i><span class="mnav-label">Inicio</span></button>
       <button class="mnav-btn" data-sec="facturacion"  onclick="goTo('facturacion')">  <i class="fa-solid fa-dollar-sign"></i><span class="mnav-label">Factura</span></button>
       <button class="mnav-btn" data-sec="clientes"     onclick="goTo('clientes')">     <i class="fa-solid fa-users"></i><span class="mnav-label">Clientes</span></button>
       <button class="mnav-btn" data-sec="productos"    onclick="goTo('productos')">    <i class="fa-solid fa-box"></i><span class="mnav-label">Productos</span></button>
@@ -76,8 +77,28 @@
 
     <!-- PANEL -->
     <section id="sec-panel" class="sec">
-      <h1 class="sec-title">Panel</h1>
-      <div id="panel-cards" class="stats-grid">
+      <h1 class="sec-title panel-compu">Panel</h1>
+      <h1 class="sr-only panel-celu">Inicio</h1>
+      <div class="inicio panel-celu">
+        <nav class="inicio-grid" aria-label="Partes del CRM">
+          <button type="button" class="inicio-tile" onclick="goTo('facturacion')"><i class="fa-solid fa-sack-dollar" aria-hidden="true"></i><span>Facturación</span></button>
+          <button type="button" class="inicio-tile" onclick="goTo('clientes')"><i class="fa-solid fa-users" aria-hidden="true"></i><span>Clientes</span></button>
+          <button type="button" class="inicio-tile" onclick="goTo('productos')"><i class="fa-solid fa-box-open" aria-hidden="true"></i><span>Productos</span></button>
+          <button type="button" class="inicio-tile" onclick="goTo('pedidos')"><b class="inicio-badge" id="badge-pedidos" hidden></b><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i><span>Pedidos</span></button>
+          <button type="button" class="inicio-tile" onclick="goTo('comprobantes')"><b class="inicio-badge" id="badge-pagos" hidden></b><i class="fa-solid fa-receipt" aria-hidden="true"></i><span>Pagos</span></button>
+          <button type="button" class="inicio-tile" onclick="goTo('leads')"><i class="fa-solid fa-bullseye" aria-hidden="true"></i><span>Leads</span></button>
+          <button type="button" class="inicio-tile" onclick="verAvisosStock()"><b class="inicio-badge" id="badge-avisos" hidden></b><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Avisos</span></button>
+          <a class="inicio-tile" href="/crm/panel-ops.html" onclick="localStorage.setItem('vsb_nav_from_crm','1')"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i><span>Operaciones</span></a>
+          <a class="inicio-tile" href="/" target="_blank" rel="noopener"><i class="fa-solid fa-store" aria-hidden="true"></i><span>Ver tienda</span></a>
+        </nav>
+        <div class="inicio-lado">
+          <h2 class="inicio-sub"><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> Ventas web</h2>
+          <div id="inicio-ventas" class="inicio-ventas"></div>
+          <h2 class="inicio-sub">Resumen del mes</h2>
+          <div id="panel-resumen" class="inicio-resumen"></div>
+        </div>
+      </div>
+      <div id="panel-cards" class="stats-grid panel-compu">
         <div class="stat-card skeleton"></div>
         <div class="stat-card skeleton"></div>
         <div class="stat-card skeleton"></div>
@@ -87,7 +108,7 @@
         <h3 class="card-title"><i class="fa-solid fa-bell"></i> Avisar: volvió el stock <span id="avisos-n" class="avisos-n"></span></h3>
         <div id="avisos-lista"></div>
       </div>
-      <div class="two-col">
+      <div class="two-col panel-compu">
         <div class="card">
           <h3 class="card-title"><i class="fa-solid fa-bag-shopping"></i> Pedidos recientes</h3>
           <div id="panel-pedidos-rec"></div>
@@ -519,7 +540,7 @@
 
 <script src="estados.js?v=1"></script>
 <script src="pedido-contacto.js?v=2"></script>
-<script src="panel.js?v=29"></script>
+<script src="panel.js?v=30"></script>
 <script src="version-crm.js?v=1"></script>
 <script src="orden-fotos.js?v=1"></script>
 <script src="productos-crm.js?v=39"></script>

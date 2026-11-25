@@ -269,6 +269,7 @@ function pintarAvisosStock() {
   const esperando = _avisos.length - listos.length;
   card.hidden = !_avisos.length;
   $('avisos-n').textContent = listos.length ? listos.length + ' para avisar' : '';
+  _badge('badge-avisos', listos.length);
   $('avisos-lista').innerHTML = (listos.length ? listos.map(a => {
     const nombre = String(a.nombre || '').split(' ')[0];
     const msg = `${_saludoHora()} ${nombre}! Te escribimos de Virtual Shop Baires: volvimos a tener *${a.producto}*. ¿Te lo reservamos? Lo ves acá: https://virtualshopbaires.com.ar/productos.html?buscar=${encodeURIComponent(a.producto)}`;
@@ -292,12 +293,82 @@ function marcarAvisado(id) {
   });
 }
 
+// Celular: pantalla de inicio con botones grandes a cada parte del CRM, últimas ventas web y resumen del mes
+function _badge(id, n) {
+  const b = $(id); if (!b) return;
+  const antes = b.hidden ? 0 : Number(b.textContent) || 0;
+  b.hidden = !n;
+  b.textContent = n > 99 ? '99+' : String(n || '');
+  if (n && n !== antes) { b.classList.remove('inicio-badge-pop'); void b.offsetWidth; b.classList.add('inicio-badge-pop'); }
+}
+function verAvisosStock() {
+  const card = $('avisos-card');
+  if (!card || card.hidden) { toast('Nadie pidió aviso de stock por ahora'); return; }
+  card.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+const _ESTADO_SIMPLE = { Pendiente: 'Falta pagar', Confirmado: 'Pagado', 'En camino': 'En camino', Entregado: 'Entregado', Cancelado: 'Cancelado' };
+
+function _pintarVentasWeb(pedidos) {
+  const t = p => { const d = parseFecha(p.timestamp || p.fecha); return d ? d.getTime() : 0; };
+  const rec = [...pedidos].sort((a, b) => t(b) - t(a)).slice(0, 4);   // la más nueva arriba
+  $('inicio-ventas').innerHTML = rec.length ? rec.map(p => {
+    const nombre = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
+    const estado = p.estado || 'Pendiente';
+    const total = _num(p.total !== undefined && p.total !== '' ? p.total : p.monto);
+    return `<button type="button" class="inicio-venta" onclick="goTo('pedidos')">
+      <span class="inicio-venta-txt"><b>${hx(nombre)}</b>
+        <small><i class="inicio-dot est-${hx(estado.toLowerCase().replace(/\s+/g, '-'))}" aria-hidden="true"></i>${hx(_ESTADO_SIMPLE[estado] || estado)} · ${hx(fmtFecha(p.timestamp || p.fecha || ''))}</small></span>
+      <span class="inicio-venta-total">${total ? fmtMoney(total) : '—'}</span>
+    </button>`;
+  }).join('') : uiVacio('fa-inbox', 'Todavía no hay ventas', 'Las compras de la tienda van a aparecer acá.');
+}
+
+async function _pintarResumenMes() {
+  const el = $('panel-resumen');
+  el.innerHTML = '<div class="inicio-resumen-card skeleton" style="min-height:150px"></div>';
+  try {
+    const [pedidos, prodRes] = await Promise.all([
+      crm({ action: 'ext_pedidos_listar', todos: 1 }).then(r => Array.isArray(sinError(r)) ? _sinEliminados(r) : []),
+      crm({ action: 'productos_list' }),
+    ]);
+    const hoy = new Date();
+    const mes = agruparFacturacion(pedidos, prodRes.rows || []).meses
+      .find(b => b.d.getFullYear() === hoy.getFullYear() && b.d.getMonth() === hoy.getMonth())
+      || { monto: 0, ben: 0, benParcial: false, n: 0, pendN: 0 };
+    let ganancia, nota = '';
+    if (!mes.n) ganancia = fmtMoney(0);
+    else if (mes.benParcial && !mes.ben) { ganancia = '—'; nota = 'Faltan los costos de los productos'; }
+    else { ganancia = fmtMoney(mes.ben); if (mes.benParcial) nota = 'Aproximada: faltan costos de algunos productos'; }
+    const nombreMes = hoy.toLocaleDateString('es-AR', { month: 'long' });
+    el.innerHTML = `<button type="button" class="inicio-resumen-card" onclick="goTo('facturacion')" aria-label="Ver facturación de ${hx(nombreMes)}">
+      <span class="inicio-num"><small>Facturación</small><b class="inicio-num-fact">${fmtMoney(mes.monto)}</b></span>
+      <span class="inicio-num"><small>Ganancia</small><b class="inicio-num-gan">${ganancia}</b>${nota ? `<em>${hx(nota)}</em>` : ''}</span>
+      <span class="inicio-resumen-pie"><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i> ${mes.n} ${mes.n === 1 ? 'venta' : 'ventas'} en ${hx(nombreMes)}${mes.pendN ? ` <span class="inicio-pend">· ${mes.pendN} sin pagar todavía</span>` : ''}</span>
+    </button>`;
+  } catch (e) {
+    _resumenPintado = false;
+    el.innerHTML = uiError(e.message, '_pintarResumenMes()');
+  }
+}
+
+const _esCelu = () => typeof matchMedia === 'function' && matchMedia('(max-width: 768px)').matches;
+let _resumenPintado = false;
+function _inicioCelu(pedidos) {
+  _pintarVentasWeb(pedidos);
+  _badge('badge-pedidos', pedidos.filter(p => (p.estado || 'Pendiente') === 'Pendiente').length);
+  _badge('badge-pagos', pedidos.filter(p => p.comprobante && (p.estado || 'Pendiente') === 'Pendiente').length);
+}
+// Si se achica la ventana hasta tamaño celular, el resumen se carga en ese momento
+if (typeof matchMedia === 'function') matchMedia('(max-width: 768px)').addEventListener('change', e => { if (e.matches && currentSec === 'panel' && !_resumenPintado) { _resumenPintado = true; _pintarResumenMes(); } });
+
 async function loadPanel() {
   cargarAvisosStock();
   const cards = $('panel-cards');
   cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
   $('panel-pedidos-rec').innerHTML = uiCargando(5);
   $('panel-clientes-rec').innerHTML = uiCargando(5);
+  if (_esCelu()) { _resumenPintado = true; _pintarResumenMes(); }
+  if (_pedidos.length) _inicioCelu(_pedidos); else $('inicio-ventas').innerHTML = uiCargando(3);
 
   try {
     // Clientes: fuente principal
@@ -340,6 +411,8 @@ async function loadPanel() {
         <div class="stat-sub">este mes</div>
       </div>`;
 
+    _inicioCelu(pedidos);
+
     // Pedidos recientes (formato web: nombre+apellido, total, estado)
     const recPed = pedidos.slice(0, 5);
     $('panel-pedidos-rec').innerHTML = recPed.length ? recPed.map(p => {
@@ -377,6 +450,7 @@ async function loadPanel() {
     cards.innerHTML = `<div class="stat-card" style="grid-column:1/-1">${uiError(e.message, 'loadPanel()')}</div>`;
     $('panel-pedidos-rec').innerHTML = '';
     $('panel-clientes-rec').innerHTML = '';
+    $('inicio-ventas').innerHTML = uiError(e.message, 'loadPanel()');
   }
 }
 

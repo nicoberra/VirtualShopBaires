@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="panel.css?v=57">
+  <link rel="stylesheet" href="panel.css?v=58">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
@@ -48,7 +48,6 @@
       <a class="nav-link" data-sec="productos"     onclick="goTo('productos')">    <i class="fa-solid fa-box"></i>           Productos</a>
       <a class="nav-link" data-sec="pedidos"       onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i>  Pedidos</a>
       <a class="nav-link" data-sec="comprobantes"  onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i>    Comprobantes</a>
-      <a class="nav-link" data-sec="leads"         onclick="goTo('leads')">        <i class="fa-solid fa-user-plus"></i>     Leads</a>
     </div>
     <div class="sidebar-footer">
       <a href="/crm/panel-ops.html" onclick="localStorage.setItem('vsb_nav_from_crm','1')" class="btn-logout" style="display:flex;align-items:center;gap:8px;text-decoration:none;margin-bottom:8px;"><i class="fa-solid fa-truck"></i> Ir a Operaciones</a>
@@ -68,7 +67,6 @@
       <button class="mnav-btn" data-sec="productos"    onclick="goTo('productos')">    <i class="fa-solid fa-box"></i><span class="mnav-label">Productos</span></button>
       <button class="mnav-btn" data-sec="pedidos"      onclick="goTo('pedidos')">      <i class="fa-solid fa-bag-shopping"></i><span class="mnav-label">Pedidos</span></button>
       <button class="mnav-btn" data-sec="comprobantes" onclick="goTo('comprobantes')"> <i class="fa-solid fa-file-image"></i><span class="mnav-label">Pagos</span></button>
-      <button class="mnav-btn" data-sec="leads"        onclick="goTo('leads')">        <i class="fa-solid fa-user-plus"></i><span class="mnav-label">Leads</span></button>
     </div>
   </div>
 
@@ -86,7 +84,6 @@
           <button type="button" class="inicio-tile" onclick="goTo('productos')"><i class="fa-solid fa-box-open" aria-hidden="true"></i><span>Productos</span></button>
           <button type="button" class="inicio-tile" onclick="goTo('pedidos')"><b class="inicio-badge" id="badge-pedidos" hidden></b><i class="fa-solid fa-bag-shopping" aria-hidden="true"></i><span>Pedidos</span></button>
           <button type="button" class="inicio-tile" onclick="goTo('comprobantes')"><b class="inicio-badge" id="badge-pagos" hidden></b><i class="fa-solid fa-receipt" aria-hidden="true"></i><span>Pagos</span></button>
-          <button type="button" class="inicio-tile" onclick="goTo('leads')"><i class="fa-solid fa-bullseye" aria-hidden="true"></i><span>Leads</span></button>
           <button type="button" class="inicio-tile" onclick="verAvisosStock()"><b class="inicio-badge" id="badge-avisos" hidden></b><i class="fa-solid fa-bell" aria-hidden="true"></i><span>Avisos</span></button>
           <a class="inicio-tile" href="/crm/panel-ops.html" onclick="localStorage.setItem('vsb_nav_from_crm','1')"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i><span>Operaciones</span></a>
           <a class="inicio-tile" href="/" target="_blank" rel="noopener"><i class="fa-solid fa-store" aria-hidden="true"></i><span>Ver tienda</span></a>
@@ -539,9 +536,9 @@
 <div id="toast" class="toast"></div>
 
 <script src="estados.js?v=1"></script>
-<script src="pedido-contacto.js?v=2"></script>
-<script src="panel.js?v=32"></script>
-<script src="version-crm.js?v=1"></script>
+<script src="pedido-contacto.js?v=3"></script>
+<script src="panel.js?v=33"></script>
+<script src="version-crm.js?v=3"></script>
 <script src="orden-fotos.js?v=1"></script>
 <script src="productos-crm.js?v=40"></script>
 <script src="leads-crm.js?v=1"></script>

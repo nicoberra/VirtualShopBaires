@@ -9,7 +9,17 @@ const CRM_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWq
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────
 
+// Lecturas iguales que ya están en camino se comparten: al abrir, el CRM pedía dos veces pedidos y clientes
+const _enVuelo = new Map();
 function crm(params) {
+  if (!/list|listar|stats/i.test(params.action || '')) return _crmLlamar(params);
+  const k = JSON.stringify(params);
+  if (_enVuelo.has(k)) return _enVuelo.get(k);
+  const pr = _crmLlamar(params).finally(() => _enVuelo.delete(k));
+  _enVuelo.set(k, pr);
+  return pr;
+}
+function _crmLlamar(params) {
   return new Promise((resolve, reject) => {
     // Inyectar token en todas las llamadas excepto las públicas
     const PUBLIC = { loginPanel:1, verifyPanel:1, version:1, loginDispositivo:1, olvidarDispositivo:1 };
@@ -624,19 +634,26 @@ async function loadPedidos(force=false, silent=false) {
   }
   try {
     const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
-    _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
+    const nuevos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
+    // Sin cambios no se redibuja: antes cada 30 s se cerraba el pedido que tenías abierto
+    const cambio = JSON.stringify(nuevos) !== JSON.stringify(_pedidos);
+    _pedidos = nuevos;
     lsGuardar('pedidos', _pedidos);
-    filtrarPedidos();
+    if (!silent || cambio) filtrarPedidos();
+    return cambio;
   } catch(e) {
     if (local || silent) return;
     $('ped-table').innerHTML = uiError(e.message, 'loadPedidos(true)');
   }
 }
 
+const _pedAbiertos = new Set();
 function filtrarPedidos() {
   const q   = val('ped-search').toLowerCase();
   const est = val('ped-estado-fil');
   let list = _filtrarPorPeriodo(_pedidos);
+  // El más nuevo arriba (los de Mercado Pago y los de transferencia vienen en listas separadas)
+  if (typeof tiempoPedido === 'function') list = [...list].sort((a, b) => tiempoPedido(b) - tiempoPedido(a));
   if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
     String(p.nombre||p.cliente||'').toLowerCase().includes(q) ||
@@ -676,7 +693,7 @@ function renderPedidos(list) {
     tr.className = 'ped-row-main';
 
     const tdFecha = tr.insertCell(); tdFecha.style.whiteSpace = 'nowrap';
-    tdFecha.textContent = fmtFecha(p.timestamp || p.fecha || '');
+    tdFecha.textContent = typeof fechaHoraPedido === 'function' ? fechaHoraPedido(p.timestamp || p.fecha || '') : fmtFecha(p.timestamp || p.fecha || '');
 
     const tdNum = tr.insertCell();
     tdNum.style.cssText = 'font-size:0.72rem;color:var(--text2);white-space:nowrap';
@@ -721,7 +738,7 @@ function renderPedidos(list) {
       ${typeof pedidoContactoHTML === 'function' ? `<div class="pc-celda">${pedidoContactoHTML(p)}</div>` : `
       ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
       ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}`}
-      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
+      ${typeof productosPedidoHTML === 'function' ? productosPedidoHTML(p) : (p.productos ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : '')}
       ${_comprobante(p) ? `<div><a href="${/^https?:\/\//i.test(_comprobante(p)) ? hx(_comprobante(p)) : '#'}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none"><i class="fa-solid fa-receipt"></i> Ver comprobante de pago</a></div>` : ''}
       ${_notasSinComprobante(p) ? `<div><span class="ped-label">Notas:</span> ${hx(_notasSinComprobante(p))}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
@@ -734,12 +751,16 @@ function renderPedidos(list) {
       </div>
     </div>`;
 
-    tr.addEventListener('click', () => {
-      const open = dr.style.display !== 'none';
-      dr.style.display = open ? 'none' : 'table-row';
+    // Se recuerda qué pedidos están abiertos: si la lista se vuelve a dibujar (pedido nuevo, cambio de estado) siguen abiertos
+    const claveAb = (p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0)) + '|' + (p.orderNumber || '');
+    const abrir = si => {
+      dr.style.display = si ? 'table-row' : 'none';
       const ch = tdChev.querySelector('.ped-chevron');
-      if (ch) ch.style.transform = open ? '' : 'rotate(180deg)';
-    });
+      if (ch) ch.style.transform = si ? 'rotate(180deg)' : '';
+      if (si) _pedAbiertos.add(claveAb); else _pedAbiertos.delete(claveAb);
+    };
+    if (_pedAbiertos.has(claveAb)) abrir(true);
+    tr.addEventListener('click', () => abrir(dr.style.display === 'none'));
   });
 
   el.innerHTML = '';
@@ -918,14 +939,27 @@ function eliminarCategoria(cat) {
 
 // ─── AUTO-REFRESH PEDIDOS ─────────────────────────────────────
 
+// Pagos de Mercado Pago: al abrir el CRM y cada 5 minutos se le pregunta a Mercado Pago qué pagos se aprobaron;
+// los pedidos pagados pasan solos a «Confirmado» (por si el aviso automático de Mercado Pago no llegó).
+let _mpRevisado = 0;
+function _revisarPagosMP() {
+  if (!sessionStorage.getItem('ops_crm_token') || Date.now() - _mpRevisado < 5 * 60 * 1000) return;
+  _mpRevisado = Date.now();
+  crm({ action: 'mp_conciliar', dias: 7 }).then(r => {
+    if (r && r.confirmados > 0) { toast(r.confirmados === 1 ? 'Se confirmó 1 pago de Mercado Pago ✓' : 'Se confirmaron ' + r.confirmados + ' pagos de Mercado Pago ✓'); _silentRefreshPedidos(); }
+  }).catch(() => {});
+}
+setTimeout(_revisarPagosMP, 4000);
+
 function _silentRefreshPedidos() {
+  _revisarPagosMP();
   if (!sessionStorage.getItem('ops_crm_token')) return;
-  loadPedidos(true, true).then(() => {
-    if (currentSec === 'panel') loadPanel();
+  loadPedidos(true, true).then(cambio => {
+    if (cambio && currentSec === 'panel') loadPanel();
   }).catch(() => {});
 }
 
-setInterval(() => { if (!document.hidden) _silentRefreshPedidos(); }, 30000);
+setInterval(() => { if (!document.hidden) _silentRefreshPedidos(); }, 60000);
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) _silentRefreshPedidos();

@@ -99,3 +99,58 @@ document.addEventListener('click', async e => {
     setTimeout(() => { b.classList.remove('pc-ok'); if (txt) txt.textContent = antes; }, 1400);
   }
 }, true);   // en captura: el bloque frena el clic para que no se cierre la tarjeta
+
+// ─── Productos del pedido con su foto ─────────────────────────
+// Lee «1x Nombre · Color, 2x Otro» (o el formato viejo en JSON) y busca la foto en la lista de productos del CRM
+function _itemsPedido(p) {
+  const t = String(p.productos || p.detalle || '').trim();
+  if (!t) return [];
+  if (t.startsWith('[')) {
+    try { return JSON.parse(t).map(i => ({ cant: Number(i.qty || i.cantidad) || 1, nombre: String(i.nombre || '').trim(), variante: [i.color, i.talle].filter(Boolean).join(' / ') })); } catch (e) { return []; }
+  }
+  return t.split(/,\s*(?=\d+\s*x\s)/i).map(s => {
+    const m = s.trim().replace(/,\s*Env[ií]o.*$/i, '').match(/^(\d+)\s*x\s+(.+)$/i);
+    if (!m) return null;
+    const [nombre, ...resto] = m[2].split(' · ');
+    return { cant: +m[1], nombre: nombre.trim(), variante: resto.join(' · ').trim() };
+  }).filter(Boolean);
+}
+function _fotoItem(it) {
+  const lista = typeof _productos !== 'undefined' && Array.isArray(_productos) ? _productos : [];
+  const n = it.nombre.toLowerCase();
+  const mismos = lista.filter(x => String(x.nombre || '').trim().toLowerCase() === n);
+  if (!mismos.length) return '';
+  const color = it.variante.split(' / ')[0].trim().toLowerCase();
+  const v = (color && mismos.find(x => String(x.color || '').trim().toLowerCase() === color && x.imagen)) || mismos.find(x => x.imagen) || {};
+  return v.imagen || mismos[0].fotoProducto || '';
+}
+function productosPedidoHTML(p) {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const items = _itemsPedido(p);
+  if (!items.length) return p.productos ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${esc(p.productos)}</div>` : '';
+  return `<div class="ped-items">${items.map(it => {
+    const foto = _fotoItem(it);
+    const img = typeof prodThumb === 'function' ? prodThumb(foto, 56)
+      : foto ? `<img class="prod-thumb" src="${esc(foto)}" alt="" loading="lazy" style="width:56px;height:56px">` : '';
+    return `<div class="ped-item">${img}<div class="ped-item-txt"><b>${it.cant}× ${esc(it.nombre)}</b>${it.variante ? `<small>${esc(it.variante)}</small>` : ''}</div></div>`;
+  }).join('')}</div>`;
+}
+
+// Momento del pedido en milisegundos (para ordenar: el más nuevo arriba)
+function tiempoPedido(p) {
+  const t = String((p && (p.timestamp || p.fecha)) == null ? '' : (p.timestamp || p.fecha)).trim();
+  const m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/);
+  const d = m ? new Date(+m[3], m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)) : new Date(t.replace(' ', 'T'));
+  return t && !isNaN(d) ? d.getTime() : 0;
+}
+
+// Fecha con hora: «26/11/2026 · 14:35 hs»
+function fechaHoraPedido(s) {
+  const t = String(s == null ? '' : s).trim();
+  let d = null, m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/);
+  if (m) d = new Date(+m[3], m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+  else if (t) d = new Date(t.replace(' ', 'T'));
+  if (!d || isNaN(d)) return t || '—';
+  const hora = /\d{1,2}:\d{2}/.test(t) ? ' · ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') + ' hs' : '';
+  return d.toLocaleDateString('es-AR') + hora;
+}

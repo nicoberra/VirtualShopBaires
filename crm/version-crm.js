@@ -10,8 +10,10 @@
   const propios = doc => [...doc.querySelectorAll('script[src], link[rel="stylesheet"][href]')]
     .map(e => e.getAttribute('src') || e.getAttribute('href'))
     .filter(u => u && !/^https?:|^\/\//.test(u))
-    .sort().join('|');
-  const actuales = propios(document);
+    .sort();
+  // Ojo: este archivo corre ANTES de que se lean los scripts que van debajo en el HTML, así que la lista de
+  // la página se arma en cada revisión (no al cargar). Hay versión nueva solo si la publicada trae un archivo
+  // (o un ?v=) que esta página no tiene; que la página tenga de más (scripts agregados por JS) no cuenta.
   let hayNueva = false, revisando = false;
 
   async function revisar() {
@@ -22,7 +24,8 @@
       if (r.ok) {
         const html = await r.text();
         const nuevos = propios(new DOMParser().parseFromString(html, 'text/html'));
-        if (nuevos && nuevos !== actuales) { hayNueva = true; avisar(); }
+        const actuales = new Set(propios(document));
+        if (nuevos.length && nuevos.some(u => !actuales.has(u))) { hayNueva = true; avisar(); }
       }
     } catch (e) { /* sin conexión: se revisa la próxima vez */ }
     revisando = false;
@@ -34,7 +37,9 @@
     const abierta = [...document.querySelectorAll('.modal-backdrop')].some(m => m.style.display === 'flex' || m.classList.contains('show'));
     const a = document.activeElement;
     const escribiendo = a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) && a.type !== 'button' && a.id !== 'ped-search';
-    return !abierta && !escribiendo;
+    // Tampoco con un pedido, un cliente o un detalle desplegado: nada se cierra solo
+    const desplegado = (typeof _pedAbiertos !== 'undefined' && _pedAbiertos.size > 0) || !!document.querySelector('details[open]');
+    return !abierta && !escribiendo && !desplegado;
   }
   function actualizar() { location.reload(); }
 
@@ -55,12 +60,15 @@
     if (typeof orig === 'function') window[n] = function () { if (hayNueva && seguro()) return actualizar(); return orig.apply(this, arguments); };
   });
 
+  // Se actualiza sola únicamente al VOLVER después de más de 5 minutos sin mirar el CRM y sin nada abierto.
+  // Ir un momento a WhatsApp y volver no recarga nada: en ese caso queda el cartel para actualizar cuando quieras.
+  let ocultoDesde = 0;
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) return;
-    if (hayNueva && seguro()) return actualizar();
+    if (document.hidden) { ocultoDesde = Date.now(); return; }
+    const lejos = ocultoDesde && Date.now() - ocultoDesde > 5 * 60 * 1000;
+    if (hayNueva && lejos && seguro()) return actualizar();
     revisar();
   });
-  window.addEventListener('focus', () => { if (hayNueva && seguro()) actualizar(); });
   setTimeout(revisar, 15000);
   setInterval(() => { if (!document.hidden) revisar(); }, 10 * 60 * 1000);
 

@@ -9,7 +9,17 @@ const CRM_URL = 'https://script.google.com/macros/s/AKfycbwovdDoOyb7WN-Hw-WpThWq
 
 // ─── COMUNICACIÓN CON EL BACKEND ─────────────────────────────
 
+// Lecturas iguales que ya están en camino se comparten: al abrir, el CRM pedía dos veces pedidos y clientes
+const _enVuelo = new Map();
 function crm(params) {
+  if (!/list|listar|stats/i.test(params.action || '')) return _crmLlamar(params);
+  const k = JSON.stringify(params);
+  if (_enVuelo.has(k)) return _enVuelo.get(k);
+  const pr = _crmLlamar(params).finally(() => _enVuelo.delete(k));
+  _enVuelo.set(k, pr);
+  return pr;
+}
+function _crmLlamar(params) {
   return new Promise((resolve, reject) => {
     // Inyectar token en todas las llamadas excepto las públicas
     const PUBLIC = { loginPanel:1, verifyPanel:1, version:1, loginDispositivo:1, olvidarDispositivo:1 };
@@ -321,6 +331,54 @@ function verAvisosStock() {
   if (!card || card.hidden) { toast('Nadie pidió aviso de stock por ahora'); return; }
   card.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
+// Clave de un pedido para guardar cambios (Mercado Pago o pedido de la web)
+const _claveDe = p => p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0);
+const _COBRADO = ['Confirmado', 'En camino', 'Entregado'];
+
+// Botones grandes para el día a día: pagado / entregado / eliminar
+function _botonesPedidoHTML(p) {
+  const est = p.estado || 'Pendiente', k = hx(_claveDe(p));
+  return `<div class="ped-rapidos">
+    ${_COBRADO.includes(est) ? '' : `<button type="button" class="btn-primary btn-sm" onclick="event.stopPropagation();marcarEstado('${k}','Confirmado')"><i class="fa-solid fa-circle-check"></i> Marcar pagado</button>`}
+    ${est === 'Entregado' || est === 'Cancelado' ? '' : `<button type="button" class="btn-secondary btn-sm" onclick="event.stopPropagation();marcarEstado('${k}','Entregado')"><i class="fa-solid fa-box-open"></i> Marcar entregado</button>`}
+    <button type="button" class="btn-danger btn-sm" onclick="event.stopPropagation();eliminarPedido('${k}')"><i class="fa-solid fa-trash"></i> Eliminar</button>
+  </div>`;
+}
+
+function _detallePedidoHTML(p) {
+  const comp = _comprobante(p), notas = _notasSinComprobante(p);
+  return `<div class="panel-rec-cuerpo">
+    ${typeof pedidoContactoHTML === 'function' ? pedidoContactoHTML(p) : ''}
+    ${typeof productosPedidoHTML === 'function' ? productosPedidoHTML(p) : ''}
+    ${comp ? `<div><a href="${hx(comp)}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none"><i class="fa-solid fa-receipt"></i> Ver comprobante de pago</a></div>` : ''}
+    ${notas ? `<div><span class="ped-label">Notas:</span> ${hx(notas)}</div>` : ''}
+    ${_botonesPedidoHTML(p)}
+  </div>`;
+}
+
+function _detalleClienteHTML(c) {
+  const ped = _pedidos.length ? pedidosDeCliente(c) : [];
+  const gastado = ped.filter(p => _COBRADO.includes(p.estado || 'Pendiente'))
+    .reduce((s, p) => s + _num(p.total !== undefined && p.total !== '' ? p.total : p.monto), 0);
+  const tel = String(c.telefono || '').replace(/\D/g, '');
+  return `<div class="panel-rec-cuerpo">
+    ${c.email ? `<div><span class="ped-label">Email:</span> ${hx(c.email)}</div>` : ''}
+    ${c.telefono ? `<div><span class="ped-label">Teléfono:</span> ${hx(c.telefono)}${tel ? ` · <a href="https://wa.me/${tel.length <= 10 ? '549' + tel : tel}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</div>` : ''}
+    ${c.direccion || c.ciudad ? `<div><span class="ped-label">Dirección:</span> ${hx([c.direccion, c.ciudad].filter(Boolean).join(' · '))}</div>` : ''}
+    <div><span class="ped-label">Compras:</span> ${ped.length}${gastado ? ` · ${fmtMoney(gastado)} pagado` : ''}</div>
+    ${ped.slice(0, 3).map(p => `<div class="panel-rec-sub">${fmtFecha(p.timestamp || p.fecha || '')} · ${hx(p.productos || p.detalle || '')} · ${badgeEstado(p.estado || 'Pendiente')}</div>`).join('')}
+    <div class="ped-rapidos"><button type="button" class="btn-secondary btn-sm" data-historial><i class="fa-solid fa-clock-rotate-left"></i> Ver todo el historial</button></div>
+  </div>`;
+}
+
+// Marca pagado / entregado desde los botones y actualiza lo que está a la vista
+async function marcarEstado(clave, estado) {
+  if (!(await _guardarEstado(clave, estado))) return;
+  toast(estado === 'Confirmado' ? 'Marcado como pagado ✓' : estado === 'Entregado' ? 'Marcado como entregado ✓' : 'Estado actualizado');
+  if (currentSec === 'pedidos') filtrarPedidos();
+  if (currentSec === 'panel') loadPanel();
+}
+
 const _ESTADO_SIMPLE = { Pendiente: 'Falta pagar', Confirmado: 'Pagado', 'En camino': 'En camino', Entregado: 'Entregado', Cancelado: 'Cancelado' };
 
 function _pintarVentasWeb(pedidos) {
@@ -379,9 +437,13 @@ if (typeof matchMedia === 'function') matchMedia('(max-width: 768px)').addEventL
 async function loadPanel() {
   cargarAvisosStock();
   const cards = $('panel-cards');
-  cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
-  $('panel-pedidos-rec').innerHTML = uiCargando(5);
-  $('panel-clientes-rec').innerHTML = uiCargando(5);
+  // Los «cargando» solo la primera vez: al refrescar no parpadea ni se cierra lo que está desplegado
+  const abiertosPanel = new Set([...document.querySelectorAll('#sec-panel details[open][data-k]')].map(d => d.dataset.k));
+  if (!cards.children.length) {
+    cards.innerHTML = '<div class="stat-card skeleton"></div>'.repeat(4);
+    $('panel-pedidos-rec').innerHTML = uiCargando(5);
+    $('panel-clientes-rec').innerHTML = uiCargando(5);
+  }
   if (_esCelu()) { _resumenPintado = true; _pintarResumenMes(); }
   if (_pedidos.length) _inicioCelu(_pedidos); else $('inicio-ventas').innerHTML = uiCargando(3);
 
@@ -431,20 +493,21 @@ async function loadPanel() {
     _inicioCelu(pedidos);
 
     // Pedidos recientes (formato web: nombre+apellido, total, estado)
-    const recPed = pedidos.slice(0, 5);
+    const tPed = p => { const d = parseFecha(p.timestamp || p.fecha); return d ? d.getTime() : 0; };
+    const recPed = [...pedidos].sort((a, b) => tPed(b) - tPed(a)).slice(0, 5);   // el más nuevo arriba
     $('panel-pedidos-rec').innerHTML = recPed.length ? recPed.map(p => {
       const nombre = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
       const total  = p.total ? fmtMoney(p.total) : p.monto ? fmtMoney(p.monto) : '—';
-      return `<div class="panel-rec-item">
+      return `<details class="panel-rec-det" data-k="${hx(_claveDe(p) + '|' + (p.orderNumber || ''))}"${abiertosPanel.has(_claveDe(p) + '|' + (p.orderNumber || '')) ? ' open' : ''}><summary class="panel-rec-item panel-rec-clickable">
         <div class="panel-rec-left">
           <div class="panel-rec-name">${hx(nombre)}</div>
-          <div class="panel-rec-sub">${fmtFecha(p.timestamp||p.fecha||'')} · ${hx(p.metodoPago||p.metodo||'')}</div>
+          <div class="panel-rec-sub">${typeof fechaHoraPedido === 'function' ? fechaHoraPedido(p.timestamp||p.fecha||'') : fmtFecha(p.timestamp||p.fecha||'')} · ${hx(p.metodoPago||p.metodo||'')}</div>
         </div>
         <div class="panel-rec-right">
           <div class="panel-rec-total">${total}</div>
           ${badgeEstado(p.estado||'Pendiente')}
         </div>
-      </div>`;
+      </div></summary>${_detallePedidoHTML(p)}</details>`;
     }).join('') : uiVacio('fa-inbox', 'Todavía no hay pedidos', 'Los pedidos de la tienda van a aparecer acá.', { texto: 'Ir a Pedidos', onclick: "goTo('pedidos')" });
 
     // Clientes recientes
@@ -453,10 +516,12 @@ async function loadPanel() {
     recCliWrap.innerHTML = '';
     if (recCli.length) {
       recCli.forEach(c => {
-        const item = document.createElement('div');
-        item.className = 'panel-rec-item panel-rec-clickable';
-        item.innerHTML = `<div class="panel-rec-left"><div class="panel-rec-name">${hx(c.nombre||'—')}</div><div class="panel-rec-sub">${hx(c.email||c.telefono||'')}</div></div><div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${hx(c.ciudad||'')}</div>`;
-        item.addEventListener('click', () => { goTo('clientes'); verHistorialCliente(c); });
+        const item = document.createElement('details');
+        item.className = 'panel-rec-det';
+        item.dataset.k = 'cli|' + (c.id || c.email || c.nombre || '');
+        if (abiertosPanel.has(item.dataset.k)) item.open = true;
+        item.innerHTML = `<summary class="panel-rec-item panel-rec-clickable"><div class="panel-rec-left"><div class="panel-rec-name">${hx(c.nombre||'—')}</div><div class="panel-rec-sub">${hx(c.email||c.telefono||'')}</div></div><div class="panel-rec-right" style="font-size:0.78rem;color:var(--text2)">${hx(c.ciudad||'')}</div></summary>${_detalleClienteHTML(c)}`;
+        item.querySelector('[data-historial]').addEventListener('click', () => { goTo('clientes'); verHistorialCliente(c); });
         recCliWrap.appendChild(item);
       });
     } else {
@@ -989,19 +1054,26 @@ async function loadPedidos(force=false, silent=false) {
   }
   try {
     const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
-    _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
+    const nuevos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
+    // Sin cambios no se redibuja: antes cada 30 s se cerraba el pedido que tenías abierto
+    const cambio = JSON.stringify(nuevos) !== JSON.stringify(_pedidos);
+    _pedidos = nuevos;
     lsGuardar('pedidos', _pedidos);
-    filtrarPedidos();
+    if (!silent || cambio) filtrarPedidos();
+    return cambio;
   } catch(e) {
     if (local || silent) return;
     $('ped-table').innerHTML = uiError(e.message, 'loadPedidos(true)');
   }
 }
 
+const _pedAbiertos = new Set();
 function filtrarPedidos() {
   const q   = val('ped-search').toLowerCase();
   const est = val('ped-estado-fil');
   let list = _filtrarPorPeriodo(_pedidos);
+  // El más nuevo arriba (los de Mercado Pago y los de transferencia vienen en listas separadas)
+  if (typeof tiempoPedido === 'function') list = [...list].sort((a, b) => tiempoPedido(b) - tiempoPedido(a));
   if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
     // String(): el teléfono, el DNI o el número de pedido pueden venir como número desde la planilla
@@ -1042,7 +1114,7 @@ function renderPedidos(list) {
     tr.className = 'ped-row-main';
 
     const tdFecha = tr.insertCell(); tdFecha.style.whiteSpace = 'nowrap';
-    tdFecha.textContent = fmtFecha(p.timestamp || p.fecha || '');
+    tdFecha.textContent = typeof fechaHoraPedido === 'function' ? fechaHoraPedido(p.timestamp || p.fecha || '') : fmtFecha(p.timestamp || p.fecha || '');
 
     const tdNum = tr.insertCell();
     tdNum.style.cssText = 'font-size:0.72rem;color:var(--text2);white-space:nowrap';
@@ -1087,11 +1159,12 @@ function renderPedidos(list) {
       ${typeof pedidoContactoHTML === 'function' ? `<div class="pc-celda">${pedidoContactoHTML(p)}</div>` : `
       ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
       ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}`}
-      ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
+      ${typeof productosPedidoHTML === 'function' ? productosPedidoHTML(p) : (p.productos ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : '')}
       ${_comprobante(p) ? `<div><a href="${/^https?:\/\//i.test(_comprobante(p)) ? hx(_comprobante(p)) : '#'}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none"><i class="fa-solid fa-receipt"></i> Ver comprobante de pago</a></div>` : ''}
       ${_notasSinComprobante(p) ? `<div><span class="ped-label">Notas:</span> ${hx(_notasSinComprobante(p))}</div>` : ''}
       ${p.utm ? `<div><span class="ped-label">Vino de:</span> ${hx(decodeURIComponent(String(p.utm).replace(/utm_/g, '').replace(/&/g, ' · ').replace(/=/g, ': ')))}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
+      <div style="flex-basis:100%">${_botonesPedidoHTML(p)}</div>
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>
         <select class="sel sel-sm" onchange="cambiarEstadoPedido(this,'${hx(p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0))}')">
@@ -1099,17 +1172,18 @@ function renderPedidos(list) {
             `<option${e===estado?' selected':''}>${e}</option>`).join('')}
         </select>
       </div>
-      <div style="margin-top:6px;flex-basis:100%">
-        <button type="button" class="btn-danger btn-sm" onclick="event.stopPropagation();eliminarPedido('${hx(p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0))}')"><i class="fa-solid fa-trash"></i> Eliminar pedido</button>
-      </div>
     </div>`;
 
-    tr.addEventListener('click', () => {
-      const open = dr.style.display !== 'none';
-      dr.style.display = open ? 'none' : 'table-row';
+    // Se recuerda qué pedidos están abiertos: si la lista se vuelve a dibujar (pedido nuevo, cambio de estado) siguen abiertos
+    const claveAb = (p.fuente === 'mp' ? 'mp:' + p._mpId : 'row:' + (p._row || 0)) + '|' + (p.orderNumber || '');
+    const abrir = si => {
+      dr.style.display = si ? 'table-row' : 'none';
       const ch = tdChev.querySelector('.ped-chevron');
-      if (ch) ch.style.transform = open ? '' : 'rotate(180deg)';
-    });
+      if (ch) ch.style.transform = si ? 'rotate(180deg)' : '';
+      if (si) _pedAbiertos.add(claveAb); else _pedAbiertos.delete(claveAb);
+    };
+    if (_pedAbiertos.has(claveAb)) abrir(true);
+    tr.addEventListener('click', () => abrir(dr.style.display === 'none'));
   });
 
   el.innerHTML = '';
@@ -1135,13 +1209,24 @@ function eliminarPedido(clave) {
       _pedidos = _pedidos.filter(x => x !== p);
       lsGuardar('pedidos', _pedidos);
       filtrarPedidos();
+      if (currentSec === 'panel') loadPanel();
       toast('Pedido eliminado');
     } catch(e) { toast('Error al eliminar: ' + e.message, 'err'); }
   }));
 }
 
 async function cambiarEstadoPedido(sel, clave) {
-  const estado = sel.value;
+  const p0 = _buscarPedido(clave);
+  const anterior = p0 ? (p0.estado || 'Pendiente') : null;
+  if (await _guardarEstado(clave, sel.value)) { toast('Estado actualizado'); filtrarPedidos(); }
+  else if (anterior) sel.value = anterior;
+}
+function _buscarPedido(clave) {
+  const m = String(clave).match(/^(mp|row):(.*)$/);
+  const tipo = m ? m[1] : 'row', ref = m ? m[2] : String(clave);
+  return _pedidos.find(x => tipo === 'mp' ? String(x._mpId) === ref : String(x._row) === ref);
+}
+async function _guardarEstado(clave, estado) {
   const m = String(clave).match(/^(mp|row):(.*)$/);
   const tipo = m ? m[1] : 'row', ref = m ? m[2] : String(clave);
   const p = _pedidos.find(x => tipo === 'mp' ? String(x._mpId) === ref : String(x._row) === ref);
@@ -1155,10 +1240,10 @@ async function cambiarEstadoPedido(sel, clave) {
     }
     if (p) p.estado = estado;
     lsGuardar('pedidos', _pedidos);
-    toast('Estado actualizado');
+    return true;
   } catch(e) {
-    if (anterior) sel.value = anterior;
     toast('Error: ' + e.message, 'err');
+    return false;
   }
 }
 
@@ -1295,10 +1380,23 @@ async function loadComprobantes(force=false) {
 
 // ─── AUTO-REFRESH PEDIDOS ─────────────────────────────────────
 
+// Pagos de Mercado Pago: al abrir el CRM y cada 5 minutos se le pregunta a Mercado Pago qué pagos se aprobaron;
+// los pedidos pagados pasan solos a «Confirmado» (por si el aviso automático de Mercado Pago no llegó).
+let _mpRevisado = 0;
+function _revisarPagosMP() {
+  if (!sessionStorage.getItem('crm_token') || Date.now() - _mpRevisado < 5 * 60 * 1000) return;
+  _mpRevisado = Date.now();
+  crm({ action: 'mp_conciliar', dias: 7 }).then(r => {
+    if (r && r.confirmados > 0) { toast(r.confirmados === 1 ? 'Se confirmó 1 pago de Mercado Pago ✓' : 'Se confirmaron ' + r.confirmados + ' pagos de Mercado Pago ✓'); _silentRefreshPedidos(); }
+  }).catch(() => {});
+}
+setTimeout(_revisarPagosMP, 4000);
+
 function _silentRefreshPedidos() {
+  _revisarPagosMP();
   if (!sessionStorage.getItem('crm_token')) return;
-  loadPedidos(true, true).then(() => {
-    if (currentSec === 'panel') loadPanel();
+  loadPedidos(true, true).then(cambio => {
+    if (cambio && currentSec === 'panel') loadPanel();
   }).catch(() => {});
 }
 
@@ -1370,7 +1468,7 @@ function eliminarCategoria(cat) {
 }
 
 // Cada 30 segundos si la pestaña está visible
-setInterval(() => { if (!document.hidden) _silentRefreshPedidos(); }, 30000);
+setInterval(() => { if (!document.hidden) _silentRefreshPedidos(); }, 60000);
 
 // Al volver a la pestaña/app después de estar en otro lado
 document.addEventListener('visibilitychange', () => {

@@ -2008,3 +2008,18 @@ html.arrastrando-foto, html.arrastrando-foto * { cursor: grabbing !important; us
   .inicio-tile i { font-size: 1.7rem; }
   .inicio-tile span { font-size: .8rem; }
 }
+
+/* ─── Pedidos: fotos de productos, botones rápidos y listas desplegables del Panel ─── */
+.ped-items { flex-basis: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
+.ped-item { display: flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg2, #fff); min-width: 0; }
+.ped-item .prod-thumb { flex-shrink: 0; border-radius: 10px; object-fit: cover; }
+.ped-item-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: .86rem; }
+.ped-item-txt b { font-weight: 600; overflow-wrap: anywhere; }
+.ped-item-txt small { color: var(--text2); }
+.ped-rapidos { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 2px; }
+.ped-rapidos .btn-sm { min-height: 40px; touch-action: manipulation; }
+.panel-rec-det > summary { list-style: none; }
+.panel-rec-det > summary::-webkit-details-marker { display: none; }
+.panel-rec-det:last-child > summary { border-bottom: none; }
+.panel-rec-det[open] > summary { background: var(--bg3); }
+.panel-rec-cuerpo { display: flex; flex-direction: column; gap: 8px; padding: 10px 2px 14px; font-size: .86rem; border-bottom: 1px solid var(--border); }

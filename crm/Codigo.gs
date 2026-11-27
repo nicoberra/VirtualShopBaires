@@ -144,7 +144,7 @@ function manejar(e) {
       'ext_categorias_list':1,'ext_categoria_foto':1,'fotos_papelera':1,
       'ext_pedidos_list':1,'ext_pedidos_listar':1,'ext_pedido_update':1,
       'push_suscribir':1,'push_desuscribir':1,'push_probar':1,
-      'leads_list':1,
+      'leads_list':1, 'mp_conciliar':1,
       // Viejas, sin uso en la web (la tienda usa registerUser / loginUser): públicas dejaban tomar la ficha de otro
       'registrar':1, 'login':1, 'comprobante_subir':1
     };
@@ -193,7 +193,7 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v28-revision-seguridad' };
+    else if (accion === 'version')              out = { ok:true, version: 'v29-pagos-mp-al-abrir' };
     else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
@@ -201,6 +201,7 @@ function manejar(e) {
     else if (accion === 'olvidarDispositivo')   out = olvidarDispositivo(p);
     else if (accion === 'ranking_actualizar')   out = actualizarRanking(p);
     else if (accion === 'mp_webhook')           out = mpWebhook(p, e);
+    else if (accion === 'mp_conciliar')         out = conciliarDesdeCRM(p);
     else if (accion === 'mis_pedidos')          out = tiendaMisPedidos(p);
     else if (accion === 'catalogo')             out = catalogoPublico();
     // Cuentas de clientes y seguimiento (antes en otro script: ahora todo vive acá)
@@ -2858,9 +2859,20 @@ function _reembolsoMP(pago) {
 
 // Conciliación: confirma pagos aprobados de las últimas 48 h que no llegaron por webhook.
 // Se ejecuta sola cada 30 min después de correr instalarConciliacion() una vez.
-function conciliarPagosMP() {
+// Desde el CRM (al abrirlo): revisa los últimos días. No más de una vez cada 3 minutos.
+function conciliarDesdeCRM(p) {
+  var cache = CacheService.getScriptCache();
+  if (cache.get('mp_conc_crm')) return { ok:true, estado:'reciente', confirmados:0 };
+  cache.put('mp_conc_crm', '1', 180);
+  var dias = Math.max(1, Math.min(15, parseInt(p && p.dias, 10) || 7));
+  var r = conciliarPagosMP(null, dias * 24);
+  if (r && r.ok === false) return r;
+  return { ok:true, revisados: r.revisados, confirmados: r.confirmados, reembolsos: r.reembolsos };
+}
+
+function conciliarPagosMP(e, horas) {
   if (!MP_ACCESS_TOKEN) return { ok:false, error:'MP_ACCESS_TOKEN no configurado' };
-  var desde = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  var desde = new Date(Date.now() - (Number(horas) || 48) * 3600 * 1000).toISOString();
   var hasta = new Date().toISOString();
   var r = _mpGet('/v1/payments/search?sort=date_created&criteria=desc&status=approved&limit=100' +
                  '&range=date_created&begin_date=' + encodeURIComponent(desde) + '&end_date=' + encodeURIComponent(hasta));

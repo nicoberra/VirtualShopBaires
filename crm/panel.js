@@ -160,13 +160,14 @@ function shakeLoginBox() {
 // Pedidos eliminados desde el CRM (quedan guardados en la planilla con estado "Eliminado", pero no se muestran)
 function _sinEliminados(arr) { return arr.filter(p => String(p.estado || '').trim() !== 'Eliminado'); }
 // El comprobante que sube el cliente desde la web queda en Observaciones como «Comprobante: <link>»
-const _RE_COMP = /Comprobante:\s*(https?:\/\/[^\s|]+)\s*\|?\s*/i;
+// Solo lo que escribe el servidor (al principio, link de Drive): un cliente no puede «inventar» un comprobante en sus notas
+const _RE_COMP = /^Comprobante:\s*(https:\/\/(?:drive|docs)\.google\.com\/[^\s|]+)\s*\|?\s*/;
 function _comprobante(p) {
   if (p.comprobante) return String(p.comprobante);
-  const m = String(p.observaciones || '').match(_RE_COMP);
+  const m = String(p.observaciones || '').trim().match(_RE_COMP);
   return m ? m[1] : '';
 }
-const _notasSinComprobante = p => String(p.observaciones || '').replace(_RE_COMP, '').trim();
+const _notasSinComprobante = p => String(p.observaciones || '').trim().replace(_RE_COMP, '').trim();
 
 function prefetchAll() {
   // Carga todo en paralelo al entrar — navegación instantánea después

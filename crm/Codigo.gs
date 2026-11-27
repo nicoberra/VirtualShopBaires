@@ -193,7 +193,7 @@ function manejar(e) {
     else if (accion === 'ext_pedido_update')    out = extPedidoActualizar(p);
     else if (accion === 'leads_list')           out = leadsListar();
     else if (accion === 'createOrder')          out = crearPedido(p);
-    else if (accion === 'version')              out = { ok:true, version: 'v27-confirmar-con-clave' };
+    else if (accion === 'version')              out = { ok:true, version: 'v28-revision-seguridad' };
     else if (accion === 'aviso_stock')          out = avisoStockGuardar(p);
     else if (accion === 'loginPanel')           out = loginPanel(p);
     else if (accion === 'verifyPanel')          out = verifyPanel(p);
@@ -824,6 +824,8 @@ function suscribir(p) {
   var datos = sh.getDataRange().getValues();
   var e = String(p.email||'').trim().toLowerCase();
   if (!e) return '';
+  // Límite contra envíos masivos: 5 por email cada hora y 200 en total cada hora
+  if (!_limite('sus_' + e, 5, 3600) || !_limite('sus_global_' + Math.floor(Date.now() / 3600000), 200, 3600)) return '';
   for (var i = 1; i < datos.length; i++)
     if (String(datos[i][2]).trim().toLowerCase() === e) return String(datos[i][0]);
   var id = 's' + Date.now();
@@ -2633,6 +2635,8 @@ function crearPedido(p) {
     if (previo) { try { return JSON.parse(previo); } catch(ex) {} }
     var abuso = _antiabuso(p, 'pedido');
     if (abuso) return { ok:false, error: abuso };
+    // «Comprobante: <link>» solo lo escribe tiendaComprobante: en las notas del cliente se neutraliza
+    p.observaciones = String(p.observaciones || '').replace(/comprobante\s*:/ig, 'Comprobante (nota del cliente) -');
 
     // Lock corto: dos envíos idénticos simultáneos no crean dos pedidos
     var lock = LockService.getScriptLock();
@@ -3245,7 +3249,15 @@ function extPedidoActualizar(p) {
       String(sh.getRange(row, mapa.orderNumber + 1).getValue()) !== String(p.orderNumber))
     return { ok:false, error:'El pedido cambió de lugar en la planilla. Tocá actualizar y volvé a intentar.' };
 
-  sh.getRange(row, colIdx).setValue(valor);
+  // Lock: si el dueño y la oficina cambian el mismo pedido a la vez, no se pisan
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(10000)) return { ok:false, error:'El sistema está ocupado. Probá de nuevo en unos segundos.' };
+  try {
+    if (p.orderNumber && mapa.orderNumber !== undefined &&
+        String(sh.getRange(row, mapa.orderNumber + 1).getValue()) !== String(p.orderNumber))
+      return { ok:false, error:'El pedido cambió de lugar en la planilla. Tocá actualizar y volvé a intentar.' };
+    sh.getRange(row, colIdx).setValue(valor);
+  } finally { lock.releaseLock(); }
   return { ok:true };
 }
 

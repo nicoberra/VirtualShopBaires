@@ -603,6 +603,7 @@ function _filtrarPorPeriodo(list) {
     if (_pedPeriodo === 'hoy')    return d >= hoy;
     if (_pedPeriodo === 'ayer')   return d >= ayer && d < hoy;
     if (_pedPeriodo === 'semana') return d >= sem;
+    if (_pedPeriodo === 'mes')    return d >= new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     return true;
   });
 }

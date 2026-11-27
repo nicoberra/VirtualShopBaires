@@ -389,7 +389,7 @@ function _pintarVentasWeb(pedidos) {
     const nombre = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
     const estado = p.estado || 'Pendiente';
     const total = _num(p.total !== undefined && p.total !== '' ? p.total : p.monto);
-    return `<button type="button" class="inicio-venta" onclick="goTo('pedidos')">
+    return `<button type="button" class="inicio-venta" onclick="irAPedidos('todos','','${hx(_claveDe(p) + '|' + (p.orderNumber || ''))}')">
       <span class="inicio-venta-txt"><b>${hx(nombre)}</b>
         <small><i class="inicio-dot est-${hx(estado.toLowerCase().replace(/\s+/g, '-'))}" aria-hidden="true"></i>${hx(_ESTADO_SIMPLE[estado] || estado)} · ${hx(fmtFecha(p.timestamp || p.fecha || ''))}</small></span>
       <span class="inicio-venta-total">${total ? fmtMoney(total) : '—'}</span>
@@ -471,16 +471,16 @@ async function loadPanel() {
       .reduce((s,p) => s + _num(p.total !== undefined && p.total !== '' ? p.total : p.monto), 0);
 
     cards.innerHTML = `
-      <div class="stat-card stat-card-link" onclick="goTo('clientes')">
+      <div class="stat-card stat-card-link" onclick="irAClientes()">
         <div class="stat-label"><i class="fa-solid fa-users" style="color:var(--red)"></i> Clientes</div>
         <div class="stat-val">${clientes.length}</div>
       </div>
-      <div class="stat-card stat-card-link" onclick="goTo('pedidos')">
+      <div class="stat-card stat-card-link" onclick="irAPedidos('todos','Pendiente')">
         <div class="stat-label"><i class="fa-solid fa-clock" style="color:#f59e0b"></i> Pendientes</div>
         <div class="stat-val text-yellow">${pendientes}</div>
         <div class="stat-sub">${pedidos.length} totales</div>
       </div>
-      <div class="stat-card stat-card-link" onclick="goTo('pedidos')">
+      <div class="stat-card stat-card-link" onclick="irAPedidos('mes','')">
         <div class="stat-label"><i class="fa-solid fa-calendar-day" style="color:var(--green)"></i> Este mes</div>
         <div class="stat-val">${delMes.length}</div>
         <div class="stat-sub">pedidos</div>
@@ -1002,6 +1002,23 @@ let _prodActual = null;
 let _pedidos = [];
 let _pedPeriodo = 'hoy';
 
+// Ir a Pedidos ya filtrado (desde las tarjetas del Panel): período, estado y, si se pide, un pedido abierto
+function irAPedidos(periodo, estado, claveAbierta) {
+  _pedPeriodo = periodo || 'todos';
+  document.querySelectorAll('#ped-periodo-chips .cat-chip').forEach(b => b.classList.toggle('cat-chip-sel', b.dataset.p === _pedPeriodo));
+  if ($('ped-estado-fil')) $('ped-estado-fil').value = estado || '';
+  if ($('ped-search')) $('ped-search').value = '';
+  if (claveAbierta) _pedAbiertos.add(claveAbierta);
+  goTo('pedidos');
+  if (_pedidos.length) filtrarPedidos();
+}
+// Ir a Clientes mostrando todos (sin búsqueda puesta)
+function irAClientes() {
+  if ($('cli-search')) $('cli-search').value = '';
+  goTo('clientes');
+  if (_clientes.length) filtrarClientes();
+}
+
 function setPedPeriodo(p) {
   _pedPeriodo = p;
   document.querySelectorAll('#ped-periodo-chips .cat-chip').forEach(b => b.classList.toggle('cat-chip-sel', b.dataset.p === p));
@@ -1019,6 +1036,7 @@ function _filtrarPorPeriodo(list) {
     if (_pedPeriodo === 'hoy')    return d >= hoy;
     if (_pedPeriodo === 'ayer')   return d >= ayer && d < hoy;
     if (_pedPeriodo === 'semana') return d >= sem;
+    if (_pedPeriodo === 'mes')    return d >= new Date(hoy.getFullYear(), hoy.getMonth(), 1);
     return true;
   });
 }

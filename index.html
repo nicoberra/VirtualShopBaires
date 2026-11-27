@@ -143,6 +143,40 @@
     .hero-video-bg .hero-buttons .btn-wa i { font-size: 1.1rem; }
     .hero-video-bg .hero-buttons .btn-wa::after { content: 'WhatsApp'; font-size: .9rem; margin-left: 6px; }
   }
+  /* Videos en uso: solo en el celular (en la compu los videos están en la portada) */
+  .videos-uso { display: none; }
+  @media (max-width: 480px) {
+    .videos-uso { display: block; padding: 34px 0 30px; background: #f1f1f4; overflow: hidden; }
+    .vu-head { margin-bottom: 18px; }
+    .vu-head h2 { font-size: 1.3rem; }
+    .vu-carrusel {
+      display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory; background: #f1f1f4; -webkit-overflow-scrolling: touch;
+      padding: 44px calc((100vw - min(72vw, 290px)) / 2) 96px; margin: -34px 0 -50px; scrollbar-width: none; overscroll-behavior-x: contain;
+    }
+    .vu-carrusel::-webkit-scrollbar { display: none; }
+    .vu-tel {
+      position: relative; flex: 0 0 min(72vw, 290px); aspect-ratio: 9 / 19.2; scroll-snap-align: center; scroll-snap-stop: always;
+      padding: 7px; border-radius: 48px; background: #0a0a0a;
+      box-shadow: 0 0 0 2px #555, 0 0 0 4px #222, inset 0 0 0 1px rgba(255,255,255,.07), 0 24px 60px rgba(0,0,0,.35), 0 8px 24px rgba(0,0,0,.18);
+      transform: scale(.9); opacity: .55; transition: transform .45s cubic-bezier(.22,1,.36,1), opacity .45s ease;
+    }
+    .vu-tel.activo { transform: scale(1); opacity: 1; }
+    /* Isla de la cámara, como antes */
+    .vu-tel::before { content: ''; position: absolute; z-index: 2; top: 16px; left: 50%; width: 31%; height: 24px; transform: translateX(-50%); border-radius: 14px; background: #000; }
+    /* Botones de costado, como un iPhone: silencio y volumen a la izquierda, encendido a la derecha */
+    .vu-b { position: absolute; width: 4px; border-radius: 2px; background: linear-gradient(90deg, #2b2b2e, #5a5a5e); pointer-events: none; }
+    .vu-b-silencio { left: -8px; top: 15%; height: 4.5%; }
+    .vu-b-sube     { left: -8px; top: 23%; height: 8.5%; }
+    .vu-b-baja     { left: -8px; top: 34%; height: 8.5%; }
+    .vu-b-encender { right: -8px; top: 26%; height: 13%; background: linear-gradient(270deg, #2b2b2e, #5a5a5e); }
+    .vu-tel video { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 41px; background: #111; }
+    .vu-puntos { display: flex; justify-content: center; gap: 7px; margin-top: -22px; }
+    .vu-puntos i { width: 7px; height: 7px; border-radius: 999px; background: rgba(0,0,0,.18); transition: width .3s ease, background .3s ease; }
+    .vu-puntos i.on { width: 22px; background: var(--red, #CC1212); }
+  }
+  @media (max-width: 480px) and (prefers-reduced-motion: reduce) {
+    .vu-tel { transition: none; }
+  }
 </style>
 </head>
 <body class="pg-inicio">
@@ -386,6 +420,23 @@
       <a href="productos.html" class="btn-primary">Ver todos los productos →</a>
     </div>
   </div>
+</section>
+
+<!-- VIDEOS EN USO (solo celular): teléfonos grandes que se deslizan -->
+<section class="videos-uso" aria-label="Productos en uso">
+  <div class="container">
+    <div class="section-header vu-head">
+      <span class="section-label">En la vida real</span>
+      <h2>Mirá cómo son <span>en uso</span></h2>
+    </div>
+  </div>
+  <div class="vu-carrusel" id="vu-carrusel" role="list">
+      <div class="vu-tel" role="listitem"><span class="vu-b vu-b-silencio" aria-hidden="true"></span><span class="vu-b vu-b-sube" aria-hidden="true"></span><span class="vu-b vu-b-baja" aria-hidden="true"></span><span class="vu-b vu-b-encender" aria-hidden="true"></span><video muted loop playsinline preload="metadata" aria-label="Video de producto en uso 1"><source src="videos/hero1.mp4#t=0.1" type="video/mp4" /></video></div>
+      <div class="vu-tel" role="listitem"><span class="vu-b vu-b-silencio" aria-hidden="true"></span><span class="vu-b vu-b-sube" aria-hidden="true"></span><span class="vu-b vu-b-baja" aria-hidden="true"></span><span class="vu-b vu-b-encender" aria-hidden="true"></span><video muted loop playsinline preload="metadata" aria-label="Video de producto en uso 2"><source src="videos/hero2.mp4#t=0.1" type="video/mp4" /></video></div>
+      <div class="vu-tel" role="listitem"><span class="vu-b vu-b-silencio" aria-hidden="true"></span><span class="vu-b vu-b-sube" aria-hidden="true"></span><span class="vu-b vu-b-baja" aria-hidden="true"></span><span class="vu-b vu-b-encender" aria-hidden="true"></span><video muted loop playsinline preload="metadata" aria-label="Video de producto en uso 3"><source src="videos/hero3.mp4#t=0.1" type="video/mp4" /></video></div>
+      <div class="vu-tel" role="listitem"><span class="vu-b vu-b-silencio" aria-hidden="true"></span><span class="vu-b vu-b-sube" aria-hidden="true"></span><span class="vu-b vu-b-baja" aria-hidden="true"></span><span class="vu-b vu-b-encender" aria-hidden="true"></span><video muted loop playsinline preload="metadata" aria-label="Video de producto en uso 4"><source src="videos/hero4.mp4#t=0.1" type="video/mp4" /></video></div>
+  </div>
+  <div class="vu-puntos" id="vu-puntos" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
 </section>
 
 <!-- BENEFICIOS: círculos como las destacadas de Instagram -->
@@ -661,16 +712,16 @@
       <span id="cart-total">$0</span>
     </div>
     <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
-    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+    <div class="mp-logo">🔒 Pago seguro · Mercado Pago o transferencia</div>
   </div>
 </div>
 
 <script>
 </script>
 <script src="js/sheets.js?v=22"></script>
-<script src="js/productos.js?v=21"></script>
+<script src="js/productos.js?v=22"></script>
 <script src="js/cart.js?v=7"></script>
-<script src="js/main.js?v=8"></script>
+<script src="js/main.js?v=9"></script>
 <script src="js/mejoras-ui.js"></script>
 <script>
   // Mapa de categoría → ícono FA (para las más comunes)
@@ -979,6 +1030,37 @@ if ('serviceWorker' in navigator) {
       .catch(() => {});
   });
 }
+</script>
+<script>
+// Videos en uso (celular): reproduce solo el teléfono del medio y solo cuando se ve en pantalla
+(function () {
+  const car = document.getElementById('vu-carrusel');
+  if (!car || getComputedStyle(car.closest('.videos-uso')).display === 'none') return;
+  const tels = [...car.querySelectorAll('.vu-tel')], puntos = [...document.querySelectorAll('#vu-puntos i')];
+  const quieto = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let enPantalla = false, actual = 0;
+  function medio() {
+    const c = car.scrollLeft + car.clientWidth / 2;
+    let mejor = 0, dist = 1e9;
+    tels.forEach((t, i) => { const d = Math.abs(t.offsetLeft + t.offsetWidth / 2 - c); if (d < dist) { dist = d; mejor = i; } });
+    return mejor;
+  }
+  function actualizar() {
+    actual = medio();
+    tels.forEach((t, i) => {
+      t.classList.toggle('activo', i === actual);
+      const v = t.querySelector('video');
+      if (i === actual && enPantalla && !quieto) v.play().catch(() => {}); else v.pause();
+    });
+    puntos.forEach((p, i) => p.classList.toggle('on', i === actual));
+  }
+  let espera;
+  car.addEventListener('scroll', () => { clearTimeout(espera); espera = setTimeout(actualizar, 90); }, { passive: true });
+  // Con movimiento reducido no hay reproducción sola: se toca el teléfono para verlo
+  tels.forEach(t => t.addEventListener('click', () => { const v = t.querySelector('video'); v.paused ? v.play().catch(() => {}) : v.pause(); }));
+  new IntersectionObserver(e => { enPantalla = e[0].isIntersecting; actualizar(); }, { threshold: .35 }).observe(car);
+  actualizar();
+})();
 </script>
 </body>
 </html>

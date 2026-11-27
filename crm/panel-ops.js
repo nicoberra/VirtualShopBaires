@@ -68,7 +68,11 @@ const val = id => ($(id) ? $(id).value.trim() : '');
 const hide  = id => { const el = $(id); if (el) el.style.display = 'none'; };
 const show  = (id, d='block') => { const el = $(id); if (el) el.style.display = d; };
 const fmtMoney = n => '$' + Number(n || 0).toLocaleString('es-AR', {minimumFractionDigits:0});
-const fmtFecha = s => { try { return new Date(String(s).replace(' ','T')).toLocaleDateString('es-AR'); } catch { return s; } };
+const fmtFecha = s => {
+  const t = String(s ?? '').trim(), m = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const d = m ? new Date(+m[3], m[2] - 1, +m[1]) : new Date(t.replace(' ','T'));
+  return t && !isNaN(d) ? d.toLocaleDateString('es-AR') : (t || '—');
+};
 
 let _toastTimer;
 function toast(msg, tipo = 'ok') {
@@ -82,6 +86,12 @@ function toast(msg, tipo = 'ok') {
 function cerrarModal(e, id) {
   if (e.target.classList.contains('modal-backdrop')) hide(id);
 }
+// Escape cierra la ventana que esté abierta arriba de todo
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  const abiertos = [...document.querySelectorAll('.modal-backdrop')].filter(m => m.style.display && m.style.display !== 'none');
+  if (abiertos.length) hide(abiertos[abiertos.length - 1].id);
+});
 
 function confirmar(msg, fn) {
   $('confirm-msg').textContent = msg;
@@ -152,6 +162,14 @@ function shakeLoginBox() {
 
 // Pedidos eliminados desde el CRM (quedan guardados en la planilla con estado "Eliminado", pero no se muestran)
 function _sinEliminados(arr) { return arr.filter(p => String(p.estado || '').trim() !== 'Eliminado'); }
+// El comprobante que sube el cliente desde la web queda en Observaciones como «Comprobante: <link>»
+const _RE_COMP = /Comprobante:\s*(https?:\/\/[^\s|]+)\s*\|?\s*/i;
+function _comprobante(p) {
+  if (p.comprobante) return String(p.comprobante);
+  const m = String(p.observaciones || '').match(_RE_COMP);
+  return m ? m[1] : '';
+}
+const _notasSinComprobante = p => String(p.observaciones || '').replace(_RE_COMP, '').trim();
 
 function prefetchAll() {
   getData('list', 'Clientes').catch(() => {});
@@ -211,7 +229,7 @@ async function loadPanel() {
     const [clientes, productos, pedidos] = await Promise.all([
       getData('list', 'Clientes', false),
       getData('ext_productos_list', null, false),
-      _pedidos.length ? Promise.resolve(_pedidos) : crm({ action: 'ext_pedidos_listar' }).then(r => Array.isArray(sinError(r)) ? [...r].reverse() : []),
+      _pedidos.length ? Promise.resolve(_pedidos) : crm({ action: 'ext_pedidos_listar' }).then(r => Array.isArray(sinError(r)) ? _sinEliminados([...r].reverse()) : []),
     ]);
     if (!_clientes.length  && clientes.length)  _clientes  = clientes;
     if (!_productos.length && productos.length) _productos = productos;
@@ -620,13 +638,13 @@ function filtrarPedidos() {
   let list = _filtrarPorPeriodo(_pedidos);
   if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
-    (p.nombre||p.cliente||'').toLowerCase().includes(q) ||
-    (p.apellido||'').toLowerCase().includes(q) ||
-    (p.email||'').toLowerCase().includes(q) ||
-    (p.productos||p.producto||p.detalle||'').toLowerCase().includes(q) ||
-    (p.orderNumber||'').toLowerCase().includes(q) ||
-    (p.telefono||'').includes(q) ||
-    (p.dni||'').includes(q));
+    String(p.nombre||p.cliente||'').toLowerCase().includes(q) ||
+    String(p.apellido||'').toLowerCase().includes(q) ||
+    String(p.email||'').toLowerCase().includes(q) ||
+    String(p.productos||p.producto||p.detalle||'').toLowerCase().includes(q) ||
+    String(p.orderNumber||'').toLowerCase().includes(q) ||
+    String(p.telefono||'').includes(q) ||
+    String(p.dni||'').includes(q));
   renderPedidos(list);
 }
 
@@ -703,7 +721,8 @@ function renderPedidos(list) {
       ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
       ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}`}
       ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
-      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${hx(p.observaciones)}</div>` : ''}
+      ${_comprobante(p) ? `<div><a href="${/^https?:\/\//i.test(_comprobante(p)) ? hx(_comprobante(p)) : '#'}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none"><i class="fa-solid fa-receipt"></i> Ver comprobante de pago</a></div>` : ''}
+      ${_notasSinComprobante(p) ? `<div><span class="ped-label">Notas:</span> ${hx(_notasSinComprobante(p))}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
         <span class="ped-label">Estado:</span>
@@ -768,8 +787,8 @@ function editarPedido(p) {
   $('mped-estado').value   = p.estado||'Pendiente';
   $('mped-notas').value    = p.notas||'';
   hide('nuevo-cli-wrap');
-  if (p.comprobante) {
-    $('mped-comp-link').href = p.comprobante;
+  if (_comprobante(p)) {
+    $('mped-comp-link').href = _comprobante(p);
     show('mped-comp-wrap');
   } else {
     hide('mped-comp-wrap');

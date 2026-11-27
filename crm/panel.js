@@ -70,7 +70,7 @@ const val = id => ($( id) ? $(id).value.trim() : '');
 const hide  = id => { const el = $(id); if (el) el.style.display = 'none'; };
 const show  = (id, d='block') => { const el = $(id); if (el) el.style.display = d; };
 const fmtMoney = n => '$' + Number(n || 0).toLocaleString('es-AR', {minimumFractionDigits:0});
-const fmtFecha = s => { try { return new Date(String(s).replace(' ','T')).toLocaleDateString('es-AR'); } catch { return s; } };
+const fmtFecha = s => { const d = parseFecha(s); return d ? d.toLocaleDateString('es-AR') : (s || '—'); };
 
 let _toastTimer;
 function toast(msg, tipo = 'ok') {
@@ -84,6 +84,12 @@ function toast(msg, tipo = 'ok') {
 function cerrarModal(e, id) {
   if (e.target.classList.contains('modal-backdrop')) hide(id);
 }
+// Escape cierra la ventana que esté abierta arriba de todo
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.defaultPrevented) return;
+  const abiertos = [...document.querySelectorAll('.modal-backdrop')].filter(m => m.style.display && m.style.display !== 'none');
+  if (abiertos.length) hide(abiertos[abiertos.length - 1].id);
+});
 
 function confirmar(msg, fn) {
   $('confirm-msg').textContent = msg;
@@ -153,6 +159,14 @@ function shakeLoginBox() {
 
 // Pedidos eliminados desde el CRM (quedan guardados en la planilla con estado "Eliminado", pero no se muestran)
 function _sinEliminados(arr) { return arr.filter(p => String(p.estado || '').trim() !== 'Eliminado'); }
+// El comprobante que sube el cliente desde la web queda en Observaciones como «Comprobante: <link>»
+const _RE_COMP = /Comprobante:\s*(https?:\/\/[^\s|]+)\s*\|?\s*/i;
+function _comprobante(p) {
+  if (p.comprobante) return String(p.comprobante);
+  const m = String(p.observaciones || '').match(_RE_COMP);
+  return m ? m[1] : '';
+}
+const _notasSinComprobante = p => String(p.observaciones || '').replace(_RE_COMP, '').trim();
 
 function prefetchAll() {
   // Carga todo en paralelo al entrar — navegación instantánea después
@@ -356,7 +370,7 @@ let _resumenPintado = false;
 function _inicioCelu(pedidos) {
   _pintarVentasWeb(pedidos);
   _badge('badge-pedidos', pedidos.filter(p => (p.estado || 'Pendiente') === 'Pendiente').length);
-  _badge('badge-pagos', pedidos.filter(p => p.comprobante && (p.estado || 'Pendiente') === 'Pendiente').length);
+  _badge('badge-pagos', pedidos.filter(p => _comprobante(p) && (p.estado || 'Pendiente') === 'Pendiente').length);
 }
 // Si se achica la ventana hasta tamaño celular, el resumen se carga en ese momento
 if (typeof matchMedia === 'function') matchMedia('(max-width: 768px)').addEventListener('change', e => { if (e.matches && currentSec === 'panel' && !_resumenPintado) { _resumenPintado = true; _pintarResumenMes(); } });
@@ -385,10 +399,12 @@ async function loadPanel() {
     const mes = new Date(); mes.setDate(1); mes.setHours(0,0,0,0);
     const pendientes = pedidos.filter(p => (p.estado||'Pendiente') === 'Pendiente').length;
     const delMes     = pedidos.filter(p => {
-      const d = new Date(String(p.timestamp||p.fecha||'').replace(' ','T'));
-      return !isNaN(d) && d >= mes;
+      const d = parseFecha(p.timestamp || p.fecha);
+      return d && d >= mes;
     });
-    const factMes = delMes.reduce((s,p) => s + (Number(String(p.total||p.monto||0).replace(/[^\d.]/g,'')) || 0), 0);
+    // Facturación = solo lo cobrado (sin pendientes ni cancelados), con montos tipo «12.500» bien leídos
+    const factMes = delMes.filter(p => ESTADOS_COBRADOS.includes(p.estado || 'Pendiente'))
+      .reduce((s,p) => s + _num(p.total !== undefined && p.total !== '' ? p.total : p.monto), 0);
 
     cards.innerHTML = `
       <div class="stat-card stat-card-link" onclick="goTo('clientes')">
@@ -408,7 +424,7 @@ async function loadPanel() {
       <div class="stat-card stat-card-link" onclick="goTo('facturacion')">
         <div class="stat-label"><i class="fa-solid fa-dollar-sign" style="color:var(--green)"></i> Facturación</div>
         <div class="stat-val">${fmtMoney(factMes)}</div>
-        <div class="stat-sub">este mes</div>
+        <div class="stat-sub">cobrado este mes</div>
       </div>`;
 
     _inicioCelu(pedidos);
@@ -467,7 +483,19 @@ function parseDetalle(det) {
 }
 
 const lunesDe = d => { const x = new Date(d); x.setHours(0,0,0,0); const wd=(x.getDay()+6)%7; x.setDate(x.getDate()-wd); return x; };
-const parseFecha = f => { const d = new Date(String(f).replace(' ','T')); return isNaN(d) ? null : d; };
+// Acepta «2026-11-25 14:30», ISO y también «25/11/2026 14:30» (día primero, como en Argentina)
+const parseFecha = f => {
+  if (f instanceof Date) return isNaN(f) ? null : f;
+  const s = String(f ?? '').trim();
+  if (!s) return null;
+  const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:[ ,T]+(\d{1,2}):(\d{2}))?/);
+  if (m) {
+    const y = +m[3] < 100 ? 2000 + +m[3] : +m[3];
+    const d = new Date(y, m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0));
+    return isNaN(d) ? null : d;
+  }
+  const d = new Date(s.replace(' ','T')); return isNaN(d) ? null : d;
+};
 
 const _num = v => {
   if (typeof v === 'number') return v;
@@ -489,7 +517,9 @@ function agruparFacturacion(pedidos, productos) {
     let costo = 0, costoCompleto = hayCostos && items.length > 0;
     items.forEach(it => { const c = costos[it.nombre.toLowerCase()]; if (c) costo += c * (it.cantidad || 1); else costoCompleto = false; });
     const cliente = [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente || '—';
-    return { fecha: parseFecha(p.timestamp || p.fecha), monto, estado, beneficio: costoCompleto ? monto - costo : null, items,
+    // La ganancia sale de lo que pagó por los productos (subtotal − descuento), sin el envío
+    const sub = _num(p.subtotal), base = sub > 0 ? Math.min(monto, sub - _num(p.descuento)) : monto;
+    return { fecha: parseFecha(p.timestamp || p.fecha), monto, estado, beneficio: costoCompleto ? base - costo : null, items,
              cliente, numero: p.orderNumber || p.id || '', detalle: p.productos || p.detalle || '', pago: p.metodoPago || p.metodo || '' };
   }).filter(v => v.fecha && v.estado !== 'Cancelado');
 
@@ -613,8 +643,10 @@ function pedidosDeCliente(cli) {
   return _pedidos.filter(p => {
     if (cliEmail && (p.email||'').toLowerCase().trim() === cliEmail) return true;
     if (cliTel   && dig(p.telefono) === cliTel) return true;
-    const pNom = ((p.nombre||'') + ' ' + (p.apellido||'')).trim().toLowerCase();
-    if (cliNom   && pNom.includes(cliNom)) return true;
+    // Por nombre solo si la ficha no tiene email ni teléfono, y el nombre es exactamente el mismo
+    // (antes «Ana» se llevaba los pedidos de «Ana María», «Juliana», etc.)
+    const pNom = ((p.nombre||'') + ' ' + (p.apellido||'')).trim().toLowerCase().replace(/\s+/g, ' ');
+    if (!cliEmail && !cliTel && cliNom && pNom === cliNom.replace(/\s+/g, ' ')) return true;
     return false;
   });
 }
@@ -915,8 +947,8 @@ function _filtrarPorPeriodo(list) {
   const ayer = new Date(hoy); ayer.setDate(ayer.getDate()-1);
   const sem  = new Date(hoy); sem.setDate(sem.getDate()-6);
   return list.filter(p => {
-    const d = new Date(String(p.timestamp||p.fecha||'').replace(' ','T'));
-    if (isNaN(d)) return false;
+    const d = parseFecha(p.timestamp || p.fecha);
+    if (!d) return false;
     if (_pedPeriodo === 'hoy')    return d >= hoy;
     if (_pedPeriodo === 'ayer')   return d >= ayer && d < hoy;
     if (_pedPeriodo === 'semana') return d >= sem;
@@ -971,13 +1003,14 @@ function filtrarPedidos() {
   let list = _filtrarPorPeriodo(_pedidos);
   if (est) list = list.filter(p => (p.estado||'Pendiente') === est);
   if (q)  list = list.filter(p =>
-    (p.nombre||p.cliente||'').toLowerCase().includes(q) ||
-    (p.apellido||'').toLowerCase().includes(q) ||
-    (p.email||'').toLowerCase().includes(q) ||
-    (p.productos||p.producto||p.detalle||'').toLowerCase().includes(q) ||
-    (p.orderNumber||'').toLowerCase().includes(q) ||
-    (p.telefono||'').includes(q) ||
-    (p.dni||'').includes(q));
+    // String(): el teléfono, el DNI o el número de pedido pueden venir como número desde la planilla
+    String(p.nombre||p.cliente||'').toLowerCase().includes(q) ||
+    String(p.apellido||'').toLowerCase().includes(q) ||
+    String(p.email||'').toLowerCase().includes(q) ||
+    String(p.productos||p.producto||p.detalle||'').toLowerCase().includes(q) ||
+    String(p.orderNumber||'').toLowerCase().includes(q) ||
+    String(p.telefono||'').includes(q) ||
+    String(p.dni||'').includes(q));
   renderPedidos(list);
 }
 
@@ -1054,7 +1087,8 @@ function renderPedidos(list) {
       ${p.dni         ? `<div><span class="ped-label">DNI/CUIT:</span> ${hx(p.dni)}</div>` : ''}
       ${dir           ? `<div><span class="ped-label">Dirección:</span> ${hx(dir)}</div>` : ''}`}
       ${p.productos   ? `<div style="flex-basis:100%"><span class="ped-label">Productos:</span> ${hx(p.productos)}</div>` : ''}
-      ${p.observaciones ? `<div><span class="ped-label">Notas:</span> ${hx(p.observaciones)}</div>` : ''}
+      ${_comprobante(p) ? `<div><a href="${/^https?:\/\//i.test(_comprobante(p)) ? hx(_comprobante(p)) : '#'}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none"><i class="fa-solid fa-receipt"></i> Ver comprobante de pago</a></div>` : ''}
+      ${_notasSinComprobante(p) ? `<div><span class="ped-label">Notas:</span> ${hx(_notasSinComprobante(p))}</div>` : ''}
       ${p.utm ? `<div><span class="ped-label">Vino de:</span> ${hx(decodeURIComponent(String(p.utm).replace(/utm_/g, '').replace(/&/g, ' · ').replace(/=/g, ': ')))}</div>` : ''}
       ${(p.subtotal && Number(p.descuento) > 0) ? `<div><span class="ped-label">Subtotal:</span> $${Number(p.subtotal).toLocaleString('es-AR')} · <span class="ped-label">Descuento:</span> -$${Number(p.descuento).toLocaleString('es-AR')}</div>` : ''}
       <div style="margin-top:4px;flex-basis:100%">
@@ -1147,8 +1181,8 @@ function editarPedido(p) {
   $('mped-estado').value   = p.estado||'Pendiente';
   $('mped-notas').value    = p.notas||'';
   hide('nuevo-cli-wrap');
-  if (p.comprobante) {
-    $('mped-comp-link').href = p.comprobante;
+  if (_comprobante(p)) {
+    $('mped-comp-link').href = _comprobante(p);
     show('mped-comp-wrap');
   } else {
     hide('mped-comp-wrap');
@@ -1216,8 +1250,21 @@ function borrarPedido(id) {
 async function loadComprobantes(force=false) {
   $('comp-table').innerHTML = uiCargando(5);
   try {
-    const pedidos = await getData('list','Pedidos',force);
-    const conComp = pedidos.filter(p => p.comprobante);
+    // Los comprobantes de la web están en los pedidos de la web (Observaciones), no en la hoja vieja «Pedidos»
+    if (force || !_pedidos.length) {
+      const raw = sinError(await crm({ action: 'ext_pedidos_listar' }));
+      _pedidos = Array.isArray(raw) ? _sinEliminados([...raw].reverse()) : [];
+      lsGuardar('pedidos', _pedidos);
+    }
+    let viejos = [];
+    try { viejos = (await getData('list','Pedidos',force)).filter(p => p.comprobante).reverse(); } catch(_) {}
+    const conComp = [
+      ..._pedidos.filter(p => _comprobante(p)).map(p => ({
+        fecha: p.timestamp || p.fecha, cliente: [p.nombre, p.apellido].filter(Boolean).join(' ') || p.cliente,
+        numero: p.orderNumber || '', monto: p.total !== undefined && p.total !== '' ? p.total : p.monto,
+        estado: p.estado || 'Pendiente', comprobante: _comprobante(p) })),
+      ...viejos.map(p => ({ fecha: p.fecha, cliente: p.cliente, numero: p.id || '', monto: p.monto, estado: p.estado || 'Pendiente', comprobante: p.comprobante })),
+    ];
     if (!conComp.length) {
       $('comp-table').innerHTML = uiVacio('fa-file-image', 'Sin comprobantes subidos', 'Cuando un cliente suba el comprobante de su transferencia va a aparecer acá.', { texto: 'Ir a Pedidos', onclick: "goTo('pedidos')" });
       return;
@@ -1226,11 +1273,11 @@ async function loadComprobantes(force=false) {
       <table>
         <thead><tr><th>Fecha</th><th>Cliente</th><th>Monto</th><th>Estado</th><th>Comprobante</th></tr></thead>
         <tbody>
-          ${[...conComp].reverse().map(p => `
+          ${conComp.map(p => `
             <tr>
               <td>${fmtFecha(p.fecha)}</td>
-              <td><strong>${hx(p.cliente||'—')}</strong></td>
-              <td>${fmtMoney(p.monto)}</td>
+              <td><strong>${hx(p.cliente||'—')}</strong>${p.numero ? `<div class="text-muted" style="font-size:.8em">${hx(p.numero)}</div>` : ''}</td>
+              <td>${fmtMoney(_num(p.monto))}</td>
               <td>${badgeEstado(p.estado)}</td>
               <td>
                 <a href="${/^https?:\/\//i.test(p.comprobante||'') ? hx(p.comprobante) : '#'}" target="_blank" rel="noopener" class="btn-secondary btn-sm" style="text-decoration:none">

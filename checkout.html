@@ -174,7 +174,7 @@
     .co-tarjetas span { font-size: 0.74rem; color: #6B7280; }
     .co-cuotas { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; padding: 9px 11px; border-radius: 10px; background: #EEF7FD; color: #0B4F79; font-size: 0.8rem; line-height: 1.4; }
     .co-cuotas i { margin-top: 2px; }
-    .co-cuotas[hidden], .co-sugeridos[hidden] { display: none; }
+    .co-cuotas[hidden], .co-sugeridos[hidden], #co-direccion[hidden] { display: none; }
     .co-sellos { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
     .co-sellos li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.76rem; color: #6B7280; line-height: 1.35; }
     .co-sellos i { color: #16A34A; font-size: 0.95rem; width: 18px; text-align: center; margin-top: 1px; }
@@ -501,6 +501,7 @@
             <div style="margin-top:3px;"><i class="fa-brands fa-whatsapp"></i>Coordiná el retiro por WhatsApp antes de venir</div>
           </div>
 
+          <div id="co-direccion">
           <div class="co-section-label">Dirección</div>
           <div class="co-2col">
             <div class="co-form-row required">
@@ -542,6 +543,7 @@
               <input class="co-input" type="text" id="f-cp" placeholder="1234" autocomplete="postal-code" inputmode="numeric" />
             </div>
           </div>
+          </div><!-- /co-direccion -->
 
           <div class="co-form-row" style="margin-top:4px;">
             <label for="f-notes">Observaciones (opcional)</label>
@@ -603,7 +605,7 @@
   <div class="cart-footer">
     <div class="cart-total"><span>Total</span><span id="cart-total">$0</span></div>
     <button class="btn-checkout" onclick="window.location='checkout.html'">Finalizar compra →</button>
-    <div class="mp-logo">🔒 Pago seguro · transferencia bancaria</div>
+    <div class="mp-logo">🔒 Pago seguro · Mercado Pago o transferencia</div>
   </div>
 </div>
 
@@ -924,6 +926,9 @@ function toggleAddressFields() {
   const metodo = document.getElementById("f-entrega").value;
   const retiroInfo = document.getElementById("retiro-info");
   if (retiroInfo) retiroInfo.style.display = (metodo === "retiro") ? "block" : "none";
+  // Si retira en persona no hace falta la dirección
+  const dir = document.getElementById("co-direccion");
+  if (dir) dir.hidden = (metodo === "retiro");
   const efectivoOpt = document.getElementById("efectivo-option");
   if (efectivoOpt) efectivoOpt.style.display = (metodo === "retiro") ? "flex" : "none";
   if (metodo !== "retiro" && getPaymentMethod() === "efectivo") {
@@ -1065,11 +1070,13 @@ async function submitOrder() {
   payload.numeroCalle = v("f-numero-calle");
   payload.piso        = v("f-piso");
   payload.cp          = v("f-cp");
+  if (entrega === "envio") {
   if (!payload.provincia) return errorCampo("f-provincia", "Elegí la provincia.");
   if (!payload.localidad) return errorCampo("f-localidad", "Ingresá la localidad.");
   if (!payload.calle)     return errorCampo("f-calle", "Ingresá la calle.");
   if (!payload.numeroCalle) return errorCampo("f-numero-calle", "Ingresá el número de la calle.");
   if (!payload.cp)        return errorCampo("f-cp", "Ingresá el código postal.");
+  }
 
   const crearCuenta = !document.getElementById("co-cuenta").hidden && document.getElementById("f-crear-cuenta").checked;
   const passCuenta = document.getElementById("f-pass").value;

@@ -10,6 +10,7 @@ window.addEventListener("scroll", () => {
   const frames = Array.from(document.querySelectorAll('.hero-phone-frame'));
   if (!frames.length) return;
   const heroGrid = document.getElementById('hero-video-grid');
+  if (heroGrid && getComputedStyle(heroGrid).display === 'none') return;   // en el celular los videos van más abajo (index.html)
   let idx = 0;
   let busy = false;
 

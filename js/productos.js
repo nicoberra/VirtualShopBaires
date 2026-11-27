@@ -226,6 +226,7 @@ function etiquetaVariante(p) {
 
 // Descripción legible: "a - b - c" se muestra como lista; el texto no cambia
 function _escHTML(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+let _descN = 0;
 function descripcionHTML(texto) {
   const t = String(texto || "").trim();
   if (!t) return "";
@@ -252,9 +253,11 @@ function descripcionHTML(texto) {
       : t.split(/\n{2,}/).map(x => `<p>${_escHTML(x).replace(/\n/g, "<br>")}</p>`).join("");
   }
   const larga = t.length > 360;
-  return `<div class="modal-desc${larga ? " modal-desc-corta" : ""}" id="modal-desc">${cuerpo}</div>` +
-    (larga ? `<button type="button" class="modal-desc-mas" aria-controls="modal-desc" aria-expanded="false"
-               onclick="const d=document.getElementById('modal-desc');const a=d.classList.toggle('modal-desc-corta');this.setAttribute('aria-expanded',String(!a));this.textContent=a?'Ver descripción completa':'Ver menos'">Ver descripción completa</button>` : "");
+  // id único por ficha: en inflables hay varias fichas a la vez y el botón abría la descripción de otra
+  const idDesc = "modal-desc-" + (++_descN);
+  return `<div class="modal-desc${larga ? " modal-desc-corta" : ""}" id="${idDesc}">${cuerpo}</div>` +
+    (larga ? `<button type="button" class="modal-desc-mas" aria-controls="${idDesc}" aria-expanded="false"
+               onclick="const d=document.getElementById('${idDesc}');const a=d.classList.toggle('modal-desc-corta');this.setAttribute('aria-expanded',String(!a));this.textContent=a?'Ver descripción completa':'Ver menos'">Ver descripción completa</button>` : "");
 }
 
 // 10% OFF por transferencia o efectivo: mismo valor que DISCOUNT_PCT (checkout) y el servidor

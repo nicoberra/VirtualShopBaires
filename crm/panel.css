@@ -2023,3 +2023,14 @@ html.arrastrando-foto, html.arrastrando-foto * { cursor: grabbing !important; us
 .panel-rec-det:last-child > summary { border-bottom: none; }
 .panel-rec-det[open] > summary { background: var(--bg3); }
 .panel-rec-cuerpo { display: flex; flex-direction: column; gap: 8px; padding: 10px 2px 14px; font-size: .86rem; border-bottom: 1px solid var(--border); }
+.ped-rapidos .btn-sm { display: inline-flex; align-items: center; gap: 7px; }
+/* Dentro del Panel la tarjeta es angosta: los datos del cliente van en una sola columna (rótulo · dato · copiar) */
+.panel-rec-cuerpo .pc-bloque { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px; }
+.panel-rec-cuerpo .pc-acciones { flex-direction: row; flex-wrap: wrap; }
+.panel-rec-cuerpo .pc-acciones .pc-btn { width: auto; flex: 1 1 180px; }
+.panel-rec-cuerpo .pc-lista { display: flex; flex-direction: column; gap: 0; }
+.panel-rec-cuerpo .pc-fila { grid-template-columns: 96px minmax(0, 1fr) auto; grid-template-areas: none; row-gap: 0; padding: 0; border: 0; border-top: 1px solid var(--border); border-radius: 0; background: none; }
+.panel-rec-cuerpo .pc-fila:first-child { border-top: 0; }
+.panel-rec-cuerpo .pc-k, .panel-rec-cuerpo .pc-v, .panel-rec-cuerpo .pc-copiar { grid-area: auto; }
+.panel-rec-cuerpo .pc-v { font-weight: 400; }
+.panel-rec-cuerpo .pc-copiar span { display: none; }

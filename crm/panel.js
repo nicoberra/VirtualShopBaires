@@ -173,7 +173,8 @@ function _sinEliminados(arr) { return arr.filter(p => String(p.estado || '').tri
 // Solo lo que escribe el servidor (al principio, link de Drive): un cliente no puede «inventar» un comprobante en sus notas
 const _RE_COMP = /^Comprobante:\s*(https:\/\/(?:drive|docs)\.google\.com\/[^\s|]+)\s*\|?\s*/;
 function _comprobante(p) {
-  if (p.comprobante) return String(p.comprobante);
+  // Solo direcciones https: nunca se arma un enlace con otra cosa (javascript:, texto suelto, etc.)
+  if (/^https:\/\//i.test(String(p.comprobante || '').trim())) return String(p.comprobante).trim();
   const m = String(p.observaciones || '').trim().match(_RE_COMP);
   return m ? m[1] : '';
 }
